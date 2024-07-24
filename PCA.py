@@ -1,7 +1,7 @@
 import numpy as np
 
 # FIXME: Check this in its entirety
-def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tolerance: float) -> bool:
+def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray]:
     PCA_ok = False
     n1,m1,rg1,x_cm,y_cm,z_cm, X,Y,Z = First_two_monomers(r, mass, number, Df, kf)
 
@@ -90,9 +90,12 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
             rg1 = (np.exp(np.sum(np.log(r))/np.log(r).size))*(np.power(n1/kf, 1/Df))
             k = k + 1
     
-    return PCA_ok
+    data_new = np.zeros((number,4))
+    for i in range(number):
+        data_new[i,:] = np.array([X[i], Y[i], Z[i], r[i]])
+    return PCA_ok, data_new
 
-def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float) -> bool:
+def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray]:
     print(R,DF,kf,tolerance)
     PCA_OK = True
     N_clusters = np.floor(N/N_subcluster)
