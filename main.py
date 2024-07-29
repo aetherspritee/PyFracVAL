@@ -29,3 +29,6 @@ def main():
 
     
     print("Successfully generated aggregate")
+
+if __name__ == "__main__":
+    main()

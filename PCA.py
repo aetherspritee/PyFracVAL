@@ -14,13 +14,14 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
             rg2 = np.sqrt(0.6*r[k-1])
 
             n3 = n1+n2
-            m3 = m1+m3
+            m3 = m1+m2
 
             rg3 = (np.exp(np.sum(np.log(r))/r.size))*np.power(n3/kf,1/Df)
             gamma_ok, gamma_pc = gamma_calc(rg1,rg2,rg3,n1,n2,n3)
             monomer_candidates = np.zeros((number-k+1))
             monomer_candidates[0] = 1
             candidates, rmax = random_list_selection(gamma_ok, gamma_pc, X,Y,Z,r,n1,x_cm,y_cm,z_cm)
+            print(f"{candidates = }")
             list_sum = 0
 
             while list_sum == 0:
@@ -31,11 +32,14 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
 
                 if np.sum(candidates) > 0:
                     candidates, selected_real = random_list_selection_one(candidates, previous_candidate)
+                    print("SELECTED REAL!!")
                     previous_candidate = selected_real
                 elif np.sum(candidates) == number-k+1:
                     PCA_ok = False
+                    print("no ??SELECTED REAL!!")
 
                 curr_try = 1
+                # FIXME: what if no selected_real is chosen?, is the =candidates= array correct?
                 X_sel = X[selected_real]
                 Y_sel = Y[selected_real]
                 Z_sel = Z[selected_real]
@@ -96,16 +100,17 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
     return PCA_ok, data_new
 
 def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray, int, np.ndarray]:
-    print(R,DF,kf,tolerance)
     PCA_OK = True
-    N_clusters = np.floor(N/N_subcluster)
+    N_clusters = int(np.floor(N/N_subcluster))
 
+    print(f"{N_subcluster = }")
+    print()
     if int(np.mod(N,N_subcluster)) != 0:
         N_clusters = N_clusters + 1
         N_subcluster_m = np.ones((N_clusters)) * N_subcluster
         N_subcluster_m[-1] = N - N_subcluster*(N_clusters-1)
     else:
-        N_subcluster_m = np.ones(N_clusters)*N_subcluster
+        N_subcluster_m = np.ones((int(N_clusters)))*N_subcluster
 
     Na = 1
     acum = 0
@@ -113,7 +118,7 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
     i_orden = np.zeros((N_clusters,3))
     data = np.zeros_like((N,4))
     for i in range(1,N_clusters):
-        number = N_subcluster_m[i]
+        number = int(N_subcluster_m[i])
         radius = R[Na-1:Na+number-2]
         mass = np.zeros((number))
 
@@ -142,7 +147,9 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
     return PCA_OK, data, N_clusters, i_orden
 
 def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) -> tuple[int,float,float,float,float,float, np.ndarray, np.ndarray, np.ndarray]:
-    X,Y,Z = np.zeros((N))
+    X = np.zeros((N))
+    Y = np.zeros((N))
+    Z = np.zeros((N))
 
     u = np.random.rand()
     v = np.random.rand()
