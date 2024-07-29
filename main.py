@@ -3,7 +3,7 @@ hi!
 '''
 
 import numpy as np
-from CCA import CCA
+from CCA import CCA_subcluster
 
 # config
 DF = 2.0
@@ -20,6 +20,12 @@ def main():
     R = shuffle(R)
     isFine = True
 
+    iter = 1
     while isFine:
-        X,Y,Z, CCA_ok, PCA_ok = CCA(R,N,DF,Kf)
+        CCA_ok, PCA_ok = CCA_subcluster(R,N,DF,Kf, iter)
         isFine = CCA_ok and PCA_ok
+        if not isFine:
+            print("Restarting, wasnt able to generate aggregate")
+
+    
+    print("Successfully generated aggregate")

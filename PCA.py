@@ -95,7 +95,7 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
         data_new[i,:] = np.array([X[i], Y[i], Z[i], r[i]])
     return PCA_ok, data_new
 
-def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray]:
+def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray, int, np.ndarray]:
     print(R,DF,kf,tolerance)
     PCA_OK = True
     N_clusters = np.floor(N/N_subcluster)
@@ -120,11 +120,10 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
         for j in range(1,radius.size):
             mass[j] = 4/3 * np.pi * np.power(R[j],3)
 
-        # TODO: Continue here
         PCA_OK, data_new = PCA(number,mass,radius,DF,kf,tolerance)
 
         if not PCA_OK:
-            return PCA_OK, data
+            return PCA_OK, data, N_clusters
 
         if i == 1:
             acum = number
@@ -140,7 +139,7 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
             i_orden[i-1,2] = acum + number
 
         Na += number
-    return PCA_OK, data
+    return PCA_OK, data, N_clusters, i_orden
 
 def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) -> tuple[int,float,float,float,float,float, np.ndarray, np.ndarray, np.ndarray]:
     X,Y,Z = np.zeros((N))
