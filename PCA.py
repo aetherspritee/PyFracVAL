@@ -6,10 +6,9 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
     PCA_ok = True
     n1,m1,rg1,x_cm,y_cm,z_cm, X,Y,Z = First_two_monomers(r, mass, number, Df, kf)
 
-    print(f"{number = }")
     if number > 2:
         k=3
-        while k < number:
+        while k < number+1:
             n2 = 1
             m2 = mass[k-1]
 
@@ -30,20 +29,14 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                     candidates, rmax = search_monomer_candidates(r,mass,monomer_candidates,number,k,n3,Df,kf,rg1,n1,X,Y,Z,x_cm,y_cm,z_cm)
 
                 previous_candidate = 0 
-                print(f"{candidates = }")
 
                 if np.sum(candidates) > 0:
-                    print("OK!!")
                     candidates, selected_real = random_list_selection_one(candidates, previous_candidate)
-                    print(f"POST OK : {candidates = }")
                     previous_candidate = selected_real
                 elif np.sum(candidates) == number-k+1:
-                    print("NOT OK!!")
                     PCA_ok = False
 
                 curr_try = 1
-                print(f"{selected_real = }")
-                print(f"{k = }")
                 X_sel = X[selected_real]
                 Y_sel = Y[selected_real]
                 Z_sel = Z[selected_real]
@@ -51,15 +44,11 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                 r_k = r[k-1]
 
                 x_k, y_k, z_k, r0,x0,y0,z0,i_vec,j_vec = sticking_process(X_sel,Y_sel,Z_sel,R_sel,r_k,x_cm,y_cm,z_cm,gamma_pc)
-                print(f"{X = }")
                 X[k-1] = x_k
                 Y[k-1] = y_k
                 Z[k-1] = z_k
-                print(f"{X = }")
 
-                print("HÖÖÖÖÖÖÖÖÖÖÖÖ")
                 cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
-                print(f"{cov_max = }")
 
                 while cov_max > tolerance and curr_try < 360:
                     x_k, y_k, z_k,_ = sticking_process2(x0,y0,z0,r0,i_vec,j_vec)
@@ -67,12 +56,10 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                     X[k-1] = x_k
                     Y[k-1] = y_k
                     Z[k-1] = z_k
-                    print("HUH")
                     cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
                     curr_try += 1
 
                     if np.mod(curr_try,359) == 0 and np.sum(candidates) > 1:
-                        print("HIIIIIIIIIIII")
                         candidates, selected_real = random_list_selection_one(candidates, previous_candidate)
                         X_sel = X[selected_real]
                         Y_sel = Y[selected_real]
@@ -86,20 +73,18 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                         previous_candidate = selected_real
                         curr_try += 1
 
-                        print("HEEEEEEEEEEEEEE")
                         cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
 
                 list_sum = np.sum(candidates)
-                print(f"{list_sum = }")
 
                 if cov_max > tolerance:
                     list_sum = 0
                     candidates *= 0
 
 
-            x_cm = (x_cm*m1 + X[k]*m2)/(m1+m2)
-            y_cm = (y_cm*m1 + Y[k]*m2)/(m1+m2)
-            z_cm = (z_cm*m1 + Z[k]*m2)/(m1+m2)
+            x_cm = (x_cm*m1 + X[k-1]*m2)/(m1+m2)
+            y_cm = (y_cm*m1 + Y[k-1]*m2)/(m1+m2)
+            z_cm = (z_cm*m1 + Z[k-1]*m2)/(m1+m2)
 
             n1 = n3
             m1 = m3
@@ -128,7 +113,6 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
     data = np.zeros((N,4))
     for i in range(1,N_clusters):
         number = int(N_subcluster_m[i-1])
-        print(f"R: {R= }")
         radius = R[Na-1:Na+number-1]
         mass = np.zeros((number))
 
@@ -140,7 +124,6 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
         print(f"{PCA_OK = }")
         if i == 1:
             acum = number
-            print(f"{data = }")
             for ii in range(number):
                 data[ii,:] = data_new[ii,:]
             # ??
@@ -202,7 +185,6 @@ def random_list_selection(gamma_ok: bool, gamma_pc: float,X: np.ndarray, Y: np.n
     if gamma_ok:
         for ii in range(n1):
             dist = np.sqrt(np.power(X[ii]-x_cm, 2) + np.power(Y[ii]-y_cm, 2) + np.power(Z[ii]-z_cm, 2))
-            print(f"{dist = }")
             if dist > rmax:
                 rmax = dist
             if dist > gamma_pc-R[n1]-R[ii] and dist < gamma_pc+R[n1]+R[ii]:
@@ -216,7 +198,6 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
     R_sl = R
     M_sl = M 
     vector_search = np.zeros((N-k+1))
-    print(f"{vector_search.shape = }")
     for i in range(vector_search.size):
         vector_search[i] = i+k
 
@@ -225,13 +206,11 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
             vector_search[i] = 0
     vector_search2 = vector_search[vector_search != 0] 
 
-    print(f"{vector_search = }")
     if vector_search2.size > 1:
         RS_1 = int(vector_search2[int(np.random.rand()*(vector_search.size-1))])
     else:
         RS_1 = int(vector_search2[0])
 
-    print(f"{RS_1 = }")
     R[RS_1-1] = R_sl[k]
     R[k] = R_sl[RS_1-1]
     M[RS_1-1] = M_sl[k]
@@ -253,8 +232,6 @@ def random_list_selection_one(candidates: np.ndarray, previous_candidate: int):
     if previous_candidate > 0:
         candidates[previous_candidate] = 0
     candidates2 = candidates[candidates > 0]
-    print(f"{candidates = }")
-    print(f"{candidates2 = }")
     selected = 1+int(np.random.rand()*(candidates2.size-1))
 
     selected_real = 0
@@ -323,9 +300,7 @@ def sticking_process2(x0, y0, z0, r0,i_vec,j_vec):
 
 def overlap_check(x: np.ndarray, y: np.ndarray, z: np.ndarray, r: np.ndarray, k: int):
     C = np.zeros((k-1))
-    print(f"{x = }")
     for i in range(k-1):
-        print(f"{x[i] = }")
         distance_kj = np.sqrt(np.power(x[k-1]-x[i],2) + np.power(y[k-1]-y[i],2) + np.power(z[k-1]-z[i],2))
 
         if distance_kj < (r[k-1]+r[i]):
