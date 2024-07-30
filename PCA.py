@@ -111,7 +111,7 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
 
     i_orden = np.zeros((N_clusters,3))
     data = np.zeros((N,4))
-    for i in range(1,N_clusters):
+    for i in range(1,N_clusters+1):
         number = int(N_subcluster_m[i-1])
         radius = R[Na-1:Na+number-1]
         mass = np.zeros((number))
@@ -133,7 +133,7 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
             for ii in range(acum,acum+number-1):
                 data[ii,:] = data_new[ii-acum,:]
             i_orden[i-1,0:2] = np.array([acum+1, acum+number])
-            i_orden[i-1,2] = acum + number
+            i_orden[i-1,2] = number
             acum += number
 
         Na += number
