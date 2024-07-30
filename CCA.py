@@ -1,22 +1,25 @@
 import numpy as np
 import copy
 import csv
-from PCA import PCA, PCA_subcluster
+from PCA import PCA_subcluster
 
 # call CCA_sub(not_able_cca,not_able_pca,N,rp_g, Df,kf, R, tol_ov)
-def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int, tolerance: float=1e-7) -> tuple[bool,bool]:
+def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl_perc: float , tolerance: float=1e-7) -> tuple[bool,bool]:
     CCA_OK = True
     print(R,DF,kf,tolerance)
     
-    if N <= 50:
+    if N < 50:
         N_subcluster = 5
-    else:
+    elif N > 500:
         N_subcluster = 50
+    else:
+        N_subcluster = int(N_subcl_perc*N)
 
     X = np.zeros(N)
     Y = np.zeros(N)
     Z = np.zeros(N)
     
+    print(f"{N = }")
     PCA_OK, data, n_clusters, i_orden = PCA_subcluster(N, N_subcluster, R, DF, kf, tolerance)
 
     if not PCA_OK:
@@ -161,6 +164,7 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
 
     for i in range(I_t-2):
         size_vectors = i_orden[i,1]-i_orden[1]+1
+        print(f"{size_vectors = }")
         X1, Y1, Z1, R1 = np.zeros((size_vectors))
 
         jjj = 0

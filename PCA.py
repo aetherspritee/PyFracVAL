@@ -1,84 +1,96 @@
 import numpy as np
+import time
 
 # FIXME: Check this in its entirety
 def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray]:
-    PCA_ok = False
+    PCA_ok = True
     n1,m1,rg1,x_cm,y_cm,z_cm, X,Y,Z = First_two_monomers(r, mass, number, Df, kf)
 
+    print(f"{number = }")
     if number > 2:
         k=3
         while k < number:
             n2 = 1
             m2 = mass[k-1]
 
-            rg2 = np.sqrt(0.6*r[k-1])
+            rg2 = np.sqrt(0.6)*r[k-1]
 
             n3 = n1+n2
             m3 = m1+m2
 
             rg3 = (np.exp(np.sum(np.log(r))/r.size))*np.power(n3/kf,1/Df)
             gamma_ok, gamma_pc = gamma_calc(rg1,rg2,rg3,n1,n2,n3)
-            monomer_candidates = np.zeros((number-k+1))
-            monomer_candidates[0] = 1
+            monomer_candidates = np.zeros((number-k+1)) # 0 = not considered
+            monomer_candidates[0] = 1 # first one has been considered
             candidates, rmax = random_list_selection(gamma_ok, gamma_pc, X,Y,Z,r,n1,x_cm,y_cm,z_cm)
-            print(f"{candidates = }")
             list_sum = 0
 
             while list_sum == 0:
-                while np.sum(candidates) == 0 and np.sum(monomer_candidates) > number-k:
+                while np.sum(candidates) == 0 and np.sum(monomer_candidates) < number-k:
                     candidates, rmax = search_monomer_candidates(r,mass,monomer_candidates,number,k,n3,Df,kf,rg1,n1,X,Y,Z,x_cm,y_cm,z_cm)
 
                 previous_candidate = 0 
+                print(f"{candidates = }")
 
                 if np.sum(candidates) > 0:
+                    print("OK!!")
                     candidates, selected_real = random_list_selection_one(candidates, previous_candidate)
-                    print("SELECTED REAL!!")
+                    print(f"POST OK : {candidates = }")
                     previous_candidate = selected_real
                 elif np.sum(candidates) == number-k+1:
+                    print("NOT OK!!")
                     PCA_ok = False
-                    print("no ??SELECTED REAL!!")
 
                 curr_try = 1
-                # FIXME: what if no selected_real is chosen?, is the =candidates= array correct?
+                print(f"{selected_real = }")
+                print(f"{k = }")
                 X_sel = X[selected_real]
                 Y_sel = Y[selected_real]
                 Z_sel = Z[selected_real]
                 R_sel = r[selected_real]
-                r_k = r[k]
+                r_k = r[k-1]
 
                 x_k, y_k, z_k, r0,x0,y0,z0,i_vec,j_vec = sticking_process(X_sel,Y_sel,Z_sel,R_sel,r_k,x_cm,y_cm,z_cm,gamma_pc)
-                X[k] = x_k
-                Y[k] = y_k
-                Z[k] = z_k
+                print(f"{X = }")
+                X[k-1] = x_k
+                Y[k-1] = y_k
+                Z[k-1] = z_k
+                print(f"{X = }")
 
-                cov_max = overlap_check(X[0:k-1], Y[0:k-1], Z[0:k-1], r[0:k-1],k)
+                print("HÖÖÖÖÖÖÖÖÖÖÖÖ")
+                cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
+                print(f"{cov_max = }")
 
                 while cov_max > tolerance and curr_try < 360:
                     x_k, y_k, z_k,_ = sticking_process2(x0,y0,z0,r0,i_vec,j_vec)
 
-                    X[k] = x_k
-                    Y[k] = y_k
-                    Z[k] = z_k
-                    cov_max = overlap_check(X[0:k-1], Y[0:k-1], Z[0:k-1], r[0:k-1],k)
+                    X[k-1] = x_k
+                    Y[k-1] = y_k
+                    Z[k-1] = z_k
+                    print("HUH")
+                    cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
                     curr_try += 1
 
                     if np.mod(curr_try,359) == 0 and np.sum(candidates) > 1:
+                        print("HIIIIIIIIIIII")
                         candidates, selected_real = random_list_selection_one(candidates, previous_candidate)
                         X_sel = X[selected_real]
                         Y_sel = Y[selected_real]
                         Z_sel = Z[selected_real]
                         R_sel = r[selected_real]
-                        r_k = r[k]
+                        r_k = r[k-1]
                         x_k, y_k, z_k, r0,x0,y0,z0,i_vec,j_vec = sticking_process(X_sel,Y_sel,Z_sel,R_sel,r_k,x_cm,y_cm,z_cm,gamma_pc)
-                        X[k] = x_k
-                        Y[k] = y_k
-                        Z[k] = z_k
+                        X[k-1] = x_k
+                        Y[k-1] = y_k
+                        Z[k-1] = z_k
                         previous_candidate = selected_real
                         curr_try += 1
 
-                        cov_max = overlap_check(X[0:k-1], Y[0:k-1], Z[0:k-1], r[0:k-1],k)
+                        print("HEEEEEEEEEEEEEE")
+                        cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
 
                 list_sum = np.sum(candidates)
+                print(f"{list_sum = }")
 
                 if cov_max > tolerance:
                     list_sum = 0
@@ -102,9 +114,6 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
 def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray, int, np.ndarray]:
     PCA_OK = True
     N_clusters = int(np.floor(N/N_subcluster))
-
-    print(f"{N_subcluster = }")
-    print()
     if int(np.mod(N,N_subcluster)) != 0:
         N_clusters = N_clusters + 1
         N_subcluster_m = np.ones((N_clusters)) * N_subcluster
@@ -116,10 +125,11 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
     acum = 0
 
     i_orden = np.zeros((N_clusters,3))
-    data = np.zeros_like((N,4))
+    data = np.zeros((N,4))
     for i in range(1,N_clusters):
-        number = int(N_subcluster_m[i])
-        radius = R[Na-1:Na+number-2]
+        number = int(N_subcluster_m[i-1])
+        print(f"R: {R= }")
+        radius = R[Na-1:Na+number-1]
         mass = np.zeros((number))
 
         for j in range(1,radius.size):
@@ -127,11 +137,10 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
 
         PCA_OK, data_new = PCA(number,mass,radius,DF,kf,tolerance)
 
-        if not PCA_OK:
-            return PCA_OK, data, N_clusters
-
+        print(f"{PCA_OK = }")
         if i == 1:
             acum = number
+            print(f"{data = }")
             for ii in range(number):
                 data[ii,:] = data_new[ii,:]
             # ??
@@ -163,7 +172,7 @@ def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) ->
     m1 = M[0] + M[1]
     n1 = 2
 
-    rg1 = (np.exp(np.sum(np.log(R[:2])))*np.power(n1/kf,1/DF))
+    rg1 = (np.exp(np.sum(np.log(R[:2]))/2))*np.power(n1/kf,1/DF)
 
     x_cm = (X[1]*M[1]+X[2]*M[2])/(M[1] + M[2])
     y_cm = (Y[1]*M[1]+Y[2]*M[2])/(M[1] + M[2])
@@ -179,8 +188,8 @@ def gamma_calc(rg1: float,rg2: float,rg3: float,n1: int,n2: int,n3: int) -> tupl
     if rg3 < rg1:
         rg3_aux = rg1
 
-
-    if np.power(n3,2)*np.power(rg3_aux,2) > n3*n1*np.power(rg1,2)+ n2*np.power(rg2,2):
+    
+    if np.power(n3,2)*np.power(rg3_aux,2) > n3*(n1*np.power(rg1,2)+ n2*np.power(rg2,2)):
         gamma_pc = np.sqrt((np.power(n3,2)*np.power(rg3_aux,2)-n3*(n1*np.power(rg1,2)+n2*np.power(rg2,2)))/(n1*n2))
     else:
         gamma_ok = False
@@ -191,10 +200,11 @@ def random_list_selection(gamma_ok: bool, gamma_pc: float,X: np.ndarray, Y: np.n
     candidates = np.zeros((n1))
     rmax = 0.0
     if gamma_ok:
-        for ii in range(0,n1-1):
+        for ii in range(n1):
             dist = np.sqrt(np.power(X[ii]-x_cm, 2) + np.power(Y[ii]-y_cm, 2) + np.power(Z[ii]-z_cm, 2))
-            if dist > Rmax:
-                Rmax = dist
+            print(f"{dist = }")
+            if dist > rmax:
+                rmax = dist
             if dist > gamma_pc-R[n1]-R[ii] and dist < gamma_pc+R[n1]+R[ii]:
                 candidates[ii] = 1
             if R[n1]+R[ii] > gamma_pc:
@@ -206,6 +216,7 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
     R_sl = R
     M_sl = M 
     vector_search = np.zeros((N-k+1))
+    print(f"{vector_search.shape = }")
     for i in range(vector_search.size):
         vector_search[i] = i+k
 
@@ -214,17 +225,19 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
             vector_search[i] = 0
     vector_search2 = vector_search[vector_search != 0] 
 
+    print(f"{vector_search = }")
     if vector_search2.size > 1:
-        RS_1 = vector_search[int(np.random.rand())]
+        RS_1 = int(vector_search2[int(np.random.rand()*(vector_search.size-1))])
     else:
-        RS_1 = vector_search[0]
+        RS_1 = int(vector_search2[0])
 
-    R[RS_1] = R_sl[k]
-    R[k] = R_sl[RS_1]
-    M[RS_1] = M_sl[k]
-    M_sl[k] = M[RS_1]
+    print(f"{RS_1 = }")
+    R[RS_1-1] = R_sl[k]
+    R[k] = R_sl[RS_1-1]
+    M[RS_1-1] = M_sl[k]
+    M_sl[k] = M[RS_1-1]
 
-    m2 = M[k]
+    m2 = M[k-1]
     rg2 = np.sqrt(0.6*R[k])
     m3 = np.sum(M[0:k-1])
     rg3 = (np.exp(np.sum(np.log(R))/np.log(R).size))*np.power(n3/kf,1./Df)
@@ -233,14 +246,16 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
 
     candidates, rmax = random_list_selection(gamma_ok, gamma_pc, X,Y,Z,R,n1,x_cm,y_cm,z_cm)
 
-    candidates[RS_1-k] = 1
+    candidates[RS_1-k-1] = 1
     return candidates, rmax
 
 def random_list_selection_one(candidates: np.ndarray, previous_candidate: int):
     if previous_candidate > 0:
         candidates[previous_candidate] = 0
-    candidates2 = candidates[candidates == 0]
-    selected = int(np.random.rand()*candidates2.size)
+    candidates2 = candidates[candidates > 0]
+    print(f"{candidates = }")
+    print(f"{candidates2 = }")
+    selected = 1+int(np.random.rand()*(candidates2.size-1))
 
     selected_real = 0
     j = 0
@@ -265,9 +280,9 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
     a = 2*(x2-x1)
     b = 2*(y2-y1)
     c = 2*(z2-z1)
-    d = np.power(x1,2)-np.power(x2,2) + np.power(y1,2)-np.power(y2,2) + np.power(z1,2)-np.power(z2,2)
+    d = np.power(x1,2)-np.power(x2,2) + np.power(y1,2)-np.power(y2,2) + np.power(z1,2)-np.power(z2,2) - np.power(r1,2)+np.power(r2,2)
 
-    t_sp = (x1*a + y1*b + z1*c + d)/(a*(x1-x2) + c*(y1-y2) + c*(z1-z2))
+    t_sp = (x1*a + y1*b + z1*c + d)/(a*(x1-x2) + b*(y1-y2) + c*(z1-z2))
 
     x0 = x1 + t_sp*(x2-x1)
     y0 = y1 + t_sp*(y2-y1)
@@ -275,7 +290,7 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
 
     distance = np.sqrt(np.power(x2-x1,2) + np.power(y2-y1,2) + np.power(z2-z1,2))
 
-    alpha = np.arccos((np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/2*r1*distance)
+    alpha = np.arccos((np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance))
     r0 = r1*np.sin(alpha)
     # alpha_0 = acos((r1**2.+distanc**2.-r2**2.)/(2.*r1*distanc))
     # r0 = r1*sin(alpha_0)
@@ -284,7 +299,7 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
     AmBdC = (a+b)/c
 
     k_vec = np.array([a,b,c])/np.sqrt(a**2+b**2+c**2)
-    i_vec = np.array([1,1,-AmBdC])/np.sqrt(1+1+c**2)
+    i_vec = np.array([1,1,-AmBdC])/np.sqrt(1+1+AmBdC**2)
     j_vec = np.cross(k_vec,i_vec)
 
     u = np.random.rand()
@@ -308,7 +323,9 @@ def sticking_process2(x0, y0, z0, r0,i_vec,j_vec):
 
 def overlap_check(x: np.ndarray, y: np.ndarray, z: np.ndarray, r: np.ndarray, k: int):
     C = np.zeros((k-1))
-    for i in range(k-2):
+    print(f"{x = }")
+    for i in range(k-1):
+        print(f"{x[i] = }")
         distance_kj = np.sqrt(np.power(x[k-1]-x[i],2) + np.power(y[k-1]-y[i],2) + np.power(z[k-1]-z[i],2))
 
         if distance_kj < (r[k-1]+r[i]):
