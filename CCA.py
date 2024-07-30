@@ -4,7 +4,7 @@ import csv
 from PCA import PCA_subcluster
 
 # call CCA_sub(not_able_cca,not_able_pca,N,rp_g, Df,kf, R, tol_ov)
-def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl_perc: float , tolerance: float=1e-7) -> tuple[bool,bool]:
+def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl_perc: float ,ext_case: int ,tolerance: float=1e-7) -> tuple[bool,bool]:
     CCA_OK = True
     print(R,DF,kf,tolerance)
     
@@ -21,6 +21,7 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
     
     print(f"{N = }")
     PCA_OK, data, n_clusters, i_orden = PCA_subcluster(N, N_subcluster, R, DF, kf, tolerance)
+    print(f"{i_orden = }")
 
     if not PCA_OK:
         return CCA_OK, PCA_OK
@@ -35,10 +36,15 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
     iteration = 1
     fill_xnew = 0
     while I_total > 1:
+
+        i_orden = sort_rows(i_orden)
+
         ID_agglom, CCA_OK = generate_CCA_pairs(I_total, i_orden, X, Y, Z, R, DF, kf)
 
         ID_mon = CCA_identify_monomers(i_orden)
+        print("HI!")
 
+        print(f"{I_total = }")
         if int(np.mod(I_total,2)) == 0:
             number_pairs = int(I_total/2)
         else:
@@ -54,21 +60,26 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
         acum = 1
 
         other = 0
+        i_orden = np.zeros((int(number_pairs),3))
         while k < I_total:
+            print("MOION!")
             for i in range(ID_agglom[k-1,:].size):
                 if ID_agglom[k-1,i] == 1:
                     other = i
-                    exit()
+                    break
 
             IS_EMPTY = True
 
             for i in range(int(np.sum(considered))):
                 if i == other and considered[i] == 1:
                     IS_EMPTY = False
-                    exit()
+                    break
 
+            print(f"{k = }, {other = }, {IS_EMPTY = }")
+            print("O")
             if k != other and IS_EMPTY:
-                Xn, Yn, Zn, Rn, CCA_OK = CCA(X,Y,Z,R, N, ID_mon, k,DF,kf, tolerance)
+                print("HOI")
+                Xn, Yn, Zn, Rn, CCA_OK = CCA(X,Y,Z,R, N, ID_mon, k,DF,kf,ext_case, tolerance)
 
                 considered[k-1] = 1
                 considered[other] = 1
@@ -161,14 +172,17 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
 def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarray,Z: np.ndarray, R: np.ndarray, Df: float, kf: float) -> tuple[np.ndarray, bool]:
     ID_agglom = np.zeros((I_t,I_t))
     CCA_ok = True
+    gamma_real = True
 
-    for i in range(I_t-2):
-        size_vectors = i_orden[i,1]-i_orden[1]+1
-        print(f"{size_vectors = }")
-        X1, Y1, Z1, R1 = np.zeros((size_vectors))
+    for i in range(I_t-1):
+        size_vectors = int(i_orden[i,1]-i_orden[i,0]+1)
+        X1 = np.zeros((size_vectors))
+        Y1 = np.zeros((size_vectors))
+        Z1 = np.zeros((size_vectors))
+        R1 = np.zeros((size_vectors))
 
         jjj = 0
-        for jj in range(i_orden[i,0],i_orden[i,1]):
+        for jj in range(int(i_orden[i,0]),int(i_orden[i,1]+1)):
             X1[jjj] = X[jj-1]
             Y1[jjj] = Y[jj-1]
             Z1[jjj] = Z[jj-1]
@@ -180,19 +194,20 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
         j=0
         
         while cntr == 0:
-            if j > i_orden[:,0].size:
+            if j+1 > i_orden[:,0].size:
                 CCA_ok = False
+                print("CCA NOT OK")
 
             if np.sum(ID_agglom[i,:]) < 1 and np.sum(ID_agglom[:,i]) < 1:
                 if i != j and np.sum(ID_agglom[:,j]) < 1:
-                    size_vectors = i_orden[j,1] - i_orden[j,0]+1
+                    size_vectors = int(i_orden[j,1] - i_orden[j,0]+1)
                     X2 = np.zeros((size_vectors))
                     Y2 = np.zeros((size_vectors))
                     Z2 = np.zeros((size_vectors))
                     R2 = np.zeros((size_vectors))
 
                     jjj = 0
-                    for jj in range(i_orden[j,0],i_orden[j,1]):
+                    for jj in range(int(i_orden[j,0]),int(i_orden[j,1]+1)):
                         X2[jjj] = X[jj-1]
                         Y2[jjj] = Y[jj-1]
                         Z2[jjj] = Z[jj-1]
@@ -202,22 +217,30 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
                     rg2, r2_max, m2, _, _, _ = CCA_agg_properties(X2,Y2, Z2, R2,jjj, Df, kf)
 
                     m3 = m1+m2
-                    rg3 = (np.exp(np.sum(np.log(np.array([R1, R2])))/((np.log(np.array([R1, R2])).size))))*(((R1.size+R2.size))/kf)**(1./Df)
-
+                    r_com = np.hstack((R1,R2))
+                    rg3 = (np.exp(np.sum(np.log(r_com))/((np.log(r_com).size))))*(((R1.size+R2.size))/kf)**(1./Df)
                     if np.power(m3,2)*np.power(rg3,2) > m3 * (m1*np.power(rg1,2) + m2 * np.power(rg2,2)):
-                        gamma_pc = np.sqrt(np.power(m3,2)*np.power(rg3,2) - m3*(m1 * np.power(rg1,2) + m2 * np.power(rg2,2))/(m1*m2))
+                        print("GAMMA REAL")
+                        gamma_pc = np.sqrt((np.power(m3,2)*np.power(rg3,2) - m3*(m1 * np.power(rg1,2) + m2 * np.power(rg2,2)))/(m1*m2))
+                        print(f"{gamma_pc = }")
                         gamma_real = True
                     else:
+                        print("GAMMA FALSE")
+                        gamma_pc = np.inf
                         gamma_real = False
 
                     if gamma_pc < r1_max+r2_max and gamma_real:
+                        print("CHANGING ID_AGGLOM")
                         ID_agglom[i,j] = 1
                         ID_agglom[j,i] = 1
                         cntr = 1
 
             else:
-                cntr += 1
+                print("??? LOOP")
+                cntr = 1
+            print("J + 11111")
             j += 1
+
     if int(np.mod(I_t,2)) != 0:
         for i in range(ID_agglom[0,:].size):
             if np.sum(ID_agglom[:,i]) == 0:
@@ -227,7 +250,8 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
     return ID_agglom, CCA_ok
 
 def CCA_agg_properties(X: np.ndarray, Y: np.ndarray, Z: np.ndarray, R: np.ndarray, npp: int, Df: float, kf: float):
-    m_vec, R_i = np.zeros((npp))
+    m_vec = np.zeros((npp))
+    R_i = np.zeros((npp))
     sum_xm = 0
     sum_ym = 0
     sum_zm = 0
@@ -244,18 +268,21 @@ def CCA_agg_properties(X: np.ndarray, Y: np.ndarray, Z: np.ndarray, R: np.ndarra
 
 
     rg = (np.exp(np.sum(np.log(R))/np.log(R).size))*np.power(npp/kf, 1/Df)
+    print(f"{rg = }")
     for i in range(npp):
         R_i[i] = np.sqrt(np.power(X_cm-X[i],2) + np.power(Y_cm-Y[i],2) + np.power(Z_cm-Z[i],2))
 
+    print(f"{R_i = }")
     R_max = np.max(R_i)
     return rg, R_max, m, X_cm, Y_cm, Z_cm
 
 def CCA_identify_monomers(i_orden: np.ndarray):
-    ID_mon = np.zeros((np.sum(i_orden[:,2])))
+    ID_mon = np.zeros((int(np.sum(i_orden[:,2]))))
 
-    for i in range(i_orden[:,0].size-1):
-        for j in range(i_orden[i,0]-1,i_orden[i,1]-1):
+    for i in range(i_orden[:,0].size):
+        for j in range(int(i_orden[i,0]-1),int(i_orden[i,1])):
             ID_mon[j] = i
+    print(f"{ID_mon =}")
     return ID_mon
 
 def CCA_random_select_list(X1, Y1, Z1, R1, X_cm1, Y_cm1, Z_cm1, X2, Y2, Z2,R2, X_cm2, Y_cm2, Z_cm2, curr_list: np.ndarray, gamma_pc: float, gamma_real: bool, ext_case):
@@ -284,7 +311,7 @@ def CCA_random_select_list(X1, Y1, Z1, R1, X_cm1, Y_cm1, Z_cm1, X2, Y2, Z2,R2, X
 
     return curr_list
 
-def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon: np.ndarray, k: int, Df: float, kf: float, tolerance: float):
+def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon: np.ndarray, k: int, Df: float, kf: float,ext_case, tolerance: float):
     CCA_ok = True
 
     monomers_1 = 0
@@ -292,6 +319,7 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
         if ID_mon[i] == k:
             monomers_1 += 1
 
+    # FIXME: X1 IS OF WRONG SIZE!!!!! DONT KNOW WHY, COMPARE VALUES WITH F90 version
     X1 = np.zeros((monomers_1))
     Y1 = np.zeros((monomers_1))
     Z1 = np.zeros((monomers_1))
@@ -366,6 +394,7 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
 
     list_sum = 0
     prev_cand1: int = 0
+    prev_cand2 = 0
     cov_max = 1
 
     while cov_max > tolerance:
@@ -378,6 +407,7 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
 
         curr_try = 1
         COR1[:,0] = X1
+        print(f"PRE: {X1.shape = }")
         COR1[:,1] = Y1
         COR1[:,2] = Z1
         COR1[:,3] = R1
@@ -390,6 +420,7 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
         COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(gamma_real, gamma_pc, COR1, COR2, CM1, CM2, prev_cand1, prev_cand2, ext_case,n1,n2)
 
         X1 = COR1[:,0]
+        print(f"{X1.shape = }")
         Y1 = COR1[:,1]
         Z1 = COR1[:,2]
 
@@ -424,7 +455,24 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
                 curr_try = 1
             list_sum = np.sum(curr_list[prev_cand1,:])
 
+    X1 = COR1[:,0]
+    Y1 = COR1[:,1]
+    Z1 = COR1[:,2]
+
+    X2 = COR2[:,0]
+    Y2 = COR2[:,1]
+    Z2 = COR2[:,2]
+
+    X_cm2 = CM2[0]
+    Y_cm2 = CM2[1]
+    Z_cm2 = CM2[2]
+    
     monomers_1 = 0
+    print(f"{k = }")
+    print(f"{X.shape  =}")
+    print(f"{X1.shape  =}")
+    print("=========")
+    print(f"{ID_mon = }")
     for i in range(N-1):
         if ID_mon[i] == k:
             X[i] = X1[i]
@@ -502,24 +550,25 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
         return prev_cand2
 
 def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, prev_cand1: int, prev_cand2: int, ext_case: int,n1: int, n2: int):
+    print(f"{COR1.shape}")
     if gamma_real:
-        X1 = COR1[:,1]
-        Y1 = COR1[:,2]
-        Z1 = COR1[:,3]
-        R1 = COR1[:,4]
+        X1 = COR1[:,0]
+        Y1 = COR1[:,1]
+        Z1 = COR1[:,2]
+        R1 = COR1[:,3]
 
-        X2 = COR2[:,1]
-        Y2 = COR2[:,2]
-        Z2 = COR2[:,3]
-        R2 = COR2[:,4]
+        X2 = COR2[:,0]
+        Y2 = COR2[:,1]
+        Z2 = COR2[:,2]
+        R2 = COR2[:,3]
 
-        X_cm1 = CM1[1]
-        Y_cm1 = CM1[2]
-        Z_cm1 = CM1[3]
+        X_cm1 = CM1[0]
+        Y_cm1 = CM1[1]
+        Z_cm1 = CM1[2]
 
-        X_cm2 = CM2[1]
-        Y_cm2 = CM2[2]
-        Z_cm2 = CM2[3]
+        X_cm2 = CM2[0]
+        Y_cm2 = CM2[1]
+        Z_cm2 = CM2[2]
         
         vect_x = X1[prev_cand1] - X_cm1
         vect_y = Y1[prev_cand1] - Y_cm1
@@ -601,12 +650,12 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         Y1_new = Y1
         X1_new = X1
 
-        v1 = np.array([X1_new[prev_cand1]-x_cm11, Y1_new[prev_cand1]-y_cm11], Z1_new[prev_cand1]-z_cm11)
+        v1 = np.array([X1_new[prev_cand1]-x_cm11, Y1_new[prev_cand1]-y_cm11, Z1_new[prev_cand1]-z_cm11])
         v2 = np.array([x-x_cm11, y-y_cm11,z-z_cm11])
         s_vec = np.cross(v1,v2)/np.linalg.norm(np.cross(v1,v2))
         angle = np.arccos(np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
 
-        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], -s_vec[1], s_vec[2],0])
+        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[2],0]])
         rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
 
         for i in range(n1-1):
@@ -630,12 +679,12 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
 
         x,y,z,vec0,i_vec,j_vec = CCA_2_sphere_intersec(sphere1,sphere2)
         
-        v1 = np.array([X2_new[prev_cand2]-x_cm22, Y2_new[prev_cand2]-y_cm22], Z2_new[prev_cand2]-z_cm22)
+        v1 = np.array([X2_new[prev_cand2]-x_cm22, Y2_new[prev_cand2]-y_cm22, Z2_new[prev_cand2]-z_cm22])
         v2 = np.array([x-x_cm22, y-y_cm22,z-z_cm22])
         s_vec = np.cross(v1,v2)/np.linalg.norm(np.cross(v1,v2))
         angle = np.arccos(np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
 
-        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], -s_vec[1], s_vec[2],0])
+        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[2],0]])
         rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
 
         for i in range(n2-1):
@@ -826,4 +875,10 @@ def save_results(X: np.ndarray, Y: np.ndarray, Z: np.ndarray, R: np.ndarray, ite
         for i in range(X.size-1):
             writer.writerow([X[i], Y[i], Z[i], R[i]])
 
-        
+def sort_rows(i_orden: np.ndarray):
+    for i in range(i_orden.shape[1]):
+        temp = i_orden[0,i]
+        i_orden[0,i] = i_orden[-1,i]
+        i_orden[-1,i] = temp
+
+    return i_orden

@@ -121,7 +121,7 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
 
         PCA_OK, data_new = PCA(number,mass,radius,DF,kf,tolerance)
 
-        print(f"{PCA_OK = }")
+        # print(f"{PCA_OK = }")
         if i == 0:
             acum = number
             for ii in range(number+1):
