@@ -82,6 +82,8 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                     candidates *= 0
 
 
+            print(f"{k = }")
+            print("WOOOOOOOOOOOW")
             x_cm = (x_cm*m1 + X[k-1]*m2)/(m1+m2)
             y_cm = (y_cm*m1 + Y[k-1]*m2)/(m1+m2)
             z_cm = (z_cm*m1 + Z[k-1]*m2)/(m1+m2)
@@ -116,7 +118,7 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
         radius = R[Na-1:Na+number-1]
         mass = np.zeros((number))
 
-        for j in range(1,radius.size):
+        for j in range(radius.size):
             mass[j] = 4/3 * np.pi * np.power(R[j],3)
 
         PCA_OK, data_new = PCA(number,mass,radius,DF,kf,tolerance)
@@ -148,6 +150,10 @@ def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) ->
     v = np.random.rand()
     theta = 2*np.pi*u
     phi = np.arccos(2*v-1)
+    theta = 1
+    phi = 1
+    # print(f"{theta = }, {phi = }")
+    # exit()
 
     X[1] = X[0] + (R[0]+R[1])*np.cos(theta)*np.sin(phi)
     Y[1] = Y[0] + (R[0]+R[1])*np.sin(theta)*np.sin(phi)
@@ -157,11 +163,17 @@ def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) ->
     n1 = 2
 
     rg1 = (np.exp(np.sum(np.log(R[:2]))/2))*np.power(n1/kf,1/DF)
+    print(f"{rg1 = }")
 
-    x_cm = (X[1]*M[1]+X[2]*M[2])/(M[1] + M[2])
-    y_cm = (Y[1]*M[1]+Y[2]*M[2])/(M[1] + M[2])
-    z_cm = (Z[1]*M[1]+Z[2]*M[2])/(M[1] + M[2])
+    x_cm = (X[0]*M[0]+X[1]*M[1])/(M[0] + M[1])
+    y_cm = (Y[0]*M[0]+Y[1]*M[1])/(M[0] + M[1])
+    z_cm = (Z[0]*M[0]+Z[1]*M[1])/(M[0] + M[1])
 
+    print(f"{X[0] = }, {Y[0] = }, {Z[0] = }")
+    print(f"{x_cm = }")
+    print(f"{y_cm = }")
+    print(f"{z_cm = }")
+    print(f"{M = }")
     return n1,m1,rg1,x_cm,y_cm,z_cm, X,Y,Z
 
 def gamma_calc(rg1: float,rg2: float,rg3: float,n1: int,n2: int,n3: int) -> tuple[bool,float]:
