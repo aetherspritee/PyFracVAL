@@ -35,7 +35,9 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
     fill_xnew = 0
     while I_total > 1:
 
+        print(f"PRE: {i_orden = }")
         i_orden = sort_rows(i_orden)
+        print(f"POST SORT: {i_orden = }")
 
         ID_agglom, CCA_OK = generate_CCA_pairs(I_total, i_orden, X, Y, Z, R, DF, kf)
 
@@ -61,10 +63,10 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
             for i in range(ID_agglom[k-1,:].size):
                 if ID_agglom[k-1,i] == 1:
                     other = i+1
-                    print("AWOOOOOOOGA")
-                    print(f"{other = }")
-                    print(f"{k = }")
-                    print(f"{ID_agglom[k-1,:] = }")
+                    # print("AWOOOOOOOGA")
+                    # print(f"{other = }")
+                    # print(f"{k = }")
+                    # print(f"{ID_agglom[k-1,:] = }")
                     break
             IS_EMPTY = True
 
@@ -74,18 +76,18 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
                     break
 
             if k != other and IS_EMPTY:
-                print("hooooo")
-                print(f"{k = }")
-                print(f"{other = }")
+                # print("hooooo")
+                # print(f"{k = }")
+                # print(f"{other = }")
                 Xn, Yn, Zn, Rn, CCA_OK = CCA(X,Y,Z,R, N, ID_mon, k,other,DF,kf,ext_case, tolerance)
 
-                print("11111111111111111111111")
+                # print("11111111111111111111111")
                 considered[k-1] = 1
                 considered[other-1] = 1
-                print(f"{k = }, {other = }")
-                print(f"{considered = }")
+                # print(f"{k = }, {other = }")
+                # print(f"{considered = }")
 
-                print(f"{np.sum(considered) = }")
+                # print(f"{np.sum(considered) = }")
                 if np.sum(considered) == 2:
                     for i in range(Xn.size):
                         X_next[i] = Xn[i]
@@ -94,11 +96,11 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
                         R_next[i] = Rn[i]
                     fill_xnew = Xn.size
                 else:
-                    print(f"{fill_xnew = }")
-                    print(f"{Xn.size = }")
-                    print(f"{Xn.shape = }")
+                    # print(f"{fill_xnew = }")
+                    # print(f"{Xn.size = }")
+                    # print(f"{Xn.shape = }")
                     for i in range(fill_xnew,fill_xnew+Xn.size):
-                        print(f"iii = {i}")
+                        # print(f"iii = {i}")
                         X_next[i] = Xn[i-fill_xnew]
                         Y_next[i] = Yn[i-fill_xnew]
                         Z_next[i] = Zn[i-fill_xnew]
@@ -114,7 +116,12 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
                     if ID_mon[j] == other+1:
                         count_other += 1
 
+                print(f"{count_other = }")
+                print(f"{acum = }")
+                print(f"{count_k = }")
+                # FIXME: Both acum and count_k are off 
                 i_orden[u-1,0:3] = np.array([acum, acum+count_k+count_other-1, count_k+count_other])
+                print(f"END1: {i_orden = }")
 
                 acum = acum + count_k + count_other
                 u += 1
@@ -128,7 +135,10 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
                 if ID_mon[j] == other +1:
                     count_other += 1
 
-            i_orden[u-1,0:3] = np.array([acum, acum + count_other + 1, count_other])
+            print(f"{count_other = }")
+            print(f"{acum = }")
+            i_orden[u-1,0:3] = np.array([acum, acum + count_other-1, count_other])
+            print(f"END2: {i_orden = }")
             Xn = np.zeros((count_other))
             Yn = np.zeros((count_other))
             Zn = np.zeros((count_other))
@@ -189,12 +199,19 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
         R1 = np.zeros((size_vectors))
 
         jjj = 0
+        print("##########################")
+        print(f"{i = }")
+        print(f"{i_orden[i,:]}")
         for jj in range(int(i_orden[i,0]),int(i_orden[i,1]+1)):
+            print(f"{jj = }")
+            print(f"{jjj = }")
             X1[jjj] = X[jj-1]
             Y1[jjj] = Y[jj-1]
             Z1[jjj] = Z[jj-1]
             R1[jjj] = R[jj-1]
             jjj += 1
+        print("##########################")
+        print(f"{R1 = }")
         rg1, r1_max, m1, _, _,_ = CCA_agg_properties(X1,Y1, Z1, R1,jjj, Df, kf)
         
         cntr = 0
@@ -221,6 +238,7 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
                         R2[jjj] = R[jj-1]
                         jjj += 1
 
+                    # print(f"{R2 = }")
                     rg2, r2_max, m2, _, _, _ = CCA_agg_properties(X2,Y2, Z2, R2,jjj, Df, kf)
 
                     m3 = m1+m2
@@ -254,7 +272,7 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
     return ID_agglom, CCA_ok
 
 def CCA_agg_properties(X: np.ndarray, Y: np.ndarray, Z: np.ndarray, R: np.ndarray, npp: int, Df: float, kf: float):
-    print(f"{X = }")
+    # print(f"{R = }")
     m_vec = np.zeros((npp))
     R_i = np.zeros((npp))
     sum_xm = 0
@@ -336,10 +354,11 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
             monomers_1 += 1
 
     n1 = X1.size
-    print("==============")
-    print(f"{n1 = }")
-    print("==============")
+    # print("==============")
+    # print(f"{n1 = }")
+    # print("==============")
 
+    print(f"2 {R1 = }")
     rg1, r1_max, m1, X_cm1, Y_cm1, Z_cm1 = CCA_agg_properties(X1,Y1, Z1, R1,n1, Df, kf)
 
     monomers_2 = 0
@@ -347,10 +366,10 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
         if ID_mon[i]+1 == other:
             monomers_2 += 1
 
-    print("#########")
-    print(f"{ID_mon = }")
-    print(f"{other = }")
-    print("#########")
+    # print("#########")
+    # print(f"{ID_mon = }")
+    # print(f"{other = }")
+    # print("#########")
     X2 = np.zeros((monomers_2))
     Y2 = np.zeros((monomers_2))
     Z2 = np.zeros((monomers_2))
@@ -367,10 +386,11 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
             monomers_2 += 1
 
     n2 = X2.size
-    print("==============")
-    print(f"{n2 = }")
-    print("==============")
+    # print("==============")
+    # print(f"{n2 = }")
+    # print("==============")
 
+    # print(f"2 {R2 = }")
     rg2, r2_max, m2, X_cm2, Y_cm2, Z_cm2 = CCA_agg_properties(X2,Y2, Z2, R2,n2, Df, kf)
 
 
@@ -398,7 +418,7 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
     CM2[1] = Y_cm2
     CM2[2] = Z_cm2
 
-    print(f"{n1 = }, {n2 =}")
+    # print(f"{n1 = }, {n2 =}")
     curr_list = np.zeros((n1,n2))
     curr_list = CCA_random_select_list(X1,Y1,Z1,R1,X_cm1,Y_cm1,Z_cm1,X2,Y2,Z2,R2,X_cm2,Y_cm2,Z_cm2,curr_list,gamma_pc,gamma_real,ext_case)
 
@@ -504,8 +524,8 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
     Zn = np.zeros((n1+n2))
     Rn = np.zeros((n1+n2))
 
-    print(f"{X1.shape = }")
-    print(f"{X2.shape = }")
+    # print(f"{X1.shape = }")
+    # print(f"{X2.shape = }")
     Xn[0:n1] = X1
     Xn[n1:n1+n2] = X2
 
@@ -562,8 +582,8 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
         return prev_cand2
 
 def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, prev_cand1: int, prev_cand2: int, ext_case: int,n1: int, n2: int):
-    print("OSDFVDJGDFJKDJSLFKJLK")
-    print(f"{n1 = }, {n2 = }")
+    # print("OSDFVDJGDFJKDJSLFKJLK")
+    # print(f"{n1 = }, {n2 = }")
     if gamma_real:
         X1 = COR1[:,0]
         Y1 = COR1[:,1]
