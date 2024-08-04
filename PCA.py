@@ -220,7 +220,8 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
     vector_search2 = vector_search[vector_search != 0] 
 
     if vector_search2.size > 1:
-        RS_1 = int(vector_search2[int(np.random.rand()*(vector_search.size-1))])
+        u = np.random.rand()
+        RS_1 = int(vector_search2[int(u*(vector_search.size-1))])
     else:
         RS_1 = int(vector_search2[0])
 
@@ -245,7 +246,8 @@ def random_list_selection_one(candidates: np.ndarray, previous_candidate: int):
     if previous_candidate > 0:
         candidates[previous_candidate] = 0
     candidates2 = candidates[candidates > 0]
-    selected = 1+int(np.random.rand()*(candidates2.size-1))
+    n = np.random.rand()
+    selected = 1+int(n*(candidates2.size-1))
 
     selected_real = 0
     j = 0
