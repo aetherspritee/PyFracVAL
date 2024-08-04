@@ -7,7 +7,6 @@ from PCA import PCA_subcluster
 # call CCA_sub(not_able_cca,not_able_pca,N,rp_g, Df,kf, R, tol_ov)
 def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl_perc: float ,ext_case: int ,tolerance: float=1e-7) -> tuple[bool,bool]:
     CCA_OK = True
-    print(R,DF,kf,tolerance)
     
     if N < 50:
         N_subcluster = 5
@@ -58,19 +57,19 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
 
         other = 0
         i_orden = np.zeros((int(number_pairs),3))
-        print(f"{ID_agglom = }")
         while k < I_total:
             for i in range(ID_agglom[k-1,:].size):
-                print(f"{k = }, {i = }")
                 if ID_agglom[k-1,i] == 1:
-                    print("bruh")
                     other = i+1
+                    print("AWOOOOOOOGA")
+                    print(f"{other = }")
+                    print(f"{k = }")
+                    print(f"{ID_agglom[k-1,:] = }")
                     break
-            print("hi")
             IS_EMPTY = True
 
             for i in range(int(np.sum(considered))):
-                if i == other and considered[i] == 1:
+                if i == other-1 and considered[i] == 1:
                     IS_EMPTY = False
                     break
 
@@ -80,9 +79,13 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
                 print(f"{other = }")
                 Xn, Yn, Zn, Rn, CCA_OK = CCA(X,Y,Z,R, N, ID_mon, k,other,DF,kf,ext_case, tolerance)
 
+                print("11111111111111111111111")
                 considered[k-1] = 1
-                considered[other] = 1
+                considered[other-1] = 1
+                print(f"{k = }, {other = }")
+                print(f"{considered = }")
 
+                print(f"{np.sum(considered) = }")
                 if np.sum(considered) == 2:
                     for i in range(Xn.size):
                         X_next[i] = Xn[i]
@@ -91,7 +94,11 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
                         R_next[i] = Rn[i]
                     fill_xnew = Xn.size
                 else:
-                    for i in range(fill_xnew,fill_xnew+Xn.size-1):
+                    print(f"{fill_xnew = }")
+                    print(f"{Xn.size = }")
+                    print(f"{Xn.shape = }")
+                    for i in range(fill_xnew,fill_xnew+Xn.size):
+                        print(f"iii = {i}")
                         X_next[i] = Xn[i-fill_xnew]
                         Y_next[i] = Yn[i-fill_xnew]
                         Z_next[i] = Zn[i-fill_xnew]
@@ -114,7 +121,7 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
             k += 1
 
         if np.sum(considered) < I_total:
-            considered[other] = 1
+            considered[other-1] = 1
             count_other = 0
 
             for j in range(ID_mon.size):
@@ -247,6 +254,7 @@ def generate_CCA_pairs(I_t: int, i_orden: np.ndarray, X: np.ndarray,Y: np.ndarra
     return ID_agglom, CCA_ok
 
 def CCA_agg_properties(X: np.ndarray, Y: np.ndarray, Z: np.ndarray, R: np.ndarray, npp: int, Df: float, kf: float):
+    print(f"{X = }")
     m_vec = np.zeros((npp))
     R_i = np.zeros((npp))
     sum_xm = 0
@@ -268,9 +276,6 @@ def CCA_agg_properties(X: np.ndarray, Y: np.ndarray, Z: np.ndarray, R: np.ndarra
         R_i[i] = np.sqrt(np.power(X_cm-X[i],2) + np.power(Y_cm-Y[i],2) + np.power(Z_cm-Z[i],2))
 
     R_max = np.max(R_i)
-    print(f"{X_cm = }, {Y_cm = }, {Z_cm = }")
-    print(f"{rg = }")
-    print(f"{R_max = }")
     return rg, R_max, m, X_cm, Y_cm, Z_cm
 
 def CCA_identify_monomers(i_orden: np.ndarray):
@@ -315,7 +320,6 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
         if ID_mon[i]+1 == k:
             monomers_1 += 1
 
-    print(f"{monomers_1 = }")
     X1 = np.zeros((monomers_1))
     Y1 = np.zeros((monomers_1))
     Z1 = np.zeros((monomers_1))
@@ -343,6 +347,10 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
         if ID_mon[i]+1 == other:
             monomers_2 += 1
 
+    print("#########")
+    print(f"{ID_mon = }")
+    print(f"{other = }")
+    print("#########")
     X2 = np.zeros((monomers_2))
     Y2 = np.zeros((monomers_2))
     Z2 = np.zeros((monomers_2))
@@ -370,7 +378,6 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
     n3 = n1 + n2
 
     r_com = np.hstack((R1, R2))
-    print(f"{r_com.shape = }")
     rg3 = (np.exp(np.sum(np.log(r_com))/(np.log(r_com).size)))*(np.power((n3)/kf,(1./Df)))
 
     if np.power(m3,2)*np.power(rg3,2) > m3*(m1*np.power(rg1,2) + m2*np.power(rg2,2)):
@@ -395,70 +402,71 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
     curr_list = np.zeros((n1,n2))
     curr_list = CCA_random_select_list(X1,Y1,Z1,R1,X_cm1,Y_cm1,Z_cm1,X2,Y2,Z2,R2,X_cm2,Y_cm2,Z_cm2,curr_list,gamma_pc,gamma_real,ext_case)
 
-    print(f"{curr_list = }")
     COR1 = np.zeros((n1,4))
     COR2 = np.zeros((n2,4))
 
     list_sum = 0
-    prev_cand1: int = 0
-    prev_cand2 = 0
-    cov_max = 1
 
-    while cov_max > tolerance:
-        if np.sum(curr_list) > 1:
-            print("HIIIIIIIIIIIIIIIIIIII")
-            prev_cand1 = CCA_random_pick(curr_list,prev_cand1)
-            prev_cand2 = 0
-            prev_cand2 = CCA_random_pick(curr_list,prev_cand1,prev_cand2)
-        else:
-            CCA_ok = False
+    while list_sum == 0:
+        prev_cand1: int = 0
+        prev_cand2 = 0
+        cov_max = 1
 
-        curr_try = 1
-        COR1[:,0] = X1
-        COR1[:,1] = Y1
-        COR1[:,2] = Z1
-        COR1[:,3] = R1
-
-        COR2[:,0] = X2
-        COR2[:,1] = Y2
-        COR2[:,2] = Z2
-        COR2[:,3] = R2
-
-        COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(gamma_real, gamma_pc, COR1, COR2, CM1, CM2, prev_cand1, prev_cand2, ext_case,n1,n2)
-
-        X1 = COR1[:,0]
-        Y1 = COR1[:,1]
-        Z1 = COR1[:,2]
-
-        X2 = COR2[:,0]
-        Y2 = COR2[:,1]
-        Z2 = COR2[:,2]
-
-        X_cm2 = CM2[0]
-        Y_cm2 = CM2[1]
-        Z_cm2 = CM2[2]
-
-        cov_max = CCA_overlap_check(n1,n2,X1,X2,Y1,Y2,Z1,Z2,R1,R2)
-
-        while cov_max > tolerance and curr_try < 360:
-            X2,Y2, Z2 = CCA_sticking_process_v2(CM2, vec0, X2,Y2,Z2,i_vec,j_vec, prev_cand2)
-            cov_max = CCA_overlap_check(n1,n2,X1,X2,Y1,Y2,Z1,Z2,R1,R2)
-            curr_try += 1
-
-            if int(np.mod(curr_try, 359)) == 0 and np.sum(curr_list[prev_cand1,:]) > 1:
+        while cov_max > tolerance:
+            if np.sum(curr_list) > 1:
+                prev_cand1 = CCA_random_pick(curr_list,prev_cand1)
+                prev_cand2 = 0
                 prev_cand2 = CCA_random_pick(curr_list,prev_cand1,prev_cand2)
+            else:
+                CCA_ok = False
 
-                COR1[0] = X1
-                COR2[0] = X2
+            curr_try = 1
+            COR1[:,0] = X1
+            COR1[:,1] = Y1
+            COR1[:,2] = Z1
+            COR1[:,3] = R1
 
-                COR1[1] = Y1
-                COR2[1] = Y2
+            COR2[:,0] = X2
+            COR2[:,1] = Y2
+            COR2[:,2] = Z2
+            COR2[:,3] = R2
 
-                COR1[2] = Z1
-                COR2[2] = Z2
+            COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(gamma_real, gamma_pc, COR1, COR2, CM1, CM2, prev_cand1, prev_cand2, ext_case,n1,n2)
 
-                COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(gamma_real, gamma_pc, COR1, COR2, CM1, CM2,prev_cand1,prev_cand2, ext_case, n1, n2)
-                curr_try = 1
+            X1 = COR1[:,0]
+            Y1 = COR1[:,1]
+            Z1 = COR1[:,2]
+
+            X2 = COR2[:,0]
+            Y2 = COR2[:,1]
+            Z2 = COR2[:,2]
+
+            X_cm2 = CM2[0]
+            Y_cm2 = CM2[1]
+            Z_cm2 = CM2[2]
+
+            cov_max = CCA_overlap_check(n1,n2,X1,X2,Y1,Y2,Z1,Z2,R1,R2)
+
+            while cov_max > tolerance and curr_try < 360:
+                X2,Y2, Z2 = CCA_sticking_process_v2(CM2, vec0, X2,Y2,Z2,i_vec,j_vec, prev_cand2)
+                cov_max = CCA_overlap_check(n1,n2,X1,X2,Y1,Y2,Z1,Z2,R1,R2)
+                curr_try += 1
+
+                if int(np.mod(curr_try, 359)) == 0 and np.sum(curr_list[prev_cand1,:]) > 1:
+                    prev_cand2 = CCA_random_pick(curr_list,prev_cand1,prev_cand2)
+
+                    COR1[0] = X1
+                    COR2[0] = X2
+
+                    COR1[1] = Y1
+                    COR2[1] = Y2
+
+                    COR1[2] = Z1
+                    COR2[2] = Z2
+
+                    COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(gamma_real, gamma_pc, COR1, COR2, CM1, CM2,prev_cand1,prev_cand2, ext_case, n1, n2)
+                    cov_max = CCA_overlap_check(n1,n2,X1,X2,Y1,Y2,Z1,Z2,R1,R2)
+                    curr_try = 1
             list_sum = np.sum(curr_list[prev_cand1,:])
 
     X1 = COR1[:,0]
@@ -496,6 +504,8 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
     Zn = np.zeros((n1+n2))
     Rn = np.zeros((n1+n2))
 
+    print(f"{X1.shape = }")
+    print(f"{X2.shape = }")
     Xn[0:n1] = X1
     Xn[n1:n1+n2] = X2
 
@@ -515,7 +525,6 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
     if prev_cand2 is None:
         if prev_cand1 > 0:
             curr_list[prev_cand1,:] = curr_list[prev_cand1,:]*0
-        print(f"{curr_list = }")
         list_sum = np.array([np.sum(curr_list[i,:]) for i in range(curr_list.shape[0])])
         curr_list2 = list_sum[list_sum > 0]
 
@@ -523,17 +532,12 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
         sel = 0
         jj = 0
 
-        print(f"{list_sum = }")
         for i in range(list_sum.size):
-            print(f"{i = }")
             if list_sum[i] > 0:
-                print("Wiiiiiiiiiiiiii")
                 jj += 1
                 sel = jj
-                print(f"{sel = }")
             if sel == selected:
                 selected_real = i
-                print("WOOOOOOOOOOOOOOO")
                 break
         prev_cand1 = selected_real
         return prev_cand1
@@ -558,6 +562,8 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
         return prev_cand2
 
 def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, prev_cand1: int, prev_cand2: int, ext_case: int,n1: int, n2: int):
+    print("OSDFVDJGDFJKDJSLFKJLK")
+    print(f"{n1 = }, {n2 = }")
     if gamma_real:
         X1 = COR1[:,0]
         Y1 = COR1[:,1]
@@ -572,7 +578,6 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         X_cm1 = CM1[0]
         Y_cm1 = CM1[1]
         Z_cm1 = CM1[2]
-        print(f"{CM1 = }")
 
         X_cm2 = CM2[0]
         Y_cm2 = CM2[1]
@@ -587,10 +592,6 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         vect_y /= vect_mag
         vect_z /= vect_mag
         
-        print()
-        print(f"{X_cm1 = }, {Y_cm1 = }, {Z_cm1 = }")
-        print(f"{gamma_pc = }")
-        print(f"{vect_x = }, {vect_y = }, {vect_z = }")
         # center of mass of aggregate 2
         x_cm22 = X_cm1 + gamma_pc*vect_x
         y_cm22 = Y_cm1 + gamma_pc*vect_y
@@ -624,33 +625,25 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         sphere1 = np.array([x1_sph1, y1_sph1, z1_sph1, d1_min, d1_max])
         sphere2 = np.array([x2_sph2, y2_sph2, z2_sph2, d2_min, d2_max])
 
-        print(f"{ext_case = }")
         if ext_case == 1:
             if np.abs(d2_max-d1_max) < gamma_pc:
                 case = 1
-                print(f"{case = }")
                 x,y,z, sph1_r = random_point_SC(case, sphere1, sphere2)
                 u_s1_cm1 = np.array([(X_cm1-x), (Y_cm1-y), (Z_cm1-z)])
             elif d2_max-d1_max > gamma_pc and d2_min-d1_max < gamma_pc:
                 case = 2
-                print(f"{case = }")
                 x,y,z, sph1_r = random_point_SC(case, sphere1, sphere2)
                 u_s1_cm1 = np.array([(X_cm1-x), (Y_cm1-y), (Z_cm1-z)])
             elif d1_max-d2_max > gamma_pc and d1_min-d2_max < gamma_pc:
                 case = 3
-                print(f"{case = }")
                 x,y,z, sph1_r = random_point_SC(case, sphere1, sphere2)
                 u_s1_cm1 = np.array([(x-X_cm1), (y-Y_cm1), (z-Z_cm1)])
         elif ext_case == 0:
-            print(f"nah..")
             sph1_r = d1_max
             sph2_r = d2_max
-            print(f"{d1_max = }")
-            print(f"{d2_max = }")
 
             sphere1 = np.array([x1_sph1, y1_sph1, z1_sph1, sph1_r])
             sphere2 = np.array([x2_sph2, y2_sph2, z2_sph2, sph2_r])
-            print("HUUUUUUUUUUUUUUUUUUUUU")
             x,y,z,_,_,_ = CCA_2_sphere_intersec(sphere1,sphere2)
             u_s1_cm1 = np.array([X_cm1-x, Y_cm1-y, Z_cm1-z])
 
@@ -697,7 +690,6 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         sphere1 = np.array([sph1_x, sph1_y, sph1_z, sph1_r])
         sphere2 = np.array([sph2_x, sph2_y, sph2_z, sph2_r])
 
-        print("HÖÖÖÖÖÖÖÖÖÖÖÖÖö")
         x,y,z,vec0,i_vec,j_vec = CCA_2_sphere_intersec(sphere1,sphere2)
         
         v1 = np.array([X2_new[prev_cand2]-x_cm22, Y2_new[prev_cand2]-y_cm22, Z2_new[prev_cand2]-z_cm22])
@@ -715,14 +707,12 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
             Z2_new[i] = z_cm22 + new_c[2]
 
         CM2 = np.array([x_cm22, y_cm22, z_cm22])
-        COR1 = np.zeros((X1_new.shape[0],3))
-        COR2 = np.zeros((X1_new.shape[0],3))
+        # COR1 = np.zeros((X1_new.shape[0],3))
+        # COR2 = np.zeros((X1_new.shape[0],3))
         COR1[:,0] = X1_new
         COR1[:,1] = Y1_new
         COR1[:,2] = Z1_new
 
-        print(f"{COR2 = }")
-        print(f"{X2_new = }")
         COR2[:,0] = X2_new
         COR2[:,1] = Y2_new
         COR2[:,2] = Z2_new
@@ -832,15 +822,12 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
     z0 = sphere1[2] + t*(sphere2[2]-sphere1[2])
 
     distance = np.sqrt(np.power(sphere2[0]-sphere1[0],2) + np.power(sphere2[1]-sphere1[1],2) + np.power(sphere2[2]-sphere1[2],2))
-    print(f"{sphere2[3] = }")
-    print(f"{sphere1[3] = }")
-    print(f"{distance = }")
 
     if np.abs((np.power(sphere1[3],2) + np.power(distance,2) - np.power(sphere2[3],2))/(2*sphere1[3]*distance)) > 1:
         print("ACOS ARG TOO LARGE! EXITING!")
         exit(-1)
     alpha_0 = np.arccos((np.power(sphere1[3],2) + np.power(distance,2) - np.power(sphere2[3],2))/(2*sphere1[3]*distance))
-    print(f"{(np.power(sphere1[3],2) + np.power(distance,2) - np.power(sphere2[3],2))/(2*sphere1[3]*distance) = }")
+    # print(f"{(np.power(sphere1[3],2) + np.power(distance,2) - np.power(sphere2[3],2))/(2*sphere1[3]*distance) = }")
     r0 = sphere1[3]*np.sin(alpha_0)
 
     AmBdC = -(A+B)/C
@@ -889,7 +876,7 @@ def CCA_sticking_process_v2(CM2: np.ndarray, vec0: np.ndarray, X2_new,Y2_new,Z2_
         angle = np.arccos(np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
 
     
-    As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], -s_vec[1], s_vec[2],0])
+    As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[2],0]])
     rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
 
     for i in range(X2_new.shape[0]):
