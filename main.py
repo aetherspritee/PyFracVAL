@@ -19,10 +19,10 @@ def shuffle(arr: np.ndarray) -> np.ndarray:
 def main():
     R = np.ones((N))*R0
     R = shuffle(R)
-    isFine = True
+    isFine = False
     N_subcl_perc = 0.1
     iter = 1
-    while isFine:
+    while not isFine:
         CCA_ok, PCA_ok = CCA_subcluster(R,N,DF,Kf, iter, N_subcl_perc, EXT_CASE)
         isFine = CCA_ok and PCA_ok
         if not isFine:
