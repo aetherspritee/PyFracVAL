@@ -1,10 +1,8 @@
 import numpy as np
 import copy
 import csv
-import time
 from PCA import PCA_subcluster
 
-# call CCA_sub(not_able_cca,not_able_pca,N,rp_g, Df,kf, R, tol_ov)
 def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl_perc: float ,ext_case: int ,tolerance: float=1e-7) -> tuple[bool,bool]:
     CCA_OK = True
     
