@@ -1,7 +1,6 @@
 import numpy as np
 import time
 
-# FIXME: Check this in its entirety
 def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray]:
     PCA_ok = True
     n1,m1,rg1,x_cm,y_cm,z_cm, X,Y,Z = First_two_monomers(r, mass, number, Df, kf)
@@ -82,8 +81,6 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                     candidates *= 0
 
 
-            print(f"{k = }")
-            print("WOOOOOOOOOOOW")
             x_cm = (x_cm*m1 + X[k-1]*m2)/(m1+m2)
             y_cm = (y_cm*m1 + Y[k-1]*m2)/(m1+m2)
             z_cm = (z_cm*m1 + Z[k-1]*m2)/(m1+m2)
@@ -123,12 +120,10 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
 
         PCA_OK, data_new = PCA(number,mass,radius,DF,kf,tolerance)
 
-        # print(f"{PCA_OK = }")
         if i == 0:
             acum = number
             for ii in range(number+1):
                 data[ii,:] = data_new[ii,:]
-            # ??
             i_orden[0,0:2] =  np.array([1, acum])
             i_orden[0,2] = acum
         else:
@@ -152,8 +147,6 @@ def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) ->
     phi = np.arccos(2*v-1)
     theta = 1
     phi = 1
-    # print(f"{theta = }, {phi = }")
-    # exit()
 
     X[1] = X[0] + (R[0]+R[1])*np.cos(theta)*np.sin(phi)
     Y[1] = Y[0] + (R[0]+R[1])*np.sin(theta)*np.sin(phi)
@@ -163,17 +156,11 @@ def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) ->
     n1 = 2
 
     rg1 = (np.exp(np.sum(np.log(R[:2]))/2))*np.power(n1/kf,1/DF)
-    print(f"{rg1 = }")
 
     x_cm = (X[0]*M[0]+X[1]*M[1])/(M[0] + M[1])
     y_cm = (Y[0]*M[0]+Y[1]*M[1])/(M[0] + M[1])
     z_cm = (Z[0]*M[0]+Z[1]*M[1])/(M[0] + M[1])
 
-    print(f"{X[0] = }, {Y[0] = }, {Z[0] = }")
-    print(f"{x_cm = }")
-    print(f"{y_cm = }")
-    print(f"{z_cm = }")
-    print(f"{M = }")
     return n1,m1,rg1,x_cm,y_cm,z_cm, X,Y,Z
 
 def gamma_calc(rg1: float,rg2: float,rg3: float,n1: int,n2: int,n3: int) -> tuple[bool,float]:
@@ -284,8 +271,6 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
 
     alpha = np.arccos((np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance))
     r0 = r1*np.sin(alpha)
-    # alpha_0 = acos((r1**2.+distanc**2.-r2**2.)/(2.*r1*distanc))
-    # r0 = r1*sin(alpha_0)
 
     # AmBdC = (A+B)/C
     AmBdC = (a+b)/c
@@ -306,7 +291,8 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
     return x_k, y_k, z_k, r0, x0,y0,z0,i_vec, j_vec
 
 def sticking_process2(x0, y0, z0, r0,i_vec,j_vec):
-    theta = 2 * np.pi * np.random.rand()
+    u = np.random.rand()
+    theta = 2 * np.pi * u 
 
     x_k = x0 + r0*np.cos(theta)*i_vec[0]+r0*np.sin(theta)*j_vec[0]
     y_k = y0 + r0*np.cos(theta)*i_vec[1]+r0*np.sin(theta)*j_vec[1]
