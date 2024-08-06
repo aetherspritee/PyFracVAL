@@ -404,6 +404,7 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
                 CCA_ok = False
 
             curr_try = 1
+
             COR1[:,0] = X1
             COR1[:,1] = Y1
             COR1[:,2] = Z1
@@ -418,6 +419,8 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
 
             # FIXME: the following point coordinates differ !!!!!!!
             # this leads to cov_max being off
+
+
             X1 = COR1[:,0]
             Y1 = COR1[:,1]
             Z1 = COR1[:,2]
@@ -525,7 +528,7 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
 
         print("RANDOM!!!666666")
         uu = np.random.rand()
-        uu = 0.5
+        # uu = 0.5
         selected = int(uu * (curr_list2.size-1))+1
         sel = 0
         jj = 0
@@ -549,7 +552,7 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
 
         print("RANDOM!!111111111")
         uu = np.random.rand()
-        uu = 0.5
+        # uu = 0.5
         selected = 1+int(uu * (curr_list2.size-1))
         sel = 0
         jj = 0
@@ -595,9 +598,9 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         vect_z /= vect_mag
         
         # center of mass of aggregate 2
-        print(f"{X_cm1 = }, {Y_cm1 = }, {Z_cm1 = }")
-        print(f"{vect_x = }, {vect_y = }, {vect_z = }")
-        print(f"{gamma_pc = }")
+        # print(f"{X_cm1 = }, {Y_cm1 = }, {Z_cm1 = }")
+        # print(f"{vect_x = }, {vect_y = }, {vect_z = }")
+        # print(f"{gamma_pc = }")
         x_cm22 = X_cm1 + gamma_pc*vect_x
         y_cm22 = Y_cm1 + gamma_pc*vect_y
         z_cm22 = Z_cm1 + gamma_pc*vect_z
@@ -628,7 +631,7 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         # print(f"{X2_new = }")
         # print(f"{Y2_new = }")
         # print(f"{Z2_new = }")
-        print(f"{prev_cand2 = }")
+        # print(f"{prev_cand2 = }")
         d2_min = np.sqrt(np.power(X2_new[prev_cand2]-x_cm22,2) + np.power(Y2_new[prev_cand2]-y_cm22,2) + np.power(Z2_new[prev_cand2]-z_cm22,2)) - R2[prev_cand2]
         # print(f"{d2_min = }")
         d2_max = np.sqrt(np.power(X2_new[prev_cand2]-x_cm22,2) + np.power(Y2_new[prev_cand2]-y_cm22,2) + np.power(Z2_new[prev_cand2]-z_cm22,2)) + R2[prev_cand2]
@@ -637,7 +640,7 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         # print(f"{np.power(Z2_new[prev_cand2]-z_cm22,2) = }")
         # print(f"{np.sqrt(np.power(X2_new[prev_cand2]-x_cm22,2) + np.power(Y2_new[prev_cand2]-y_cm22,2) + np.power(Z2_new[prev_cand2]-z_cm22,2)) = }")
         # print(f"{d2_max = }")
-        print(f"{x_cm22 = }, {y_cm22 = }, {z_cm22 = }")
+        # print(f"{x_cm22 = }, {y_cm22 = }, {z_cm22 = }")
 
         sphere1 = np.array([x1_sph1, y1_sph1, z1_sph1, d1_min, d1_max])
         sphere2 = np.array([x2_sph2, y2_sph2, z2_sph2, d2_min, d2_max])
@@ -686,15 +689,17 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         s_vec = np.cross(v1,v2)/np.linalg.norm(np.cross(v1,v2))
         angle = np.arccos(np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
 
-        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[2],0]])
+        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[0],0]])
         rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
 
-        for i in range(n1-1):
+        for i in range(n1):
             new_c = np.matmul(rot, np.array([X1_new[i]-x_cm11, Y1_new[i]-y_cm11, Z1_new[i]-z_cm11]))
             X1_new[i] = x_cm11 + new_c[0]
             Y1_new[i] = y_cm11 + new_c[1]
             Z1_new[i] = z_cm11 + new_c[2]
 
+        # print(f"{x_cm11 = }")
+        # print(f"{new_c[0] = }")
         sph2_r = np.sqrt(np.power(X2_new[prev_cand2]-x_cm22,2) + np.power(Y2_new[prev_cand2]-y_cm22,2) + np.power(Z2_new[prev_cand2]-z_cm22,2))
         sph2_x = x_cm22
         sph2_y = y_cm22
@@ -715,10 +720,10 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         s_vec = np.cross(v1,v2)/np.linalg.norm(np.cross(v1,v2))
         angle = np.arccos(np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
 
-        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[2],0]])
+        As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[0],0]])
         rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
 
-        for i in range(n2-1):
+        for i in range(n2):
             new_c = np.matmul(rot, np.array([X2_new[i]-x_cm22, Y2_new[i]-y_cm22, Z2_new[i]-z_cm22]))
             X2_new[i] = x_cm22 + new_c[0]
             Y2_new[i] = y_cm22 + new_c[1]
@@ -730,16 +735,15 @@ def CCA_sticking_process(gamma_real: bool, gamma_pc: float, COR1,COR2,CM1,CM2, p
         COR1[:,0] = X1_new
         COR1[:,1] = Y1_new
         COR1[:,2] = Z1_new
-        print(f"{X1_new.shape = }")
 
         COR2[:,0] = X2_new
         COR2[:,1] = Y2_new
         COR2[:,2] = Z2_new
-        print(f"{X2_new.shape = }")
 
+        return COR1, COR2, CM2, vec0, i_vec, j_vec
     else:
         pass
-    return COR1, COR2, CM2, vec0, i_vec, j_vec
+    # return COR1, COR2, CM2, vec0, i_vec, j_vec
 
 def random_point_SC(case: int,sphere1: np.ndarray, sphere2: np.ndarray):
     phi_crit_max = 0
@@ -776,11 +780,11 @@ def random_point_SC(case: int,sphere1: np.ndarray, sphere2: np.ndarray):
         sph1_r = sph1_r_min
     print("RANDOM!!99999")
     uu = np.random.rand()
-    uu = 0.5
+    # uu = 0.5
     theta_r = 2*np.pi*uu
     print("RANDOM!!8888")
     uu = np.random.rand()
-    uu = 0.5
+    # uu = 0.5
     phi_r = phi_crit_min + (phi_crit_max-phi_crit_min)*uu
 
     sph1_x = sphere1[0]
@@ -867,7 +871,7 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
 
     print("RANDOM!00000")
     uu = np.random.rand()
-    uu = 0.5
+    # uu = 0.5
     theta = np.pi * 2 * uu
 
     x = x0 + r0*np.cos(theta)*i_vec[0] + r0 * np.sin(theta)*j_vec[0]
@@ -880,22 +884,9 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
 def CCA_overlap_check(n1: int, n2: int, X1,X2,Y1,Y2,Z1,Z2,R1,R2):
     cov_max = 0
 
-    print(f"{X1 = }")
-    print(f"{X2 = }")
-    print(f"{Y1 = }")
-    print(f"{Y2 = }")
-    print(f"{Z1 = }")
-    print(f"{Z2 = }")
-
-    print(f"{R1 = }")
-    print(f"{R2 = }")
-    print(f"{n1 = }")
-    print(f"{n2 = }")
     for i in range(n1):
         for j in range(n2):
             d_ij = np.sqrt(np.power(X1[i]-X2[j],2) + np.power(Y1[i]-Y2[j],2) + np.power(Z1[i]-Z2[j],2))
-            print(f"{d_ij = }")
-
             if d_ij < R1[i]+R2[j]:
                 c_ij = (R1[i]+R2[j]-d_ij)/(R1[i]+R2[j])
                 if c_ij > cov_max:
@@ -905,9 +896,9 @@ def CCA_overlap_check(n1: int, n2: int, X1,X2,Y1,Y2,Z1,Z2,R1,R2):
 def CCA_sticking_process_v2(CM2: np.ndarray, vec0: np.ndarray, X2_new,Y2_new,Z2_new, i_vec, j_vec, prev_cand):
     print("RANDOM!!77777777")
     uu = np.random.rand()
-    uu = 0.5
+    # uu = 0.5
     theta_a = 2*np.pi * uu
-    time.sleep(2)
+    # time.sleep(2)
 
     x = vec0[0] + vec0[3] * np.cos(theta_a) * i_vec[0] + vec0[3] * np.sin(theta_a) * j_vec[0]
     y = vec0[1] + vec0[3] * np.cos(theta_a) * i_vec[1] + vec0[3] * np.sin(theta_a) * j_vec[1]
