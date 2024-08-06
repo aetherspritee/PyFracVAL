@@ -440,22 +440,25 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
             print(f"{curr_try = }")
 
             while cov_max > tolerance and curr_try < 360:
-                print("MMMMMMMOOOOOOOOOOOIN")
+                # print("MMMMMMMOOOOOOOOOOOIN")
                 X2,Y2, Z2 = CCA_sticking_process_v2(CM2, vec0, X2,Y2,Z2,i_vec,j_vec, prev_cand2)
                 cov_max = CCA_overlap_check(n1,n2,X1,X2,Y1,Y2,Z1,Z2,R1,R2)
                 curr_try += 1
 
                 if int(np.mod(curr_try, 359)) == 0 and np.sum(curr_list[prev_cand1,:]) > 1:
+                    print("YOOOOOOOOOOOO WHATS GOOOOOOOOOOOOOOO")
                     prev_cand2 = CCA_random_pick(curr_list,prev_cand1,prev_cand2)
 
-                    COR1[0] = X1
-                    COR2[0] = X2
+                    print(f"{X1.shape = }")
+                    print(f"{COR1[0].shape = }")
+                    COR1[:,0] = X1
+                    COR2[:,0] = X2
 
-                    COR1[1] = Y1
-                    COR2[1] = Y2
+                    COR1[:,1] = Y1
+                    COR2[:,1] = Y2
 
-                    COR1[2] = Z1
-                    COR2[2] = Z2
+                    COR1[:,2] = Z1
+                    COR2[:,2] = Z2
 
                     COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(gamma_real, gamma_pc, COR1, COR2, CM1, CM2,prev_cand1,prev_cand2, ext_case, n1, n2)
                     cov_max = CCA_overlap_check(n1,n2,X1,X2,Y1,Y2,Z1,Z2,R1,R2)
@@ -894,11 +897,10 @@ def CCA_overlap_check(n1: int, n2: int, X1,X2,Y1,Y2,Z1,Z2,R1,R2):
     return cov_max
 
 def CCA_sticking_process_v2(CM2: np.ndarray, vec0: np.ndarray, X2_new,Y2_new,Z2_new, i_vec, j_vec, prev_cand):
-    print("RANDOM!!77777777")
+    # print("RANDOM!!77777777")
     uu = np.random.rand()
     # uu = 0.5
     theta_a = 2*np.pi * uu
-    # time.sleep(2)
 
     x = vec0[0] + vec0[3] * np.cos(theta_a) * i_vec[0] + vec0[3] * np.sin(theta_a) * j_vec[0]
     y = vec0[1] + vec0[3] * np.cos(theta_a) * i_vec[1] + vec0[3] * np.sin(theta_a) * j_vec[1]
@@ -915,7 +917,7 @@ def CCA_sticking_process_v2(CM2: np.ndarray, vec0: np.ndarray, X2_new,Y2_new,Z2_
         angle = np.arccos(np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
 
     
-    As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[2],0]])
+    As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[0],0]])
     rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
 
     for i in range(X2_new.shape[0]):
