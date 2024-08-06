@@ -935,9 +935,13 @@ def save_results(X: np.ndarray, Y: np.ndarray, Z: np.ndarray, R: np.ndarray, ite
             writer.writerow([X[i], Y[i], Z[i], R[i]])
 
 def sort_rows(i_orden: np.ndarray):
-    for i in range(i_orden.shape[1]):
-        temp = i_orden[0,i]
-        i_orden[0,i] = i_orden[-1,i]
-        i_orden[-1,i] = temp
+    c_sort = 2
+    for irow in range(i_orden.shape[0]):
+        krow = np.argmin(i_orden[irow:i_orden.shape[0],c_sort]) + irow
 
+        temp = copy.deepcopy(i_orden[irow,:])
+        i_orden[irow,:] = i_orden[krow,:]
+        i_orden[krow,:] = temp
+
+    print(f"sortrows = {i_orden}")
     return i_orden
