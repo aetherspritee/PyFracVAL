@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import csv
+import numba
 from PCA import PCA_subcluster
 
 def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl_perc: float ,ext_case: int ,tolerance: float=1e-7) -> tuple[bool,bool]:
@@ -134,8 +135,14 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
 
         if int(np.mod(I_total,2)) == 0:
             I_total = int(I_total/2)
+            print("======================")
+            print(f"{I_total = }")
+            print("======================")
         else:
             I_total = int(np.floor(I_total/2)+1)
+            print("======================")
+            print(f"{I_total = }")
+            print("======================")
 
         X = X_next
         Y = Y_next
@@ -265,7 +272,8 @@ def CCA_identify_monomers(i_orden: np.ndarray):
             ID_mon[j] = i
     return ID_mon
 
-def CCA_random_select_list(X1, Y1, Z1, R1, X_cm1, Y_cm1, Z_cm1, X2, Y2, Z2,R2, X_cm2, Y_cm2, Z_cm2, curr_list: np.ndarray, gamma_pc: float, gamma_real: bool, ext_case):
+@numba.njit()
+def CCA_random_select_list(X1: np.ndarray, Y1: np.ndarray, Z1: np.ndarray, R1: np.ndarray, X_cm1: np.ndarray, Y_cm1: np.ndarray, Z_cm1: np.ndarray, X2: np.ndarray, Y2: np.ndarray, Z2: np.ndarray,R2: np.ndarray, X_cm2: np.ndarray, Y_cm2: np.ndarray, Z_cm2: np.ndarray, curr_list: np.ndarray, gamma_pc: float, gamma_real: bool, ext_case: int):
     if gamma_real and ext_case == 1:
         for i in range(curr_list.shape[0]-1):
             d_i_min = np.sqrt(np.power(X1[i]-X_cm1,2) + np.power(Y1[i]-Y_cm1,2) + np.power(Z1[i]-Z_cm1,2)) - R1[i]
@@ -811,7 +819,8 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
     return x,y,z, vec0, i_vec,j_vec
 
 
-def CCA_overlap_check(n1: int, n2: int, X1,X2,Y1,Y2,Z1,Z2,R1,R2):
+@numba.jit(nopython=True)
+def CCA_overlap_check(n1: int, n2: int, X1: np.ndarray,X2: np.ndarray,Y1: np.ndarray,Y2: np.ndarray,Z1: np.ndarray,Z2: np.ndarray,R1: np.ndarray,R2: np.ndarray):
     cov_max = 0
 
     for i in range(n1):
@@ -823,7 +832,8 @@ def CCA_overlap_check(n1: int, n2: int, X1,X2,Y1,Y2,Z1,Z2,R1,R2):
                     cov_max = c_ij
     return cov_max
 
-def CCA_sticking_process_v2(CM2: np.ndarray, vec0: np.ndarray, X2_new,Y2_new,Z2_new, i_vec, j_vec, prev_cand):
+@numba.jit(nopython=True)
+def CCA_sticking_process_v2(CM2: np.ndarray, vec0: np.ndarray, X2_new: np.ndarray,Y2_new: np.ndarray,Z2_new: np.ndarray, i_vec: np.ndarray, j_vec: np.ndarray, prev_cand: int):
     uu = np.random.rand()
     theta_a = 2*np.pi * uu
 
@@ -833,19 +843,23 @@ def CCA_sticking_process_v2(CM2: np.ndarray, vec0: np.ndarray, X2_new,Y2_new,Z2_
 
     v1 = np.array([X2_new[prev_cand]-CM2[0], Y2_new[prev_cand]-CM2[1], Z2_new[prev_cand]-CM2[2]])
     v2 = np.array([x-CM2[0], y-CM2[1], z-CM2[2]])
-    s_vec = np.cross(v1,v2)/np.linalg.norm(np.cross(v1,v2))
+    s_vec = np.cross(v1,v2)/my_norm(np.cross(v1,v2))
+    # print(f"{np.linalg.norm(np.cross(v1,v2)) = }")
+    # print(f"{my_norm(np.cross(v1,v2)) = }")
 
-    if np.dot(v1,v2)/np.linalg.norm(np.dot(v1,v2)) > 1 or np.dot(v1,v2)/np.linalg.norm(np.dot(v1,v2)) < -1:
+    if np.dot(v1,v2)/abs(np.dot(v1,v2)) > 1 or np.dot(v1,v2)/abs(np.dot(v1,v2)) < -1:
         angle = np.arccos(1)
     else:
-        angle = np.arccos(np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
+        angle = np.arccos(np.dot(v1,v2)/(my_norm(v1)*my_norm(v2)))
 
     
     As = np.array([[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[0],0]])
-    rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
+    # rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
+    rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * (As @ As)
 
     for i in range(X2_new.shape[0]):
-        new_c = np.matmul(rot, np.array([X2_new[i]-CM2[0], Y2_new[i]-CM2[1], Z2_new[i]-CM2[2]]))
+        # new_c = np.matmul(rot, np.array([X2_new[i]-CM2[0], Y2_new[i]-CM2[1], Z2_new[i]-CM2[2]]))
+        new_c = rot @ np.array([X2_new[i]-CM2[0], Y2_new[i]-CM2[1], Z2_new[i]-CM2[2]])
         X2_new[i] = CM2[0] + new_c[0]
         Y2_new[i] = CM2[1] + new_c[1]
         Z2_new[i] = CM2[2] + new_c[2]
@@ -868,3 +882,8 @@ def sort_rows(i_orden: np.ndarray):
         i_orden[krow,:] = temp
 
     return i_orden
+
+@numba.jit(nopython=True)
+def my_norm(a: np.ndarray) -> float:
+    n = np.sqrt(np.power(a[0],2) + np.power(a[1],2) + np.power(a[2],2))
+    return n

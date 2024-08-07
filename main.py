@@ -8,7 +8,7 @@ from CCA import CCA_subcluster
 # config
 DF = 2.0
 Kf = 1.0
-N = 64
+N = 1024
 R0 = 0.01
 SIGMA = 0
 EXT_CASE = 0
