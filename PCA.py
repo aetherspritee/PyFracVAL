@@ -1,4 +1,5 @@
 import numpy as np
+import numba
 import time
 
 def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray]:
@@ -89,6 +90,7 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
             m1 = m3
             rg1 = (np.exp(np.sum(np.log(r))/np.log(r).size))*(np.power(n1/kf, 1/Df))
             k = k + 1
+            # FIXME: this gets stuck for some reason (no apparent connection to the arcos issue)
     
     data_new = np.zeros((number,4))
     for i in range(number):
@@ -179,6 +181,7 @@ def gamma_calc(rg1: float,rg2: float,rg3: float,n1: int,n2: int,n3: int) -> tupl
     
     return gamma_ok, gamma_pc
 
+@numba.njit()
 def random_list_selection(gamma_ok: bool, gamma_pc: float,X: np.ndarray, Y: np.ndarray, Z: np.ndarray,R: np.ndarray, n1: int, x_cm: float, y_cm: float, z_cm: float) -> tuple[np.ndarray, float]:
     candidates = np.zeros((n1))
     rmax = 0.0
@@ -226,6 +229,7 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
 
     candidates, rmax = random_list_selection(gamma_ok, gamma_pc, X,Y,Z,R,n1,x_cm,y_cm,z_cm)
 
+    # FIXME: this fails once kf > 1.5 LMFAO
     candidates[RS_1-k-1] = 1
     return candidates, rmax
 
@@ -270,6 +274,10 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
     distance = np.sqrt(np.power(x2-x1,2) + np.power(y2-y1,2) + np.power(z2-z1,2))
 
     alpha = np.arccos((np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance))
+    if abs((np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance)) > 1:
+        # FIXME: this should never happen!
+        print(f"{(np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance) = }")
+        exit(-1)
     r0 = r1*np.sin(alpha)
 
     # AmBdC = (A+B)/C

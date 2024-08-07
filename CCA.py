@@ -20,6 +20,9 @@ def CCA_subcluster(R: np.ndarray, N: int, DF: float, kf: float,iter: int,N_subcl
     
     PCA_OK, data, n_clusters, i_orden = PCA_subcluster(N, N_subcluster, R, DF, kf, tolerance)
 
+    print("==============================")
+    print("         PCA DONE!            ")
+    print("==============================")
     if not PCA_OK:
         return CCA_OK, PCA_OK
 
