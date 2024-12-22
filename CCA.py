@@ -436,7 +436,6 @@ def CCA(X: np.ndarray,Y: np.ndarray,Z: np.ndarray,R: np.ndarray, N: int, ID_mon:
                 curr_try += 1
 
                 if int(np.mod(curr_try, 359)) == 0 and np.sum(curr_list[prev_cand1,:]) > 1:
-                    print("OOF")
                     prev_cand2 = CCA_random_pick(curr_list,prev_cand1,prev_cand2)
 
                     COR1[:,0] = X1
