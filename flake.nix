@@ -47,6 +47,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
+        "aarch64-darwin"
       ];
       perSystem =
         {
@@ -67,6 +68,28 @@
             numba = prev.numba.overrideAttrs (old: {
               buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.tbb_2021_11 ];
             });
+            # scipy = prev.scipy.overrideAttrs (old: {
+            #   build-system =
+            #     (old.build-system or [ ])
+            #     ++ (with final; [
+            #       cython
+            #       meson-python
+            #       # pythran
+            #       setuptools
+            #     ])
+            #     ++ (with pkgs; [
+            #       gfortran
+            #       nukeReferences
+            #       pkg-config
+            #     ])
+            #     ++ lib.optionals final.stdenv.hostPlatform.isDarwin [
+            #       # Minimal version required according to:
+            #       # https://github.com/scipy/scipy/blob/v1.14.0/scipy/meson.build#L185-L188
+            #       (final.xcbuild.override {
+            #         sdkVer = "13.3";
+            #       })
+            #     ];
+            # });
           };
 
           python = pkgs.python3;
