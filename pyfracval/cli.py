@@ -1,5 +1,6 @@
 import click
 import numpy as np
+import pyvista as pv
 
 from pyfracval.CCA import CCA_subcluster
 
@@ -65,7 +66,7 @@ def cli(
     N_subcl_perc = 0.1
     iter = 1
     while not isFine:
-        CCA_ok, PCA_ok = CCA_subcluster(
+        data, CCA_ok, PCA_ok = CCA_subcluster(
             R,
             number_of_particles,
             fractal_dimension,
@@ -78,7 +79,23 @@ def cli(
         if not isFine:
             print("Restarting, wasnt able to generate aggregate")
 
+    if plot:
+        plot_particles(data["x", "y", "z"].to_numpy(), data["r"].to_numpy())
+
     print("Successfully generated aggregate")
+
+
+def plot_particles(position, radii):
+    point_cloud = pv.PolyData(position)
+    point_cloud["radius"] = [2 * i for i in radii]
+
+    geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+    glyphed = point_cloud.glyph(scale="radius", geom=geom, orient=False)  # type: ignore
+    pl = pv.Plotter(window_size=[800, 800])
+    pl.add_mesh(glyphed, color="white", smooth_shading=True, pbr=True)
+    pl.view_isometric()  # type: ignore
+    pl.link_views()
+    pl.show()
 
 
 # def _download(Src):
