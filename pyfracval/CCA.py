@@ -332,7 +332,7 @@ def CCA_identify_monomers(i_orden: np.ndarray):
     return ID_mon
 
 
-@numba.njit()
+@numba.jit()
 def CCA_random_select_list(
     X1: np.ndarray,
     Y1: np.ndarray,
@@ -1158,7 +1158,7 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
     return x, y, z, vec0, i_vec, j_vec
 
 
-@numba.jit(nopython=True)
+@numba.jit()
 def CCA_overlap_check(
     n1: int,
     n2: int,
@@ -1187,7 +1187,7 @@ def CCA_overlap_check(
     return cov_max
 
 
-@numba.jit(nopython=True)
+@numba.jit()
 def CCA_sticking_process_v2(
     CM2: np.ndarray,
     vec0: np.ndarray,
@@ -1281,7 +1281,7 @@ def sort_rows(i_orden: np.ndarray):
     return i_orden
 
 
-@numba.jit(nopython=True)
+@numba.jit()
 def my_norm(a: np.ndarray) -> float:
     n = np.sqrt(np.power(a[0], 2) + np.power(a[1], 2) + np.power(a[2], 2))
     return n
