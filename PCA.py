@@ -1,6 +1,9 @@
 import numpy as np
 import numba
 import time
+from time import sleep
+import pyvista as pv
+
 
 def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray]:
     PCA_ok = True
@@ -8,7 +11,7 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
 
     if number > 2:
         k=3
-        while k < number+1:
+        while k <= number:
             n2 = 1
             m2 = mass[k-1]
 
@@ -16,25 +19,37 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
 
             n3 = n1+n2
             m3 = m1+m2
-
             rg3 = (np.exp(np.sum(np.log(r))/r.size))*np.power(n3/kf,1/Df)
+
             gamma_ok, gamma_pc = gamma_calc(rg1,rg2,rg3,n1,n2,n3)
             monomer_candidates = np.zeros((number-k+1)) # 0 = not considered
             monomer_candidates[0] = 1 # first one has been considered
-            candidates, rmax = random_list_selection(gamma_ok, gamma_pc, X,Y,Z,r,n1,x_cm,y_cm,z_cm)
-            list_sum = 0
 
+            candidates, rmax = random_list_selection(gamma_ok, gamma_pc, X,Y,Z,r,n1,x_cm,y_cm,z_cm)
+
+            list_sum = 0
+            # print("here")
             while list_sum == 0:
-                while np.sum(candidates) == 0 and np.sum(monomer_candidates) < number-k:
+                # print(f"{np.sum(candidates) == 0 = }")
+                # print(f"{np.sum(monomer_candidates) <= number-k = }")
+                # if not np.sum(monomer_candidates) <= number-k-1:
+                #     print(f"{number = }")
+                #     print(f"{k = }")
+                #     print(f"{number-k = }")
+                #     print(f"{list_sum = }")
+                #     print(f"{np.sum(candidates) = }")
+                #     print(f"{monomer_candidates = }")
+                while np.sum(candidates) == 0 and np.sum(monomer_candidates) <= number-k:
                     candidates, rmax = search_monomer_candidates(r,mass,monomer_candidates,number,k,n3,Df,kf,rg1,n1,X,Y,Z,x_cm,y_cm,z_cm)
 
-                previous_candidate = 0 
+                previous_candidate = -1
 
                 if np.sum(candidates) > 0:
                     candidates, selected_real = random_list_selection_one(candidates, previous_candidate)
                     previous_candidate = selected_real
                 elif np.sum(candidates) == number-k+1:
                     PCA_ok = False
+                    exit(-1)
 
                 curr_try = 1
                 X_sel = X[selected_real]
@@ -43,6 +58,7 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                 R_sel = r[selected_real]
                 r_k = r[k-1]
 
+                # print(f"modified {k-1 = }")
                 x_k, y_k, z_k, r0,x0,y0,z0,i_vec,j_vec = sticking_process(X_sel,Y_sel,Z_sel,R_sel,r_k,x_cm,y_cm,z_cm,gamma_pc)
                 X[k-1] = x_k
                 Y[k-1] = y_k
@@ -50,6 +66,20 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
 
                 cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
 
+                positions = [[X[i], Y[i], Z[i]] for i in range(X.shape[0])]
+                # print(f"{len(positions) = }")
+                # print(f"{positions}")
+                # point_cloud = pv.PolyData(positions)
+                # point_cloud["radius"] = [2 for i in range(X.shape[0])]
+
+                # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+                # glyphed = point_cloud.glyph(scale="radius", geom=geom,)
+                #     # p = pv.Plotter(notebook=False, off_screen=True, window_size=(2000,2000))
+                # p = pv.Plotter(notebook=False)
+                # p.add_mesh(glyphed, color='white',smooth_shading=True)
+                # p.show()
+                # if cov_max > tolerance:
+                #     print("Need to readjust")
                 while cov_max > tolerance and curr_try < 360:
                     x_k, y_k, z_k,_ = sticking_process2(x0,y0,z0,r0,i_vec,j_vec)
 
@@ -61,6 +91,8 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
 
                     if np.mod(curr_try,359) == 0 and np.sum(candidates) > 1:
                         candidates, selected_real = random_list_selection_one(candidates, previous_candidate)
+                        # if np.sum(candidates) == 0:
+                        #     print("FOURTH, candidates all ZERO")
                         X_sel = X[selected_real]
                         Y_sel = Y[selected_real]
                         Z_sel = Z[selected_real]
@@ -73,15 +105,27 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
                         previous_candidate = selected_real
                         curr_try += 1
 
+                        # print("huh1")
                         cov_max = overlap_check(X[0:k], Y[0:k], Z[0:k], r[0:k],k)
+                        # print("huh2")
 
+                # FIXME: candidates may be full of zeros at some point which causes the program to get stuck
                 list_sum = np.sum(candidates)
+                if np.sum(candidates) == 0:
+                    print("FIFTH, candidates all ZERO")
+                    sleep(2)
+
 
                 if cov_max > tolerance:
                     list_sum = 0
                     candidates *= 0
+                    # print("SIXTH, set all candidates to ZERO")
+                    if number == k:
+                        print("Failure -- restarting PCA routine")
+                        return False, np.zeros((number,4))
 
 
+            # print("bruh")
             x_cm = (x_cm*m1 + X[k-1]*m2)/(m1+m2)
             y_cm = (y_cm*m1 + Y[k-1]*m2)/(m1+m2)
             z_cm = (z_cm*m1 + Z[k-1]*m2)/(m1+m2)
@@ -91,10 +135,21 @@ def PCA(number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tole
             rg1 = (np.exp(np.sum(np.log(r))/np.log(r).size))*(np.power(n1/kf, 1/Df))
             k = k + 1
             # FIXME: this gets stuck for some reason (no apparent connection to the arcos issue)
+            # print("hi")
     
     data_new = np.zeros((number,4))
     for i in range(number):
         data_new[i,:] = np.array([X[i], Y[i], Z[i], r[i]])
+
+    # point_cloud = pv.PolyData(data_new[:,:-1])
+    # point_cloud["radius"] = [2 for i in range(X.shape[0])]
+
+    # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+    # glyphed = point_cloud.glyph(scale="radius", geom=geom,)
+    #     # p = pv.Plotter(notebook=False, off_screen=True, window_size=(2000,2000))
+    # p = pv.Plotter(notebook=False)
+    # p.add_mesh(glyphed, color='white',smooth_shading=True)
+    # p.show()
     return PCA_ok, data_new
 
 def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float) -> tuple[bool, np.ndarray, int, np.ndarray]:
@@ -120,7 +175,11 @@ def PCA_subcluster(N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: floa
         for j in range(radius.size):
             mass[j] = 4/3 * np.pi * np.power(R[j],3)
 
-        PCA_OK, data_new = PCA(number,mass,radius,DF,kf,tolerance)
+        PCA_OK = False
+        while not PCA_OK:
+            PCA_OK, data_new = PCA(number,mass,radius,DF,kf,tolerance)
+        print(f"PCA LOOP {i} DONE!")
+        # time.sleep(1)
 
         if i == 0:
             acum = number
@@ -145,10 +204,16 @@ def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) ->
 
     u = np.random.rand()
     v = np.random.rand()
+    # print("first two monomers")
+    # print(f"{u = }, {v = }")
+
+
+    # u = 0.007316022089059793
+    # v = 0.43406326698233766
     theta = 2*np.pi*u
     phi = np.arccos(2*v-1)
-    theta = 1
-    phi = 1
+    # theta = 0.5
+    # phi = 0.1
 
     X[1] = X[0] + (R[0]+R[1])*np.cos(theta)*np.sin(phi)
     Y[1] = Y[0] + (R[0]+R[1])*np.sin(theta)*np.sin(phi)
@@ -158,10 +223,16 @@ def First_two_monomers(R: np.ndarray,M: np.ndarray,N: int,DF: float,kf:float) ->
     n1 = 2
 
     rg1 = (np.exp(np.sum(np.log(R[:2]))/2))*np.power(n1/kf,1/DF)
+    # print(f"{rg1 = }")
 
     x_cm = (X[0]*M[0]+X[1]*M[1])/(M[0] + M[1])
     y_cm = (Y[0]*M[0]+Y[1]*M[1])/(M[0] + M[1])
     z_cm = (Z[0]*M[0]+Z[1]*M[1])/(M[0] + M[1])
+
+
+    # print(f"{X[0] = }, {Y[0] = }, {Z[0] = }")
+    # print(f"{x_cm = }, {y_cm = }, {z_cm = }")
+    # print(f"{M = }")
 
     return n1,m1,rg1,x_cm,y_cm,z_cm, X,Y,Z
 
@@ -178,7 +249,7 @@ def gamma_calc(rg1: float,rg2: float,rg3: float,n1: int,n2: int,n3: int) -> tupl
         gamma_pc = np.sqrt((np.power(n3,2)*np.power(rg3_aux,2)-n3*(n1*np.power(rg1,2)+n2*np.power(rg2,2)))/(n1*n2))
     else:
         gamma_ok = False
-    
+
     return gamma_ok, gamma_pc
 
 @numba.njit()
@@ -202,7 +273,8 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
     M_sl = M 
     vector_search = np.zeros((N-k+1))
     for i in range(vector_search.size):
-        vector_search[i] = i+k
+        vector_search[i] = i+k-2
+        # print(f"{i+k-2 = }")
 
     for i in range(monomer_candidates.size):
         if monomer_candidates[i] == 1:
@@ -211,6 +283,8 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
 
     if vector_search2.size > 1:
         u = np.random.rand()
+        # print("search monomer candidates")
+        # print(f"{u = }")
         RS_1 = int(vector_search2[int(u*(vector_search.size-1))])
     else:
         RS_1 = int(vector_search2[0])
@@ -229,15 +303,16 @@ def search_monomer_candidates(R: np.ndarray, M: np.ndarray, monomer_candidates: 
 
     candidates, rmax = random_list_selection(gamma_ok, gamma_pc, X,Y,Z,R,n1,x_cm,y_cm,z_cm)
 
-    # FIXME: this fails once kf > 1.5 LMFAO
-    candidates[RS_1-k-1] = 1
     return candidates, rmax
 
 def random_list_selection_one(candidates: np.ndarray, previous_candidate: int):
-    if previous_candidate > 0:
+    if previous_candidate > -1:
         candidates[previous_candidate] = 0
     candidates2 = candidates[candidates > 0]
     n = np.random.rand()
+    # print("random list selection one")
+    # print(f"{n = }")
+    # n = 0.5
     selected = 1+int(n*(candidates2.size-1))
 
     selected_real = 0
@@ -260,6 +335,9 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
     z2 = z_cm
     r2 = gamma_pc
 
+    # print(f"{x1 = }, {y1 = }, {z1 = }, {r1 = }")
+    # print(f"{x2 = }, {y2 = }, {z2 = }, {r2 = }")
+
     a = 2*(x2-x1)
     b = 2*(y2-y1)
     c = 2*(z2-z1)
@@ -273,9 +351,24 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
 
     distance = np.sqrt(np.power(x2-x1,2) + np.power(y2-y1,2) + np.power(z2-z1,2))
 
+
+    # print(f"{distance = }")
+
     alpha = np.arccos((np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance))
+    # print(f"{alpha = }")
     if abs((np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance)) > 1:
         # FIXME: this should never happen!
+
+        pos = [[x1,y1,z1], [x2,y2,z2]]
+        point_cloud = pv.PolyData(pos)
+        point_cloud["radius"] = [2,2]
+
+        geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+        glyphed = point_cloud.glyph(scale="radius", geom=geom,)
+            # p = pv.Plotter(notebook=False, off_screen=True, window_size=(2000,2000))
+        p = pv.Plotter(notebook=False)
+        p.add_mesh(glyphed, color='white',smooth_shading=True)
+        p.show()
         print(f"{(np.power(r1,2) + np.power(distance,2) - np.power(r2,2))/(2*r1*distance) = }")
         exit(-1)
     r0 = r1*np.sin(alpha)
@@ -289,6 +382,9 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
 
     u = np.random.rand()
     v = np.random.rand()
+    # print("sticking process")
+    # print(f"{u = }, {v = }")
+
     theta = 2.*np.pi*u
     phi = np.arccos(2.*v-1.)
 
@@ -300,6 +396,8 @@ def sticking_process(x: float,y: float,z: float,r: float,r_k: float, x_cm: float
 
 def sticking_process2(x0, y0, z0, r0,i_vec,j_vec):
     u = np.random.rand()
+    # print("sticking process2")
+    # print(f"{u = }")
     theta = 2 * np.pi * u 
 
     x_k = x0 + r0*np.cos(theta)*i_vec[0]+r0*np.sin(theta)*j_vec[0]

@@ -6,10 +6,10 @@ import numpy as np
 from CCA import CCA_subcluster
 
 # config
-DF = 2.7
+DF = 1.8
 Kf = 1.0
-N = 64
-R0 = 0.01
+N = 1024
+R0 = 1
 SIGMA = 0
 EXT_CASE = 0
 
