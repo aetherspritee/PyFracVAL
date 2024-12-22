@@ -4,6 +4,7 @@ from time import sleep
 import numba
 import numpy as np
 import pyvista as pv
+from tqdm import tqdm
 
 
 def PCA(
@@ -202,7 +203,7 @@ def PCA_subcluster(
 
     i_orden = np.zeros((N_clusters, 3))
     data = np.zeros((N, 4))
-    for i in range(1, N_clusters + 1):
+    for i in tqdm(range(1, N_clusters + 1)):
         number = int(N_subcluster_m[i - 1])
         radius = R[Na - 1 : Na + number - 1]
         mass = np.zeros((number))
@@ -213,7 +214,7 @@ def PCA_subcluster(
         PCA_OK = False
         while not PCA_OK:
             PCA_OK, data_new = PCA(number, mass, radius, DF, kf, tolerance)
-        print(f"PCA LOOP {i} DONE!")
+        # print(f"PCA LOOP {i} DONE!")
         # time.sleep(1)
 
         if i == 0:
