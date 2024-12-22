@@ -3,6 +3,7 @@ import csv
 
 import numba
 import numpy as np
+import polars as pl
 from numpy.core.multiarray import ndarray
 
 from .PCA import PCA_subcluster
@@ -17,7 +18,7 @@ def CCA_subcluster(
     N_subcl_perc: float,
     ext_case: int,
     tolerance: float = 1e-7,
-) -> tuple[bool, bool]:
+) -> tuple[pl.DataFrame, bool, bool]:
     CCA_OK = True
 
     if N < 50:
@@ -184,7 +185,16 @@ def CCA_subcluster(
     else:
         save_results(X, Y, Z, R, iter)
 
-    return CCA_OK, PCA_OK
+    result = pl.DataFrame(
+        {
+            "x": pl.Series(X),
+            "y": pl.Series(Y),
+            "z": pl.Series(Z),
+            "r": pl.Series(R),
+        }
+    )
+
+    return result, CCA_OK, PCA_OK
 
 
 def generate_CCA_pairs(
