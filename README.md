@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/aetherspritee/PyFracVAL/blob/main/.github/logo.png?raw=true" alt="RefIdxDB-Logo"/>
+</p>
+
 # PyFracVAL
 
 Implementation of FracVAL by [Morán, J. et al. 2019](https://www.sciencedirect.com/science/article/pii/S0010465519300323?via%3Dihub) in python.
