@@ -1,9 +1,12 @@
 import copy
-import csv
+import re
+from datetime import datetime
+from pathlib import Path
 
 import numba
 import numpy as np
-from numpy.core.multiarray import ndarray
+import polars as pl
+from tqdm import tqdm
 
 from .PCA import PCA_subcluster
 
@@ -17,7 +20,8 @@ def CCA_subcluster(
     N_subcl_perc: float,
     ext_case: int,
     tolerance: float = 1e-7,
-) -> tuple[bool, bool]:
+    folder: str = "results",
+) -> tuple[pl.DataFrame | None, bool, bool]:
     CCA_OK = True
 
     if N < 50:
@@ -35,11 +39,9 @@ def CCA_subcluster(
         N, N_subcluster, R, DF, kf, tolerance
     )
 
-    print("==============================")
-    print("         PCA DONE!            ")
-    print("==============================")
     if not PCA_OK:
-        return CCA_OK, PCA_OK
+        print("PCA failed")
+        return None, CCA_OK, PCA_OK
 
     I_total = int(n_clusters)
 
@@ -50,6 +52,12 @@ def CCA_subcluster(
 
     iteration = 1
     fill_xnew = 0
+    progress_bar = tqdm(
+        total=np.ceil(np.log2(n_clusters)).astype(int),
+        desc="I_total",
+    )
+    # TODO: Precalculate the I_total beforehand
+    # and iterate over them in a foor loop
     while I_total > 1:
         i_orden = sort_rows(i_orden)
 
@@ -57,10 +65,7 @@ def CCA_subcluster(
 
         ID_mon = CCA_identify_monomers(i_orden)
 
-        if int(np.mod(I_total, 2)) == 0:
-            number_pairs = int(I_total / 2)
-        else:
-            number_pairs = np.floor(I_total / 2) + 1
+        number_pairs = (I_total + 1) // 2
 
         considered = np.zeros((I_total))
         X_next = np.zeros((N))
@@ -73,6 +78,7 @@ def CCA_subcluster(
 
         other = 0
         i_orden = np.zeros((int(number_pairs), 3))
+        # TODO: why not for loop? More secure!
         while k <= I_total:
             for i in range(ID_agglom[k - 1, :].size):
                 if ID_agglom[k - 1, i] == 1:
@@ -154,16 +160,7 @@ def CCA_subcluster(
                 Z_next[i] = Zn[i - fill_xnew]
                 R_next[i] = Rn[i - fill_xnew]
 
-        if int(np.mod(I_total, 2)) == 0:
-            I_total = int(I_total / 2)
-            print("======================")
-            print(f"{I_total = }")
-            print("======================")
-        else:
-            I_total = int(np.floor(I_total / 2) + 1)
-            print("======================")
-            print(f"{I_total = }")
-            print("======================")
+        I_total = (I_total + 1) // 2
 
         X = X_next
         Y = Y_next
@@ -171,20 +168,25 @@ def CCA_subcluster(
         R = R_next
 
         iteration += 1
+        progress_bar.update(1)
 
-    for k in range(N - 1):
-        if np.isnan(X[k]) or np.isnan(Y[k]):
-            CCA_OK = False
-        elif np.isnan(Z[k]) or np.isnan(R[k]):
-            CCA_OK = False
+    result = pl.DataFrame(
+        {
+            "x": pl.Series(X),
+            "y": pl.Series(Y),
+            "z": pl.Series(Z),
+            "r": pl.Series(R),
+        }
+    )
 
+    CCA_OK = np.logical_not(np.isnan(result.to_numpy())).any().astype(bool)
+
+    filename = filename_generate(N, DF, kf)
     # save results
-    if not CCA_OK or not PCA_OK:
-        pass
-    else:
-        save_results(X, Y, Z, R, iter)
+    if CCA_OK and PCA_OK:
+        save_results(result, iter, filename=filename, folder=folder)
 
-    return CCA_OK, PCA_OK
+    return result, CCA_OK, PCA_OK
 
 
 def generate_CCA_pairs(
@@ -332,7 +334,7 @@ def CCA_identify_monomers(i_orden: np.ndarray):
     return ID_mon
 
 
-@numba.njit()
+@numba.jit()
 def CCA_random_select_list(
     X1: np.ndarray,
     Y1: np.ndarray,
@@ -1158,7 +1160,7 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
     return x, y, z, vec0, i_vec, j_vec
 
 
-@numba.jit(nopython=True)
+@numba.jit()
 def CCA_overlap_check(
     n1: int,
     n2: int,
@@ -1187,7 +1189,7 @@ def CCA_overlap_check(
     return cov_max
 
 
-@numba.jit(nopython=True)
+@numba.jit()
 def CCA_sticking_process_v2(
     CM2: np.ndarray,
     vec0: np.ndarray,
@@ -1255,18 +1257,24 @@ def CCA_sticking_process_v2(
     return X2_new, Y2_new, Z2_new
 
 
+def filename_generate(n: int, df: float, kf: float) -> str:
+    now = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return re.sub(r"[\.\,\s]", "_", f"N{n}-D{df}-K{kf}-{now}")
+
+
 def save_results(
-    X: np.ndarray,
-    Y: np.ndarray,
-    Z: np.ndarray,
-    R: np.ndarray,
+    data: pl.DataFrame,
     iteration: int,
-    res_name: str = "test",
+    folder: str = "",
+    filename: str = "test",
 ):
-    with open(res_name + str(iteration) + ".csv", "w") as f:
-        writer = csv.writer(f)
-        for i in range(X.size):
-            writer.writerow([X[i], Y[i], Z[i], R[i]])
+    path = Path(folder)
+    print(path)
+    if not path.exists():
+        print(f"`{path}` does not exist. Making the directory for you!")
+        path.mkdir(parents=True, exist_ok=True)
+    path /= f"{filename}_{iteration}.csv"
+    data.write_csv(path)
 
 
 def sort_rows(i_orden: np.ndarray):
@@ -1281,7 +1289,7 @@ def sort_rows(i_orden: np.ndarray):
     return i_orden
 
 
-@numba.jit(nopython=True)
+@numba.jit()
 def my_norm(a: np.ndarray) -> float:
     n = np.sqrt(np.power(a[0], 2) + np.power(a[1], 2) + np.power(a[2], 2))
     return n
