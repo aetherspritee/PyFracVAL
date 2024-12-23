@@ -26,7 +26,7 @@ def main():
     N_subcl_perc = 0.1
     iter = 1
     while not isFine:
-        CCA_ok, PCA_ok = CCA_subcluster(R, N, DF, Kf, iter, N_subcl_perc, EXT_CASE)
+        _ , CCA_ok, PCA_ok = CCA_subcluster(R, N, DF, Kf, iter, N_subcl_perc, EXT_CASE)
         isFine = CCA_ok and PCA_ok
         if not isFine:
             print("Restarting, wasnt able to generate aggregate")
