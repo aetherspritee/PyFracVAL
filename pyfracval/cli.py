@@ -1,6 +1,11 @@
+import sys
+from pathlib import Path
+
 import click
 import numpy as np
 import pyvista as pv
+from streamlit import runtime
+from streamlit.web import cli as stcli
 
 from pyfracval.CCA import CCA_subcluster
 
@@ -17,6 +22,7 @@ EXT_CASE = 0
     invoke_without_command=True,
     help="Calculate a fractal particle cluster",
 )
+@click.pass_context
 @click.option(
     "-df",
     "--fractal-dimension",
@@ -53,14 +59,24 @@ EXT_CASE = 0
     is_flag=True,
     help="Display result using pyvista",
 )
+@click.option(
+    "-f",
+    "--folder",
+    default="",
+    help="Folder to save the results",
+)
 def cli(
+    ctx,
     fractal_dimension: float,
     fractal_prefactor: float,
     number_of_particles: int,
     mean_radius: float,
     std_radius: float,
     plot: bool,
+    folder: str,
 ) -> None:
+    if ctx.invoked_subcommand:
+        return
     R = np.ones((number_of_particles)) * mean_radius
     isFine = False
     N_subcl_perc = 0.1
@@ -74,18 +90,23 @@ def cli(
             iter,
             N_subcl_perc,
             EXT_CASE,
+            folder=folder,
         )
         isFine = CCA_ok and PCA_ok
         if not isFine:
             print("Restarting, wasnt able to generate aggregate")
 
+    if data is None:
+        raise Exception("Failed to generate aggregate. Probably due to PCA.")
+
     if plot:
-        plot_particles(data["x", "y", "z"].to_numpy(), data["r"].to_numpy())
+        pl = plot_particles(data["x", "y", "z"].to_numpy(), data["r"].to_numpy())
+        pl.show()
 
     print("Successfully generated aggregate")
 
 
-def plot_particles(position, radii):
+def plot_particles(position, radii) -> pv.Plotter:
     point_cloud = pv.PolyData(position)
     point_cloud["radius"] = [2 * i for i in radii]
 
@@ -95,97 +116,26 @@ def plot_particles(position, radii):
     pl.add_mesh(glyphed, color="white", smooth_shading=True, pbr=True)
     pl.view_isometric()  # type: ignore
     pl.link_views()
-    pl.show()
+    return pl
+    # pl.show()
 
 
-# def _download(Src):
-#     worker_id = current_process()._identity[0]
-#     db = Src()
-#     db.download(position=worker_id)
-
-
-# def download_db(dbs: str):
-#     if dbs == "all":
-#         download_list = list(databases.values())
-#     else:
-#         db_list = [item.lower() for item in dbs.split(",")]
-#         download_list = [databases[item] for item in db_list]
-
-#     # Use with 3.14: with Pool(processes=2) as pool:
-#     # Polars can get deadlock if fork() is used
-#     # Using spawn() fixes this for now
-#     # Should be fixed in 3.14
-#     with get_context("spawn").Pool(processes=2) as pool:
-#         for _ in tqdm(
-#             pool.imap(_download, download_list),
-#             total=len(download_list),
-#             desc="TOTAL",
-#             position=0,
-#         ):
-#             pass
-
-#     click.echo("All databases downlaoded!")
-#     click.echo("Bye :)")
-
-
-# @cli.command(help="""Display data from a database.""")
-# @click.option(
-#     "--db",
-#     help="Database to be used.",
-# )
-# @click.option(
-#     "--data",
-#     help="Data to be used from the database.",
-# )
-# @click.option(
-#     "--display",
-#     default="table",
-#     show_default=True,
-#     help="How to display the data: table or graph.",
-# )
-# @click.option(
-#     "--bounds",
-#     help="Bounds for the graph. Two values separated by a comma, e.g., `1.5,3.56`",
-# )
-# def show(db, data, display, bounds) -> None:  # pragma: no cover
-#     scale = 1e-6
-#     df = parse_source(db, data)
-#     nk = df.nk.with_columns(pl.col("w").truediv(scale))
-#     if bounds is not None:
-#         bounds = [float(val) for val in bounds.split(",")]
-#         if len(bounds) != 2:
-#             raise Exception("Bounds need to have two values separated by a comma.")
-#         nk = nk.filter((pl.col("w") > bounds[0]) & (pl.col("w") < bounds[1]))
-#     match str.lower(display):
-#         case "table":
-#             with pl.Config(tbl_rows=1000):
-#                 click.echo(nk)
-#         case "graph":
-#             if "n" in df.nk.columns:
-#                 plt.plot(nk["w"], nk["n"], label="n")
-#             if "k" in df.nk.columns:
-#                 plt.plot(nk["w"], nk["k"], label="k")
-#             plt.title("Refractive index values")
-#             plt.xlabel(f"Wavelength in {scale}")
-#             plt.ylabel("Values")
-#             plt.show()
-#         case _:
-#             raise Exception("Unsupported display option")
-
-
-# def parse_source(db, data) -> RefIdxDB:  # pragma: no cover
-#     match str.lower(db):
-#         case "refidx":
-#             return RefIdx(path=data)
-#         case "aria":
-#             return Aria(path=data)
-#         case _:
-#             raise Exception(f"Provided {db} is not supported!")
-
-
-# @cli.command(help="""Explore data using Streamlit""")
-# def explore():  # pragma: no cover
-#     if not runtime.exists():
-#         print(Path(__file__).parent)
-#         sys.argv = ["streamlit", "run", f"{Path(__file__).parent}/app.py"]
-#         sys.exit(stcli.main())
+@cli.command(help="""Explore data using Streamlit""")
+@click.option(
+    "--path",
+    type=str,
+    default="",
+    help="Path where to look for data files to be displayed",
+)
+def explore(path: str):  # pragma: no cover
+    if not runtime.exists():
+        print(Path(__file__).parent)
+        sys.argv = [
+            "streamlit",
+            "run",
+            f"{Path(__file__).parent}/app.py",
+            "--",
+            "--path",
+            path,
+        ]
+        sys.exit(stcli.main())
