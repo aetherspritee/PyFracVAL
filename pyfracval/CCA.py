@@ -20,7 +20,7 @@ def CCA_subcluster(
     N_subcl_perc: float,
     ext_case: int,
     tolerance: float = 1e-7,
-    folder: str = "",
+    folder: str = "results",
 ) -> tuple[pl.DataFrame | None, bool, bool]:
     CCA_OK = True
 
@@ -1263,10 +1263,6 @@ def filename_generate(n: int, df: float, kf: float) -> str:
 
 
 def save_results(
-    # X: np.ndarray,
-    # Y: np.ndarray,
-    # Z: np.ndarray,
-    # R: np.ndarray,
     data: pl.DataFrame,
     iteration: int,
     folder: str = "",
@@ -1279,10 +1275,6 @@ def save_results(
         path.mkdir(parents=True, exist_ok=True)
     path /= f"{filename}_{iteration}.csv"
     data.write_csv(path)
-    # with open(res_name + str(iteration) + ".csv", "w") as f:
-    #     writer = csv.writer(f)
-    #     for i in range(X.size):
-    #         writer.writerow([X[i], Y[i], Z[i], R[i]])
 
 
 def sort_rows(i_orden: np.ndarray):
