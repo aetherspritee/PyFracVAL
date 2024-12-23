@@ -643,7 +643,7 @@ def CCA(
                         n2,
                     )
                     cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
-                    curr_try = 1
+                    curr_try += 1
             list_sum = np.sum(curr_list[prev_cand1, :])
 
     X1 = COR1[:, 0]
