@@ -4,7 +4,7 @@ from time import sleep
 import numba
 import numpy as np
 import pyvista as pv
-from tqdm import tqdm
+from tqdm import trange
 
 
 def PCA(
@@ -203,7 +203,7 @@ def PCA_subcluster(
 
     i_orden = np.zeros((N_clusters, 3))
     data = np.zeros((N, 4))
-    for i in tqdm(range(1, N_clusters + 1)):
+    for i in trange(1, N_clusters + 1, desc="PCA Loop"):
         number = int(N_subcluster_m[i - 1])
         radius = R[Na - 1 : Na + number - 1]
         mass = np.zeros((number))
