@@ -4,14 +4,21 @@ from time import sleep
 import numba
 import numpy as np
 import pyvista as pv
+from scipy.stats import gmean
 from tqdm import trange
 
 
+# Particle-Cluster Aggregation
 def PCA(
-    number: int, mass: np.ndarray, r: np.ndarray, Df: float, kf: float, tolerance: float
+    number: int,
+    mass: np.ndarray,
+    r: np.ndarray,
+    Df: float,
+    kf: float,
+    tolerance: float,
 ) -> tuple[bool, np.ndarray]:
     PCA_ok = True
-    n1, m1, rg1, x_cm, y_cm, z_cm, X, Y, Z = First_two_monomers(r, mass, number, Df, kf)
+    n1, m1, rg1, x_cm, y_cm, z_cm, X, Y, Z = first_two_monomers(r, mass, number, Df, kf)
 
     if number > 2:
         k = 3
@@ -23,7 +30,7 @@ def PCA(
 
             n3 = n1 + n2
             m3 = m1 + m2
-            rg3 = (np.exp(np.sum(np.log(r)) / r.size)) * np.power(n3 / kf, 1 / Df)
+            rg3 = gmean(r) * np.power(n3 / kf, 1 / Df)
 
             gamma_ok, gamma_pc = gamma_calc(rg1, rg2, rg3, n1, n2, n3)
             monomer_candidates = np.zeros((number - k + 1))  # 0 = not considered
@@ -163,9 +170,7 @@ def PCA(
 
             n1 = n3
             m1 = m3
-            rg1 = (np.exp(np.sum(np.log(r)) / np.log(r).size)) * (
-                np.power(n1 / kf, 1 / Df)
-            )
+            rg1 = gmean(r) * (np.power(n1 / kf, 1 / Df))
             k = k + 1
             # FIXME: this gets stuck for some reason (no apparent connection to the arcos issue)
             # print("hi")
@@ -187,7 +192,12 @@ def PCA(
 
 
 def PCA_subcluster(
-    N: int, N_subcluster: int, R: np.ndarray, DF: float, kf: float, tolerance: float
+    N: int,
+    N_subcluster: int,
+    R: np.ndarray,
+    DF: float,
+    kf: float,
+    tolerance: float,
 ) -> tuple[bool, np.ndarray, int, np.ndarray]:
     PCA_OK = True
     N_clusters = int(np.floor(N / N_subcluster))
@@ -234,129 +244,190 @@ def PCA_subcluster(
     return PCA_OK, data, N_clusters, i_orden
 
 
-def First_two_monomers(
-    R: np.ndarray, M: np.ndarray, N: int, DF: float, kf: float
+@numba.jit()
+def first_two_monomers(
+    r: np.ndarray, m: np.ndarray, n: int, df: float, kf: float
 ) -> tuple[int, float, float, float, float, float, np.ndarray, np.ndarray, np.ndarray]:
-    X = np.zeros((N))
-    Y = np.zeros((N))
-    Z = np.zeros((N))
+    """
+    Initializes two particles in space next to each other
+
+    Args:
+        r (np.ndarray): radius of particles
+        m (np.ndarray): mass of particles
+        n (int): number of particles
+        df (float): fractal dimension
+        kf (float): fractal prefactor
+
+    Returns:
+        n1 (int): number of particles in cluster, i.e., 2
+        m1 (float): mass of cluster
+        rg1 (float): radius of gyration of cluster
+        x_cm (float): x coordinate of center of mass
+        y_cm (float): y coordinate of center of mass
+        z_cm (float): z coordinate of center of mass
+        x (np.ndarray): x coordinates of particles
+        y (np.ndarray): y coordinates of particles
+        z (np.ndarray): z coordinates of particles
+    """
+    # TODO: why keep them in separate arrays?
+    x = np.zeros((n))
+    y = np.zeros((n))
+    z = np.zeros((n))
 
     u = np.random.rand()
     v = np.random.rand()
-    # print("first two monomers")
-    # print(f"{u = }, {v = }")
 
-    # u = 0.007316022089059793
-    # v = 0.43406326698233766
     theta = 2 * np.pi * u
     phi = np.arccos(2 * v - 1)
-    # theta = 0.5
-    # phi = 0.1
 
-    X[1] = X[0] + (R[0] + R[1]) * np.cos(theta) * np.sin(phi)
-    Y[1] = Y[0] + (R[0] + R[1]) * np.sin(theta) * np.sin(phi)
-    Z[1] = Z[0] + (R[0] + R[1]) * np.cos(phi)
+    # Place p[1] at distance R[0]+R[1] from p[0]
+    # at angles theta, phi
+    x[1] = x[0] + (r[0] + r[1]) * np.cos(theta) * np.sin(phi)
+    y[1] = y[0] + (r[0] + r[1]) * np.sin(theta) * np.sin(phi)
+    z[1] = z[0] + (r[0] + r[1]) * np.cos(phi)
 
-    m1 = M[0] + M[1]
+    m1 = m[0] + m[1]
     n1 = 2
 
-    rg1 = (np.exp(np.sum(np.log(R[:2])) / 2)) * np.power(n1 / kf, 1 / DF)
+    # eq 2a for two elements and eq 3
+    rg1 = np.sqrt(r[0] * r[1]) * np.power(n1 / kf, 1 / df)
     # print(f"{rg1 = }")
 
-    x_cm = (X[0] * M[0] + X[1] * M[1]) / (M[0] + M[1])
-    y_cm = (Y[0] * M[0] + Y[1] * M[1]) / (M[0] + M[1])
-    z_cm = (Z[0] * M[0] + Z[1] * M[1]) / (M[0] + M[1])
+    # Center of mass
+    x_cm = (x[0] * m[0] + x[1] * m[1]) / m1
+    y_cm = (y[0] * m[0] + y[1] * m[1]) / m1
+    z_cm = (z[0] * m[0] + z[1] * m[1]) / m1
 
-    # print(f"{X[0] = }, {Y[0] = }, {Z[0] = }")
-    # print(f"{x_cm = }, {y_cm = }, {z_cm = }")
-    # print(f"{M = }")
-
-    return n1, m1, rg1, x_cm, y_cm, z_cm, X, Y, Z
+    return n1, m1, rg1, x_cm, y_cm, z_cm, x, y, z
 
 
+@numba.jit()
 def gamma_calc(
-    rg1: float, rg2: float, rg3: float, n1: int, n2: int, n3: int
+    rg1: float, rg2: float, rg: float, n1: int, n2: int, n: int
 ) -> tuple[bool, float]:
-    gamma_ok = True
+    """
+    Check if the gamma value is correct for two given clusters
+    and a potential aggregation of those clusters.
+    Return the gamma value for the clusters.
+    Uses equation 7 to compute the gamma value for the given values
+
+    Args:
+        rg1 (float): radius of gyration of cluster 1
+        rg2 (float): radius of gyration of cluster 2
+        rg (float): radius of gyration of the combined cluster
+        n1 (int): number of particles in cluster 1
+        n2 (int): number of particles in cluster 2
+        n (int): number of particles in the combined cluster
+
+    Return:
+        gamma_ok (bool): True if the gamma value is valid
+        gamma_pc (float): gamma value for the clusters
+    """
+    # TODO: create assert message out of this
+    if n1 + n2 != n:
+        print("Number of particles do not add up!")
+
     gamma_pc = 0.0
 
-    rg3_aux = rg3
-    if rg3 < rg1:
-        rg3_aux = rg1
+    rg_aux = rg
+    # TODO: explain why or reference!
+    if rg < rg1:
+        rg_aux = rg1
 
-    if np.power(n3, 2) * np.power(rg3_aux, 2) > n3 * (
-        n1 * np.power(rg1, 2) + n2 * np.power(rg2, 2)
-    ):
-        gamma_pc = np.sqrt(
-            (
-                np.power(n3, 2) * np.power(rg3_aux, 2)
-                - n3 * (n1 * np.power(rg1, 2) + n2 * np.power(rg2, 2))
-            )
-            / (n1 * n2)
-        )
-    else:
-        gamma_ok = False
+    # gamma squared from eq 7
+    gamma_pc_2 = (
+        np.power(n * rg_aux, 2) - n * (n1 * np.power(rg1, 2) + n2 * np.power(rg2, 2))
+    ) / (n1 * n2)
+    gamma_ok = gamma_pc_2 > 0
+    if gamma_ok:
+        gamma_pc = np.sqrt(gamma_pc_2)
 
     return gamma_ok, gamma_pc
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, parallel=True)
 def random_list_selection(
     gamma_ok: bool,
     gamma_pc: float,
-    X: np.ndarray,
-    Y: np.ndarray,
-    Z: np.ndarray,
-    R: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    z: np.ndarray,
+    r: np.ndarray,
     n1: int,
     x_cm: float,
     y_cm: float,
     z_cm: float,
 ) -> tuple[np.ndarray, float]:
+    """
+    Args:
+        gamma_ok (bool): True if the gamma value was valid
+        gamma_pc (float): gamma value for the clusters
+        x (np.ndarray): x coordinates of particles
+        y (np.ndarray): y coordinates of particles
+        z (np.ndarray): z coordinates of particles
+        n1 (int): number of particles in the cluster
+        x_cm (float): x coordinate of center of mass
+        y_cm (float): y coordinate of center of mass
+        z_cm (float): z coordinate of center of mass
+
+    Returns:
+        candidates (np.ndarray): list of candidate indices
+        rmax (float): maximum distance from center of mass
+    """
+    # TODO: candidates should be a boolean array
     candidates = np.zeros((n1))
     rmax = 0.0
+    dists = np.sqrt(
+        np.power(x - x_cm, 2) + np.power(y - y_cm, 2) + np.power(z - z_cm, 2)
+    )
     if gamma_ok:
-        for ii in range(n1):
-            dist = np.sqrt(
-                np.power(X[ii] - x_cm, 2)
-                + np.power(Y[ii] - y_cm, 2)
-                + np.power(Z[ii] - z_cm, 2)
-            )
-            if dist > rmax:
-                rmax = dist
-            if dist > gamma_pc - R[n1] - R[ii] and dist < gamma_pc + R[n1] + R[ii]:
+        for ii in numba.prange(n1):
+            if dists[ii] > rmax:
+                rmax = dists[ii]
+            # Condition similar to triangle inequality
+            # with sides dist, gamma_pc, and r[n1] + r[ii] (one inequality is missing)
+            # TODO: condense the conditions in a single expression
+            # and skip the for loop
+            if (dists[ii] > gamma_pc - r[n1] - r[ii]) and (
+                dists[ii] < gamma_pc + r[n1] + r[ii]
+            ):
                 candidates[ii] = 1
-            if R[n1] + R[ii] > gamma_pc:
+            if r[n1] + r[ii] > gamma_pc:
                 candidates[ii] = 0
 
     return candidates, rmax
 
 
 def search_monomer_candidates(
-    R: np.ndarray,
-    M: np.ndarray,
+    r: np.ndarray,
+    m: np.ndarray,
     monomer_candidates: np.ndarray,
-    N: int,
+    n: int,
     k: int,
     n3: int,
-    Df: float,
+    df: float,
     kf: float,
     rg1: float,
     n1: int,
-    X: np.ndarray,
-    Y: np.ndarray,
-    Z: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    z: np.ndarray,
     x_cm: float,
     y_cm: float,
     z_cm: float,
 ):
-    R_sl = R
-    M_sl = M
-    vector_search = np.zeros((N - k + 1))
+    r_sl = r
+    m_sl = m
+    vector_search = np.zeros((n - k + 1))
+    # TODO: this loop can be avoided
+    # by directly initializing the values with np.arange
+    # vector_search = np.arange(n - k + 1) + k - 2
     for i in range(vector_search.size):
         vector_search[i] = i + k - 2
         # print(f"{i+k-2 = }")
 
+    # TODO: this loop can be avoided
+    # by multiplication with a logical array
     for i in range(monomer_candidates.size):
         if monomer_candidates[i] == 1:
             vector_search[i] = 0
@@ -366,24 +437,26 @@ def search_monomer_candidates(
         u = np.random.rand()
         # print("search monomer candidates")
         # print(f"{u = }")
-        RS_1 = int(vector_search2[int(u * (vector_search.size - 1))])
+        rs_1 = int(vector_search2[int(u * (vector_search.size - 1))])
     else:
-        RS_1 = int(vector_search2[0])
+        rs_1 = int(vector_search2[0])
 
-    R[RS_1 - 1] = R_sl[k]
-    R[k] = R_sl[RS_1 - 1]
-    M[RS_1 - 1] = M_sl[k]
-    M_sl[k] = M[RS_1 - 1]
+    r[rs_1 - 1] = r_sl[k]
+    r[k] = r_sl[rs_1 - 1]
+    m[rs_1 - 1] = m_sl[k]
+    m_sl[k] = m[rs_1 - 1]
 
-    m2 = M[k - 1]
-    rg2 = np.sqrt(0.6 * R[k])
-    m3 = np.sum(M[0 : k - 1])
-    rg3 = (np.exp(np.sum(np.log(R)) / np.log(R).size)) * np.power(n3 / kf, 1.0 / Df)
+    # TODO: not needed?
+    # m2 = M[k - 1]
+    # m3 = np.sum(M[0 : k - 1])
+    rg2 = np.sqrt(0.6 * r[k])
+    rg3 = gmean(r) * np.power(n3 / kf, 1.0 / df)
+    # rg3 = (np.exp(np.sum(np.log(r)) / np.log(r).size)) * np.power(n3 / kf, 1.0 / df)
 
     gamma_ok, gamma_pc = gamma_calc(rg1, rg2, rg3, n1, 1, n3)
 
     candidates, rmax = random_list_selection(
-        gamma_ok, gamma_pc, X, Y, Z, R, n1, x_cm, y_cm, z_cm
+        gamma_ok, gamma_pc, x, y, z, r, n1, x_cm, y_cm, z_cm
     )
 
     return candidates, rmax
