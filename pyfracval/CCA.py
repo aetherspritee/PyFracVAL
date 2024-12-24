@@ -1269,7 +1269,6 @@ def save_results(
     filename: str = "test",
 ):
     path = Path(folder)
-    print(path)
     if not path.exists():
         print(f"`{path}` does not exist. Making the directory for you!")
         path.mkdir(parents=True, exist_ok=True)
