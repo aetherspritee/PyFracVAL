@@ -3,17 +3,19 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-import numba
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 from numba import jit, prange
+from scipy.spatial.distance import cdist
 from tqdm import tqdm
 
-from .PCA import PCA_subcluster
+from .PCA import PCA_subcluster, gmean
 
 
+# Cluster-Cluster Aggregation
 def CCA_subcluster(
-    R: np.ndarray,
+    R: npt.NDArray[np.float64],
     N: int,
     DF: float,
     kf: float,
@@ -32,6 +34,7 @@ def CCA_subcluster(
     else:
         N_subcluster = int(N_subcl_perc * N)
 
+    # p = np.zeros((N, 3))
     X = np.zeros(N)
     Y = np.zeros(N)
     Z = np.zeros(N)
@@ -190,6 +193,7 @@ def CCA_subcluster(
     return result, CCA_OK, PCA_OK
 
 
+# @jit(cache=True)
 def generate_CCA_pairs(
     I_t: int,
     i_orden: np.ndarray,
@@ -219,7 +223,9 @@ def generate_CCA_pairs(
             Z1[jjj] = Z[jj - 1]
             R1[jjj] = R[jj - 1]
             jjj += 1
-        rg1, r1_max, m1, _, _, _ = CCA_agg_properties(X1, Y1, Z1, R1, jjj, Df, kf)
+        rg1, r1_max, m1, _ = CCA_agg_properties(
+            np.column_stack([X1, Y1, Z1]), R1, jjj, Df, kf
+        )
 
         cntr = 0
         j = 0
@@ -245,8 +251,8 @@ def generate_CCA_pairs(
                         R2[jjj] = R[jj - 1]
                         jjj += 1
 
-                    rg2, r2_max, m2, _, _, _ = CCA_agg_properties(
-                        X2, Y2, Z2, R2, jjj, Df, kf
+                    rg2, r2_max, m2, _ = CCA_agg_properties(
+                        np.column_stack([X2, Y2, Z2]), R2, jjj, Df, kf
                     )
 
                     m3 = m1 + m2
@@ -287,43 +293,26 @@ def generate_CCA_pairs(
     return ID_agglom, CCA_ok
 
 
+# @jit(cache=True)
 def CCA_agg_properties(
-    X: np.ndarray,
-    Y: np.ndarray,
-    Z: np.ndarray,
-    R: np.ndarray,
+    p: npt.NDArray[np.float64],
+    r: npt.NDArray[np.float64],
     npp: int,
     Df: float,
     kf: float,
-) -> tuple[float, float, float, float, float, float]:
-    m_vec = np.zeros((npp))
-    R_i = np.zeros((npp))
-    sum_xm: float = 0
-    sum_ym: float = 0
-    sum_zm: float = 0
-    for i in range(npp):
-        m_vec[i] = 4 / 3 * np.pi * np.power(R[i], 3)
-        sum_xm += X[i] * m_vec[i]
-        sum_ym += Y[i] * m_vec[i]
-        sum_zm += Z[i] * m_vec[i]
+) -> tuple[float, float, np.float64, npt.NDArray[np.float64]]:
+    m_vec = 4 / 3 * np.pi * r**3
+    sum_pm = np.sum(p[:npp, :] * m_vec[:npp, np.newaxis], axis=0)
 
-    m = float(np.sum(m_vec))
-    X_cm = sum_xm / m
-    Y_cm = sum_ym / m
-    Z_cm = sum_zm / m
+    m = np.sum(m_vec)
+    p_cm = sum_pm / m
 
-    rg = float(
-        (np.exp(np.sum(np.log(R) / np.log(R).size))) * np.power(npp / kf, 1 / Df)
-    )
-    for i in range(npp):
-        R_i[i] = np.sqrt(
-            np.power(X_cm - X[i], 2)
-            + np.power(Y_cm - Y[i], 2)
-            + np.power(Z_cm - Z[i], 2)
-        )
+    rg = gmean(r) * np.power(npp / kf, 1 / Df)
+    r_i = np.sqrt(np.sum((p_cm - p[:npp, :]) ** 2, axis=1))
 
-    R_max = float(np.max(R_i))
-    return rg, R_max, m, X_cm, Y_cm, Z_cm
+    r_max = np.max(r_i)
+    X_cm, Y_cm, Z_cm = p_cm
+    return rg, r_max, m, p_cm
 
 
 def CCA_identify_monomers(i_orden: np.ndarray):
@@ -442,57 +431,69 @@ def CCA(
 ):
     CCA_ok = True
 
-    monomers_1 = 0
-    for i in range(N):
-        if ID_mon[i] + 1 == k:
-            monomers_1 += 1
+    # monomers_1 = 0
+    # for i in range(N):
+    #     if ID_mon[i] + 1 == k:
+    #         monomers_1 += 1
 
-    X1 = np.zeros((monomers_1))
-    Y1 = np.zeros((monomers_1))
-    Z1 = np.zeros((monomers_1))
-    R1 = np.zeros((monomers_1))
+    # X1 = np.zeros((monomers_1))
+    # Y1 = np.zeros((monomers_1))
+    # Z1 = np.zeros((monomers_1))
+    # R1 = np.zeros((monomers_1))
 
-    monomers_1 = 0
+    # monomers_1 = 0
 
-    for i in range(N):
-        if ID_mon[i] + 1 == k:
-            X1[monomers_1] = X[i]
-            Y1[monomers_1] = Y[i]
-            Z1[monomers_1] = Z[i]
-            R1[monomers_1] = R[i]
-            monomers_1 += 1
+    # for i in range(N):
+    #     if ID_mon[i] + 1 == k:
+    #         X1[monomers_1] = X[i]
+    #         Y1[monomers_1] = Y[i]
+    #         Z1[monomers_1] = Z[i]
+    #         R1[monomers_1] = R[i]
+    #         monomers_1 += 1
+    X1 = X[ID_mon + 1 == k]
+    Y1 = Y[ID_mon + 1 == k]
+    Z1 = Z[ID_mon + 1 == k]
+    R1 = R[ID_mon + 1 == k]
+    # np.testing.assert_allclose(X1, X1_my)
 
     n1 = X1.size
 
-    rg1, r1_max, m1, X_cm1, Y_cm1, Z_cm1 = CCA_agg_properties(
-        X1, Y1, Z1, R1, n1, Df, kf
+    rg1, r1_max, m1, p_cm1 = CCA_agg_properties(
+        np.column_stack([X1, Y1, Z1]), R1, n1, Df, kf
     )
+    X_cm1, Y_cm1, Z_cm1 = p_cm1
 
-    monomers_2 = 0
-    for i in range(N):
-        if ID_mon[i] + 1 == other:
-            monomers_2 += 1
+    # monomers_2 = 0
+    # for i in range(N):
+    #     if ID_mon[i] + 1 == other:
+    #         monomers_2 += 1
 
-    X2 = np.zeros((monomers_2))
-    Y2 = np.zeros((monomers_2))
-    Z2 = np.zeros((monomers_2))
-    R2 = np.zeros((monomers_2))
+    # X2 = np.zeros((monomers_2))
+    # Y2 = np.zeros((monomers_2))
+    # Z2 = np.zeros((monomers_2))
+    # R2 = np.zeros((monomers_2))
 
-    monomers_2 = 0
+    # monomers_2 = 0
 
-    for i in range(N):
-        if ID_mon[i] + 1 == other:
-            X2[monomers_2] = X[i]
-            Y2[monomers_2] = Y[i]
-            Z2[monomers_2] = Z[i]
-            R2[monomers_2] = R[i]
-            monomers_2 += 1
+    # for i in range(N):
+    #     if ID_mon[i] + 1 == other:
+    #         X2[monomers_2] = X[i]
+    #         Y2[monomers_2] = Y[i]
+    #         Z2[monomers_2] = Z[i]
+    #         R2[monomers_2] = R[i]
+    #         monomers_2 += 1
+
+    X2 = X[ID_mon + 1 == other]
+    Y2 = Y[ID_mon + 1 == other]
+    Z2 = Z[ID_mon + 1 == other]
+    R2 = R[ID_mon + 1 == other]
 
     n2 = X2.size
 
-    rg2, r2_max, m2, X_cm2, Y_cm2, Z_cm2 = CCA_agg_properties(
-        X2, Y2, Z2, R2, n2, Df, kf
+    rg2, r2_max, m2, p_cm2 = CCA_agg_properties(
+        np.column_stack([X2, Y2, Z2]), R2, n2, Df, kf
     )
+    X_cm2, Y_cm2, Z_cm2 = p_cm2
 
     m3 = m1 + m2
     n3 = n1 + n2
@@ -580,6 +581,7 @@ def CCA(
             COR2[:, 2] = Z2
             COR2[:, 3] = R2
 
+            # SLOW:
             COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(
                 gamma_real,
                 gamma_pc,
@@ -606,13 +608,26 @@ def CCA(
             Y_cm2 = CM2[1]
             Z_cm2 = CM2[2]
 
-            cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
+            # cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
+            cov_max = CCA_overlap_check(
+                np.column_stack([X1, Y1, Z1]),
+                np.column_stack([X2, Y2, Z2]),
+                R1,
+                R2,
+            )
 
             while cov_max > tolerance and curr_try < 360:
                 X2, Y2, Z2 = CCA_sticking_process_v2(
                     CM2, vec0, X2, Y2, Z2, i_vec, j_vec, prev_cand2
                 )
-                cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
+                # SLOW:
+                # cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
+                cov_max = CCA_overlap_check(
+                    np.column_stack([X1, Y1, Z1]),
+                    np.column_stack([X2, Y2, Z2]),
+                    R1,
+                    R2,
+                )
                 curr_try += 1
 
                 if (
@@ -643,7 +658,13 @@ def CCA(
                         n1,
                         n2,
                     )
-                    cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
+                    # cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
+                    cov_max = CCA_overlap_check(
+                        np.column_stack([X1, Y1, Z1]),
+                        np.column_stack([X2, Y2, Z2]),
+                        R1,
+                        R2,
+                    )
                     curr_try += 1
             list_sum = np.sum(curr_list[prev_cand1, :])
 
@@ -1161,33 +1182,73 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
     return x, y, z, vec0, i_vec, j_vec
 
 
-@jit(parallel=True, fastmath=True, cache=True)
 def CCA_overlap_check(
-    n1: int,
-    n2: int,
-    X1: np.ndarray,
-    X2: np.ndarray,
-    Y1: np.ndarray,
-    Y2: np.ndarray,
-    Z1: np.ndarray,
-    Z2: np.ndarray,
-    R1: np.ndarray,
-    R2: np.ndarray,
+    p1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
 ):
-    cov_max = 0
+    return CCA_overlap_check_fast(p1, p2, r1, r2)
 
-    for i in prange(n1):
+
+@jit(fastmath=True, cache=True)
+def CCA_overlap_check_old(
+    p1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
+):
+    n1 = r1.size
+    n2 = r2.size
+    cov_max = 0
+    for i in range(n1):
         for j in range(n2):
             d_ij = np.sqrt(
-                np.power(X1[i] - X2[j], 2)
-                + np.power(Y1[i] - Y2[j], 2)
-                + np.power(Z1[i] - Z2[j], 2)
+                (p1[i, 0] - p2[j, 0]) ** 2
+                + (p1[i, 1] - p2[j, 1]) ** 2
+                + (p1[i, 2] - p2[j, 2]) ** 2
             )
-            if d_ij < R1[i] + R2[j]:
-                c_ij = (R1[i] + R2[j] - d_ij) / (R1[i] + R2[j])
+            if d_ij < r1[i] + r2[j]:
+                c_ij = (r1[i] + r2[j] - d_ij) / (r1[i] + r2[j])
                 if c_ij > cov_max:
                     cov_max = c_ij
     return cov_max
+
+
+@jit(parallel=True, fastmath=True, cache=True)
+def CCA_overlap_check_fast(
+    p1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
+):
+    c_ij = np.zeros((r1.size, r2.size))
+
+    for k in prange(c_ij.size):
+        i = k % r1.size
+        j = k // r1.size
+        d_ij_2 = (
+            (p1[i, 0] - p2[j, 0]) ** 2
+            + (p1[i, 1] - p2[j, 1]) ** 2
+            + (p1[i, 2] - p2[j, 2]) ** 2
+        )
+        if d_ij_2 < (r1[i] + r2[j]) ** 2:
+            c_ij[i, j] = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
+
+    return np.max(c_ij)
+
+
+def CCA_overlap_check_scipy(
+    p1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
+):
+    dist_ij_2 = cdist(p1, p2, metric="sqeuclidean")
+    r_ij = np.add.outer(r1, r2)
+    c_ij = np.where(dist_ij_2 < r_ij**2, 1 - np.sqrt(dist_ij_2) / r_ij, 0)
+
+    return np.max(c_ij)
 
 
 @jit(cache=True)
@@ -1228,7 +1289,9 @@ def CCA_sticking_process_v2(
         ]
     )
     v2 = np.array([x - CM2[0], y - CM2[1], z - CM2[2]])
-    s_vec = np.cross(v1, v2) / my_norm(np.cross(v1, v2))
+    # s_vec = np.cross(v1, v2) / my_norm(np.cross(v1, v2))
+    s_vec = np.cross(v1, v2)
+    s_vec /= np.linalg.norm(s_vec)
     # print(f"{np.linalg.norm(np.cross(v1,v2)) = }")
     # print(f"{my_norm(np.cross(v1,v2)) = }")
 
@@ -1238,7 +1301,8 @@ def CCA_sticking_process_v2(
     ):
         angle = np.arccos(1)
     else:
-        angle = np.arccos(np.dot(v1, v2) / (my_norm(v1) * my_norm(v2)))
+        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+        # angle = np.arccos(np.dot(v1, v2) / (my_norm(v1) * my_norm(v2)))
 
     As = np.array(
         [[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[0], 0]]
@@ -1289,7 +1353,7 @@ def sort_rows(i_orden: np.ndarray):
     return i_orden
 
 
-@jit(cache=True)
-def my_norm(a: np.ndarray) -> float:
-    n = np.sqrt(np.power(a[0], 2) + np.power(a[1], 2) + np.power(a[2], 2))
-    return n
+# @jit(cache=True)
+# def my_norm(a: np.ndarray) -> float:
+#     n = np.sqrt(np.power(a[0], 2) + np.power(a[1], 2) + np.power(a[2], 2))
+#     return n
