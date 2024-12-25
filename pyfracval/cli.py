@@ -106,7 +106,8 @@ def cli(
     print("Successfully generated aggregate")
 
 
-def plot_particles(position, radii) -> pv.Plotter:
+# def plot_particles(position, radii) -> pv.Plotter:
+def plot_particles(position, radii):
     point_cloud = pv.PolyData(position)
     point_cloud["radius"] = [2 * i for i in radii]
 
