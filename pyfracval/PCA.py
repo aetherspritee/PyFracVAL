@@ -2,11 +2,18 @@ from time import sleep
 
 import numpy as np
 import numpy.typing as npt
-from numba import jit, prange
+from numba import jit
 from tqdm import trange
+
+# TODO: make a PCA class with internal values to be passed down
+# This would cut down on copying the data around
+# and make the function a bit more readable
+# TODO: when starting to create the class, use pydantic,
+# and don't forget to use numba jitclass ;)
 
 
 # Particle-Cluster Aggregation
+@jit(cache=True)
 def PCA(
     number: int,
     mass: npt.NDArray[np.float64],
@@ -45,16 +52,7 @@ def PCA(
         )  # 0 = not considered
         monomer_candidates[0] = 1  # first one has been considered
 
-        candidates, _ = random_list_selection(
-            gamma_ok,
-            gamma_pc,
-            # np.column_stack((X, Y, Z)),
-            p,
-            r,
-            n1,
-            # np.array([x_cm, y_cm, z_cm]),
-            p_cm,
-        )
+        candidates, _ = random_list_selection(gamma_ok, gamma_pc, p, r, n1, p_cm)
 
         list_sum = 0
         while list_sum == 0:
@@ -85,7 +83,7 @@ def PCA(
                 previous_candidate = selected_real
             elif np.sum(candidates) == number - k + 1:
                 PCA_ok = False
-                exit(-1)
+                return False, np.zeros((number, 4))
 
             # p_sel = p[selected_real, :]
             # X_sel, Y_sel, Z_sel = p_sel
@@ -97,15 +95,7 @@ def PCA(
 
             # print(f"modified {k-1 = }")
             p[k - 1, :], r0, p0, i_vec, j_vec = sticking_process(
-                # np.array([X_sel, Y_sel, Z_sel]),
-                # R_sel,
-                # r_k,
-                # np.array([x_cm, y_cm, z_cm]),
-                p[selected_real, :],
-                r[selected_real],
-                r[k - 1],
-                p_cm,
-                gamma_pc,
+                p[selected_real, :], r[selected_real], r[k - 1], p_cm, gamma_pc
             )
             # X[k - 1], Y[k - 1], Z[k - 1] = p_k
             # x0, y0, z0 = p0
@@ -187,8 +177,10 @@ def PCA(
             list_sum = np.sum(candidates)
             if np.sum(candidates) == 0:
                 print("FIFTH, candidates all ZERO")
-                sleep(2)
+                # sleep(2)
 
+            # FIXME: why does this happen?
+            # maybe it can be forced/corrected not to happen
             if cov_max > tolerance:
                 list_sum = 0
                 # candidates *= 0
@@ -218,6 +210,7 @@ def PCA(
     # return PCA_ok, np.column_stack((X, Y, Z, r))
 
 
+# @jit(cache=True)
 def PCA_subcluster(
     N: int,
     N_subcluster: int,
@@ -271,7 +264,7 @@ def PCA_subcluster(
     return PCA_OK, data, N_clusters, i_orden
 
 
-@jit()
+@jit(cache=True)
 def first_two_monomers(
     r: npt.NDArray[np.float64],
     m: npt.NDArray[np.float64],
@@ -336,7 +329,7 @@ def first_two_monomers(
     # return n1, m1, rg1, x_cm, y_cm, z_cm, x, y, z
 
 
-@jit()
+@jit(cache=True)
 def gamma_calc(
     rg1: float, rg2: float, rg: float, n1: int, n2: int, n: int
 ) -> tuple[bool, float]:
@@ -380,7 +373,7 @@ def gamma_calc(
     return gamma_ok, gamma_pc
 
 
-@jit(nopython=True, parallel=True)
+@jit(fastmath=True, cache=True)
 def random_list_selection(
     gamma_ok: bool,
     gamma_pc: float,
@@ -402,30 +395,21 @@ def random_list_selection(
         candidates (np.ndarray): list of candidate indices
         rmax (float): maximum distance from center of mass
     """
-    candidates = np.zeros((n1), dtype=np.bool_)
     if not gamma_ok:
-        return candidates, 0.0
+        return np.zeros((n1), dtype=np.bool_), 0.0
 
-    rmax = 0.0
     dists = np.sqrt(np.sum((p - p_cm) ** 2, axis=1))
-    for ii in prange(n1):
-        if dists[ii] > rmax:
-            rmax = dists[ii]
-        # Condition similar to triangle inequality
-        # with sides dist, gamma_pc, and r[n1] + r[ii] (one inequality is missing)
-        # TODO: condense the conditions in a single expression
-        # and skip the for loop
-        if (dists[ii] > gamma_pc - r[n1] - r[ii]) and (
-            dists[ii] < gamma_pc + r[n1] + r[ii]
-        ):
-            candidates[ii] = True
-        if r[n1] + r[ii] > gamma_pc:
-            candidates[ii] = False
+    rmax = np.max(dists)
+
+    candidates = (dists[:n1] > gamma_pc - r[n1] - r[:n1]) & (
+        dists[:n1] < gamma_pc + r[n1] + r[:n1]
+    )
+    candidates &= r[n1] + r[:n1] <= gamma_pc
 
     return candidates, rmax
 
 
-@jit()
+@jit(cache=True)
 def search_monomer_candidates(
     r: npt.NDArray[np.float64],
     m: npt.NDArray[np.float64],
@@ -485,21 +469,12 @@ def search_monomer_candidates(
 
     gamma_ok, gamma_pc = gamma_calc(rg1, rg2, rg3, n1, 1, n3)
 
-    candidates, rmax = random_list_selection(
-        gamma_ok,
-        gamma_pc,
-        # np.column_stack((x, y, z)),
-        p,
-        r,
-        n1,
-        # np.array([x_cm, y_cm, z_cm]),
-        p_cm,
-    )
+    candidates, rmax = random_list_selection(gamma_ok, gamma_pc, p, r, n1, p_cm)
 
     return candidates, rmax
 
 
-@jit()
+@jit(cache=True)
 def random_list_selection_one(
     candidates: npt.NDArray[np.bool_],
     previous_candidate: int,
@@ -542,17 +517,11 @@ def random_list_selection_one(
 
 
 # Can be enabled when the arg problem has been solved
-# @jit()
+@jit(cache=True)
 def sticking_process(
-    # x: float,
-    # y: float,
-    # z: float,
     p: npt.NDArray[np.float64],
     r: float,
     r_k: float,
-    # x_cm: float,
-    # y_cm: float,
-    # z_cm: float,
     p_cm: npt.NDArray[np.float64],
     gamma_pc: float,
 ) -> tuple[
@@ -580,6 +549,7 @@ def sticking_process(
         i_vec (npt.NDArray[np.float64]): i vector
         j_vec (npt.NDArray[np.float64]): j vector
     """
+    # print([print(type(x)) for x in [p, r, r_k, p_cm, gamma_pc]])
     # TODO: Find some sources and explanation on the math!
     # p1 = np.array([x, y, z])
     r1 = r + r_k
@@ -598,11 +568,10 @@ def sticking_process(
     p0 = p + t_sp * dp
 
     arg = (r1**2 + distance**2 - r2**2) / (2 * r1 * distance)
+
     # FIXME: this should never happen!
-    if abs(arg) > 1:
-        print(f"{arg=}")
-        exit(-1)
-        # return
+    assert abs(arg) <= 1, "Args value is faulty"
+
     r0 = r1 * np.sqrt(1 - arg**2)
 
     # k points from point 1 to point 2
@@ -627,7 +596,7 @@ def sticking_process(
     return p_k, r0, p0, i_vec, j_vec
 
 
-@jit()
+@jit(cache=True)
 def sticking_process2(
     p0: npt.NDArray[np.float64],
     r0: float,
@@ -641,7 +610,7 @@ def sticking_process2(
     return p_k, theta
 
 
-@jit()
+@jit(cache=True)
 def overlap_check(
     p: npt.NDArray[np.float64],
     r: npt.NDArray[np.float64],
@@ -670,13 +639,22 @@ def overlap_check(
     return np.max(c)
 
 
-@jit(fastmath=True)
-def gmean(a: npt.NDArray[np.float64]) -> float:
+@jit(fastmath=True, cache=True)
+def gmean(a: npt.NDArray[np.float64]) -> np.float64:
     """
     Calculate the geometric mean of an array of numbers
     """
-
-    # with np.errstate(divide="ignore"):
-    #     log_a = np.log(a)
     log_a = np.log(a)
     return np.exp(np.mean(log_a))
+
+
+# @jit(fastmath=True, cache=True)
+# @guvectorize([(float64[:], float64[:])], "(n)->()")
+# def gmean(a: npt.NDArray[np.float64], res: npt.NDArray) -> None:
+#     """
+#     Calculate the geometric mean of an array of numbers
+#     """
+#     acc = 0
+#     for i in range(a.shape[0]):
+#         acc += np.log(a[i])
+#     res[0] = np.exp(acc / a.shape[0])

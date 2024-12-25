@@ -6,6 +6,7 @@ from pathlib import Path
 import numba
 import numpy as np
 import polars as pl
+from numba import jit, prange
 from tqdm import tqdm
 
 from .PCA import PCA_subcluster
@@ -334,7 +335,7 @@ def CCA_identify_monomers(i_orden: np.ndarray):
     return ID_mon
 
 
-@numba.jit()
+@jit(cache=True)
 def CCA_random_select_list(
     X1: np.ndarray,
     Y1: np.ndarray,
@@ -1160,7 +1161,7 @@ def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
     return x, y, z, vec0, i_vec, j_vec
 
 
-@numba.jit()
+@jit(parallel=True, fastmath=True, cache=True)
 def CCA_overlap_check(
     n1: int,
     n2: int,
@@ -1175,7 +1176,7 @@ def CCA_overlap_check(
 ):
     cov_max = 0
 
-    for i in range(n1):
+    for i in prange(n1):
         for j in range(n2):
             d_ij = np.sqrt(
                 np.power(X1[i] - X2[j], 2)
@@ -1189,7 +1190,7 @@ def CCA_overlap_check(
     return cov_max
 
 
-@numba.jit()
+@jit(cache=True)
 def CCA_sticking_process_v2(
     CM2: np.ndarray,
     vec0: np.ndarray,
@@ -1288,7 +1289,7 @@ def sort_rows(i_orden: np.ndarray):
     return i_orden
 
 
-@numba.jit()
+@jit(cache=True)
 def my_norm(a: np.ndarray) -> float:
     n = np.sqrt(np.power(a[0], 2) + np.power(a[1], 2) + np.power(a[2], 2))
     return n
