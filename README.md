@@ -5,6 +5,7 @@
 # PyFracVAL
 
 Implementation of FracVAL by [Morán, J. et al. 2019](https://www.sciencedirect.com/science/article/pii/S0010465519300323?via%3Dihub) in python.
+Source files for the original FracVAL Fortran implementation can be found [here](https://data.mendeley.com/datasets/mgf8wdcsfb/1).
 
 ## Development
 
