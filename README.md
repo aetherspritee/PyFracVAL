@@ -23,6 +23,19 @@ Sync the packages with the dependencies found in `pyproject.toml`:
 uv sync
 ```
 
+### Profiling
+
+The code can be profiles using [py-spy](https://github.com/benfred/py-spy).
+Install it in the environment using `uv` with `uv pip install py-spy`.
+Afterwards, you can run `py-spy` as:
+
+```sh
+uv run py-spy record --format speedscope -o profile.speedscope.json -- pyfracval -df 1.8 -kf 1 -n 2048 -r 2
+```
+
+Feel free to change the parameters of the example to fit your needs.
+The results in `profile.speedscope.json` can be visualized using [speedscope](https://www.speedscope.app/).
+
 ## TODO
 
 - [ ] Fix PCA issues
