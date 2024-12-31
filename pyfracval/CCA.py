@@ -1,4 +1,4 @@
-import copy
+# import copy
 import re
 from datetime import datetime
 from functools import cache
@@ -316,6 +316,7 @@ def CCA_agg_properties(
     return rg, r_max, m, p_cm
 
 
+@jit(cache=True)
 def CCA_identify_monomers(i_orden: np.ndarray):
     ID_mon = np.zeros((int(np.sum(i_orden[:, 2]))))
 
@@ -593,7 +594,7 @@ def CCA(
 
     # X1, Y1, Z1, _ = COR1.transpose()
     # X2, Y2, Z2, _ = COR2.transpose()
-    X_cm2, Y_cm2, Z_cm2 = CM2
+    # X_cm2, Y_cm2, Z_cm2 = CM2
 
     # monomers_1 = 0
     # for i in range(N - 1):
@@ -652,9 +653,14 @@ def CCA(
     return Xn, Yn, Zn, Rn, CCA_ok
 
 
-def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
+# @jit(cache=True)
+def CCA_random_pick(
+    curr_list: np.ndarray,
+    prev_cand1: int,
+    prev_cand2: int = -1,
+):
     selected_real = 0
-    if prev_cand2 is None:
+    if prev_cand2 == -1:
         if prev_cand1 > 0:
             curr_list[prev_cand1, :] = curr_list[prev_cand1, :] * 0
         list_sum = np.array(
@@ -676,7 +682,9 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
                 break
     else:
         if prev_cand2 > 0:
+            print(prev_cand1, prev_cand2)
             curr_list[prev_cand1, prev_cand2] = curr_list[prev_cand1, prev_cand2] * 0
+            # curr_list[prev_cand1, prev_cand2] = 0
         list_sum = curr_list[prev_cand1, :]
         curr_list2 = list_sum[list_sum > 0]
 
@@ -695,6 +703,7 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
     return selected_real
 
 
+# FIX: not used
 def update_monomer_coordinates(p, p1, p_cm1, prev_cand1):
     x, y, z = p.transpose()
     X1, Y1, Z1 = p1.transpose()
@@ -1005,6 +1014,7 @@ def CCA_sticking_process(
     )
 
 
+@jit(cache=True)
 def random_point_SC(case: int, sphere1: np.ndarray, sphere2: np.ndarray):
     phi_crit_max = 0
     phi_crit_min = 0
@@ -1056,7 +1066,8 @@ def random_point_SC(case: int, sphere1: np.ndarray, sphere2: np.ndarray):
     r12 = r12 / np.linalg.norm(r12)
 
     v1 = np.array([0, 0, 1])
-    v2 = copy.deepcopy(r12)
+    v2 = r12.copy()
+    # v2 = copy.deepcopy(r12)
     s_vec = np.cross(v1, v2)
     s_vec /= np.linalg.norm(s_vec)
     angle = np.arccos((np.dot(v1, v2)) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
@@ -1075,19 +1086,21 @@ def random_point_SC(case: int, sphere1: np.ndarray, sphere2: np.ndarray):
     return x, y, z, sph1_r
 
 
+@jit(cache=True)
 def spherical_cap_angle(sphere1: np.ndarray, sphere2: np.ndarray):
-    A = 2 * (sphere2[0] - sphere1[0])
-    B = 2 * (sphere2[1] - sphere1[1])
-    C = 2 * (sphere2[2] - sphere1[2])
+    # A = 2 * (sphere2[0] - sphere1[0])
+    # B = 2 * (sphere2[1] - sphere1[1])
+    # C = 2 * (sphere2[2] - sphere1[2])
+    A, B, C = 2 * (sphere2[:3] - sphere1[:3])
     D = (
-        np.power(sphere1[0], 2)
-        - np.power(sphere2[0], 2)
-        + np.power(sphere1[1], 2)
-        - np.power(sphere2[1], 2)
-        + np.power(sphere1[2], 2)
-        - np.power(sphere2[2], 2)
-        - np.power(sphere1[3], 2)
-        + np.power(sphere2[3], 2)
+        sphere1[0] ** 2
+        - sphere2[0] ** 2
+        + sphere1[1] ** 2
+        - sphere2[1] ** 2
+        + sphere1[2] ** 2
+        - sphere2[2] ** 2
+        - sphere1[3] ** 2
+        + sphere2[3] ** 2
     )
 
     t = (sphere1[0] * A + sphere1[1] * B + sphere1[2] * C + D) / (
@@ -1123,10 +1136,19 @@ def spherical_cap_angle(sphere1: np.ndarray, sphere2: np.ndarray):
     return phi_crit
 
 
+# TODO: hstack is a bit weird... need to fix it
+# @jit(cache=True)
 def CCA_2_sphere_intersec(
     sphere1: npt.NDArray[np.float64],
     sphere2: npt.NDArray[np.float64],
-):
+) -> tuple[
+    float,
+    float,
+    float,
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+]:
     p, p0, r0, i_vec, j_vec = sphere_sphere_intersection(
         sphere1[:3],
         sphere1[3],
@@ -1134,6 +1156,7 @@ def CCA_2_sphere_intersec(
         sphere2[3],
     )
     return p[0], p[1], p[2], np.hstack([p0, r0]), i_vec, j_vec
+    # return p[0], p[1], p[2], np.hstack((p0, r0, [])), i_vec, j_vec
 
 
 # def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
@@ -1251,7 +1274,7 @@ def CCA_overlap_check(
     # return CCA_overlap_check_fast(p1, r1, p2, r2)
 
 
-# @jit(fastmath=True, cache=True)
+@jit(fastmath=True, cache=True)
 def CCA_overlap_check_old(
     p1: npt.NDArray[np.float64],
     r1: npt.NDArray[np.float64],
@@ -1410,12 +1433,15 @@ def save_results(
     data.write_csv(path)
 
 
+# Is deepcopy needed? I guess not
+@jit(cache=True)
 def sort_rows(i_orden: np.ndarray):
     c_sort = 2
     for irow in range(i_orden.shape[0]):
         krow = np.argmin(i_orden[irow : i_orden.shape[0], c_sort]) + irow
 
-        temp = copy.deepcopy(i_orden[irow, :])
+        # temp = copy.deepcopy(i_orden[irow, :])
+        temp = i_orden[irow, :].copy()
         i_orden[irow, :] = i_orden[krow, :]
         i_orden[krow, :] = temp
 
