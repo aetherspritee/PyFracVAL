@@ -1,9 +1,16 @@
 from time import sleep
 
+import jax
+import jax.numpy as jnp
 import numpy as np
 import numpy.typing as npt
+
+# from jax.experimental import checkify
+from jaxtyping import Array, Bool, Float, Integer, Key, PRNGKeyArray, Scalar
 from numba import jit
 from tqdm import trange
+
+from pyfracval.functions import random_theta, sphere_sphere_intersection
 
 # TODO: make a PCA class with internal values to be passed down
 # This would cut down on copying the data around
@@ -11,9 +18,11 @@ from tqdm import trange
 # TODO: when starting to create the class, use pydantic,
 # and don't forget to use numba jitclass ;)
 
+PRNG_KEY = jax.random.key(42)
+
 
 # Particle-Cluster Aggregation
-@jit(cache=True)
+# @jit(cache=True)
 def PCA(
     number: int,
     mass: npt.NDArray[np.float64],
@@ -52,11 +61,16 @@ def PCA(
         )  # 0 = not considered
         monomer_candidates[0] = 1  # first one has been considered
 
-        candidates, _ = random_list_selection(gamma_ok, gamma_pc, p, r, n1, p_cm)
+        candidates, _ = random_list_selection(
+            gamma_ok, gamma_pc, p, r, n1, p_cm
+        )
 
         list_sum = 0
         while list_sum == 0:
-            while np.sum(candidates) == 0 and np.sum(monomer_candidates) <= number - k:
+            while (
+                np.sum(candidates) == 0
+                and np.sum(monomer_candidates) <= number - k
+            ):
                 candidates, _ = search_monomer_candidates(
                     r,
                     mass,
@@ -264,14 +278,16 @@ def PCA_subcluster(
     return PCA_OK, data, N_clusters, i_orden
 
 
-@jit(cache=True)
+# @jit(cache=True)
 def first_two_monomers(
     r: npt.NDArray[np.float64],
     m: npt.NDArray[np.float64],
     n: int,
     df: float,
     kf: float,
-) -> tuple[int, float, float, npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+) -> tuple[
+    int, float, float, npt.NDArray[np.float64], npt.NDArray[np.float64]
+]:
     # ) -> tuple[int, float, float, float, float, float, np.ndarray, np.ndarray, np.ndarray]:
     """
     Initializes two particles in space next to each other
@@ -329,10 +345,15 @@ def first_two_monomers(
     # return n1, m1, rg1, x_cm, y_cm, z_cm, x, y, z
 
 
-@jit(cache=True)
+@jax.jit
 def gamma_calc(
-    rg1: float, rg2: float, rg: float, n1: int, n2: int, n: int
-) -> tuple[bool, float]:
+    rg1: Float,
+    rg2: Float,
+    rg: Float,
+    n1: Integer,
+    n2: Integer,
+    n: Integer,
+) -> tuple[Bool, Float]:
     """
     Check if the gamma value is correct for two given clusters
     and a potential aggregation of those clusters.
@@ -363,17 +384,17 @@ def gamma_calc(
         rg_aux = rg1
 
     # gamma squared from eq 7
-    gamma_pc_2 = (
-        np.power(n * rg_aux, 2) - n * (n1 * np.power(rg1, 2) + n2 * np.power(rg2, 2))
-    ) / (n1 * n2)
+    gamma_pc_2 = ((n * rg_aux) ** 2 - n * (n1 * rg1**2 + n2 * rg2**2)) / (
+        n1 * n2
+    )
     gamma_ok = gamma_pc_2 > 0
     if gamma_ok:
-        gamma_pc = np.sqrt(gamma_pc_2)
+        gamma_pc = jnp.sqrt(gamma_pc_2)
 
     return gamma_ok, gamma_pc
 
 
-@jit(fastmath=True, cache=True)
+# @jit(fastmath=True, cache=True)
 def random_list_selection(
     gamma_ok: bool,
     gamma_pc: float,
@@ -409,11 +430,11 @@ def random_list_selection(
     return candidates, rmax
 
 
-@jit(cache=True)
+@jax.jit
 def search_monomer_candidates(
-    r: npt.NDArray[np.float64],
-    m: npt.NDArray[np.float64],
-    monomer_candidates: npt.NDArray[np.bool_],
+    r: Array,
+    m: Array,
+    monomer_candidates: Array,
     n: int,
     k: int,
     n3: int,
@@ -421,9 +442,10 @@ def search_monomer_candidates(
     kf: float,
     rg1: float,
     n1: int,
-    p: npt.NDArray[np.float64],
-    p_cm: npt.NDArray[np.float64],
-) -> tuple[npt.NDArray[np.bool_], float]:
+    p: Array,
+    p_cm: Array,
+    key: Array | None = None,
+) -> tuple[Array, Array]:
     """
     Search for possible monomer candidates
     """
@@ -447,7 +469,10 @@ def search_monomer_candidates(
     # Random sample from vector_search
     # TODO: monomer_candidates is full with 0 and a leading 1, why?
     # vector_search = np.arange(n - k + 1) + k - 2
-    rs_1 = np.random.choice(
+    if key is None:
+        key = jax.random.key(42)
+    rs_1 = jnp.random.choice(
+        key,
         (np.arange(n - k + 1) + k - 2)[monomer_candidates == 1],
         1,
     )[0]
@@ -465,20 +490,22 @@ def search_monomer_candidates(
     # m3 = np.sum(M[0 : k - 1])
     # TODO: why?
     rg2 = np.sqrt(0.6 * r[k])
-    rg3 = gmean(r) * np.power(n3 / kf, 1.0 / df)
+    rg3 = gmean(r) * jnp.power(n3 / kf, 1.0 / df)
 
     gamma_ok, gamma_pc = gamma_calc(rg1, rg2, rg3, n1, 1, n3)
 
-    candidates, rmax = random_list_selection(gamma_ok, gamma_pc, p, r, n1, p_cm)
+    candidates, rmax = random_list_selection(
+        gamma_ok, gamma_pc, p, r, n1, p_cm
+    )
 
     return candidates, rmax
 
 
-@jit(cache=True)
 def random_list_selection_one(
-    candidates: npt.NDArray[np.bool_],
+    candidates: Array,
     previous_candidate: int,
-) -> tuple[npt.NDArray[np.bool_], int]:
+    key: PRNGKeyArray = None,
+) -> tuple[Array, int]:
     """
     Get and index for a candidate.
 
@@ -491,170 +518,81 @@ def random_list_selection_one(
         selected_real (int): index of the selected candidate
 
     """
-    if previous_candidate > -1:
-        candidates[previous_candidate] = 0
-    # candidates2 = candidates[candidates > 0]
-    # n = np.random.rand()
-    # print("random list selection one")
-    # print(f"{n = }")
-    # n = 0.5
-    # selected = 1 + int(n * (candidates2.size - 1))
-    # # Tweak:
-    # selected = 1 + np.random.randint(np.sum(candidates > 0) - 1)
-
-    # selected_real = 0
-    # j = 0
-    # for i in range(candidates.size):
-    #     if candidates[i] > 0:
-    #         j += 1
-    #     if j == selected:
-    #         selected_real = i
-    #         break
-    selected_real = np.random.choice(
-        np.arange(candidates.size, dtype=np.int64)[candidates > 0], 1
+    if key is None:
+        key = jax.random.key(42)
+    candidates_filtered = jax.lax.cond(
+        previous_candidate > -1,
+        lambda x: x.at[previous_candidate].set(0),
+        lambda x: x,
+        candidates,
+    )
+    # print(f"{jnp.sum(candidates_filtered > 0) = }")
+    selected = jax.random.randint(
+        key, (1,), 0, jnp.sum(candidates_filtered > 0)
     )[0]
-    return candidates, selected_real
+    # print(f"{selected = }")
+    # selected = 1 + int(n * (jnp.sum(candidates > 0) - 1))
+
+    # selected_real = jnp.argmax(jnp.cumsum(candidates_filtered > 0) == selected)
+    selected_real = jnp.argmax(
+        jnp.cumsum(candidates_filtered > 0) - 1 == selected
+    )
+    selected_real = int(selected_real)
+    # print(f"{selected_real = }")
+    return candidates_filtered, selected_real
 
 
-# Can be enabled when the arg problem has been solved
-@jit(cache=True)
+@jax.jit
+# @checkify.checkify
 def sticking_process(
-    p: npt.NDArray[np.float64],
+    p: Float[Array],
     r: float,
     r_k: float,
-    p_cm: npt.NDArray[np.float64],
+    p_cm: Float[Array],
     gamma_pc: float,
 ) -> tuple[
-    npt.NDArray[np.float64],
-    float,
-    npt.NDArray[np.float64],
-    npt.NDArray[np.float64],
-    npt.NDArray[np.float64],
+    Float[Array],
+    Float[Array],
+    Float[Array],
+    Float[Array],
+    Float[Array],
 ]:
-    """
-    Handles the intersection/collision of two spheres.
-    The `_k` coordinates represent a point on the intersection of the two spheres.
-
-    Args:
-        p (npt.NDArray[np.float64]): coordinates of the particle
-        r (float): radius of the particle
-        r_k (float): radius of the particle cluster
-        p_cm (npt.NDArray[np.float64]): coordinates of the center of mass
-        gamma_pc (float): gamma value for the clusters
-
-    Returns:
-        p_k (npt.NDArray[np.float64]): coordinates of the new particle
-        r0 (float): radius of the new particle
-        p0 (npt.NDArray[np.float64]): coordinates of the new particle
-        i_vec (npt.NDArray[np.float64]): i vector
-        j_vec (npt.NDArray[np.float64]): j vector
-    """
-    # print([print(type(x)) for x in [p, r, r_k, p_cm, gamma_pc]])
-    # TODO: Find some sources and explanation on the math!
-    # p1 = np.array([x, y, z])
     r1 = r + r_k
-
-    # p2 = np.array([x_cm, y_cm, z_cm])
     r2 = gamma_pc
 
-    dp = p_cm - p
-    abc = 2 * dp
-    d = np.sum(p**2) - r1**2 - np.sum(p_cm**2) + r2**2
-
-    distance = np.sqrt(np.sum(dp**2))
-
-    t_sp = (np.dot(p, abc) + d) / (-2 * distance**2)
-
-    p0 = p + t_sp * dp
-
-    arg = (r1**2 + distance**2 - r2**2) / (2 * r1 * distance)
-
-    # FIXME: this should never happen!
-    assert abs(arg) <= 1, "Args value is faulty"
-
-    r0 = r1 * np.sqrt(1 - arg**2)
-
-    # k points from point 1 to point 2
-    # i is orthogonal to k (dot product is zero)
-    # j is orthogonal the plane spanned by k and i
-    # TODO: find a nicer i vector to create?
-    a = abc[0]
-    b = abc[1]
-    c = abc[2]
-    k_vec = abc / np.sqrt(np.sum(abc**2))
-    i_vec = np.array([-c, -c, a + b]) / np.sqrt(2 * c**2 + (a + b) ** 2)
-    j_vec = np.cross(k_vec, i_vec)
-
-    theta = 2.0 * np.pi * np.random.rand()
-
-    # Point on the cross-section of the two spheres
-    p_k = p0 + r0 * (np.cos(theta) * i_vec + np.sin(theta) * j_vec)
-
-    # x_k, y_k, z_k = p_k
-    # x0, y0, z0 = p0
-
+    p_k, r0, p0, i_vec, j_vec = sphere_sphere_intersection(p, r1, p_cm, r2)
     return p_k, r0, p0, i_vec, j_vec
 
 
-@jit(cache=True)
+@jax.jit
 def sticking_process2(
-    p0: npt.NDArray[np.float64],
-    r0: float,
-    i_vec: npt.NDArray[np.float64],
-    j_vec: npt.NDArray[np.float64],
-) -> tuple[npt.NDArray[np.float64], float]:
-    u = np.random.rand()
-    theta = 2 * np.pi * u
+    p0: Float[Array],
+    r0: Float,
+    i_vec: Float[Array],
+    j_vec: Float[Array],
+) -> tuple[Float[Array], Float[Array]]:
+    theta, _ = random_theta()
 
-    p_k = p0 + r0 * (np.cos(theta) * i_vec + np.sin(theta) * j_vec)
+    p_k = p0 + r0 * (jnp.cos(theta) * i_vec + jnp.sin(theta) * j_vec)
     return p_k, theta
 
 
-@jit(cache=True)
+@jax.jit
 def overlap_check(
-    p: npt.NDArray[np.float64],
-    r: npt.NDArray[np.float64],
+    p: Float[Array],
+    r: Float[Array],
     k: int,
-) -> np.float64:
-    # TODO: do we need k here?
-    # the arrays already have k+1 length
-    # -> could be infered!
-
-    # C = np.zeros((k - 1))
-    # for i in range(k - 1):
-    #     distance_kj = np.sqrt(
-    #         np.power(x[k - 1] - x[i], 2)
-    #         + np.power(y[k - 1] - y[i], 2)
-    #         + np.power(z[k - 1] - z[i], 2)
-    #     )
-
-    #     if distance_kj < (r[k - 1] + r[i]):
-    #         C[i] = ((r[k - 1] + r[i]) - distance_kj) / (r[k - 1] + r[i])
-    #     else:
-    #         C[i] = 0
-
-    distance_k = np.sqrt(np.sum((p - p[k - 1, :]) ** 2, axis=1))
+) -> Float[Array]:
+    distance_k = jnp.sqrt(jnp.sum((p - p[k - 1, :]) ** 2, axis=1))
     c = ((r[k - 1] + r) - distance_k) / (r[k - 1] + r)
-    c[-1] = 0.0
-    return np.max(c)
+    c = c.at[-1].set(0.0)
+    return jnp.max(c)
 
 
-@jit(fastmath=True, cache=True)
-def gmean(a: npt.NDArray[np.float64]) -> np.float64:
+@jax.jit
+def gmean(a: Float[Array, "n"]) -> Float[Scalar, ""]:
     """
     Calculate the geometric mean of an array of numbers
     """
-    log_a = np.log(a)
-    return np.exp(np.mean(log_a))
-
-
-# @jit(fastmath=True, cache=True)
-# @guvectorize([(float64[:], float64[:])], "(n)->()")
-# def gmean(a: npt.NDArray[np.float64], res: npt.NDArray) -> None:
-#     """
-#     Calculate the geometric mean of an array of numbers
-#     """
-#     acc = 0
-#     for i in range(a.shape[0]):
-#         acc += np.log(a[i])
-#     res[0] = np.exp(acc / a.shape[0])
+    log_a = jnp.log(a)
+    return jnp.exp(jnp.mean(log_a))
