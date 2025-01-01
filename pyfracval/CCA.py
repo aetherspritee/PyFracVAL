@@ -1,18 +1,23 @@
-import copy
+# import copy
 import re
 from datetime import datetime
+from functools import cache
 from pathlib import Path
 
-import numba
 import numpy as np
+import numpy.typing as npt
 import polars as pl
+from numba import jit, prange
+from scipy.spatial.distance import cdist
 from tqdm import tqdm
 
-from .PCA import PCA_subcluster
+from .functions import sphere_sphere_intersection
+from .PCA import PCA_subcluster, gmean
 
 
+# Cluster-Cluster Aggregation
 def CCA_subcluster(
-    R: np.ndarray,
+    R: npt.NDArray[np.float64],
     N: int,
     DF: float,
     kf: float,
@@ -31,6 +36,7 @@ def CCA_subcluster(
     else:
         N_subcluster = int(N_subcl_perc * N)
 
+    # p = np.zeros((N, 3))
     X = np.zeros(N)
     Y = np.zeros(N)
     Z = np.zeros(N)
@@ -189,6 +195,7 @@ def CCA_subcluster(
     return result, CCA_OK, PCA_OK
 
 
+# @jit(cache=True)
 def generate_CCA_pairs(
     I_t: int,
     i_orden: np.ndarray,
@@ -218,7 +225,9 @@ def generate_CCA_pairs(
             Z1[jjj] = Z[jj - 1]
             R1[jjj] = R[jj - 1]
             jjj += 1
-        rg1, r1_max, m1, _, _, _ = CCA_agg_properties(X1, Y1, Z1, R1, jjj, Df, kf)
+        rg1, r1_max, m1, _ = CCA_agg_properties(
+            np.column_stack([X1, Y1, Z1]), R1, Df, kf
+        )
 
         cntr = 0
         j = 0
@@ -244,8 +253,8 @@ def generate_CCA_pairs(
                         R2[jjj] = R[jj - 1]
                         jjj += 1
 
-                    rg2, r2_max, m2, _, _, _ = CCA_agg_properties(
-                        X2, Y2, Z2, R2, jjj, Df, kf
+                    rg2, r2_max, m2, _ = CCA_agg_properties(
+                        np.column_stack([X2, Y2, Z2]), R2, Df, kf
                     )
 
                     m3 = m1 + m2
@@ -286,45 +295,28 @@ def generate_CCA_pairs(
     return ID_agglom, CCA_ok
 
 
+@jit(cache=True)
 def CCA_agg_properties(
-    X: np.ndarray,
-    Y: np.ndarray,
-    Z: np.ndarray,
-    R: np.ndarray,
-    npp: int,
+    p: npt.NDArray[np.float64],
+    r: npt.NDArray[np.float64],
     Df: float,
     kf: float,
-) -> tuple[float, float, float, float, float, float]:
-    m_vec = np.zeros((npp))
-    R_i = np.zeros((npp))
-    sum_xm: float = 0
-    sum_ym: float = 0
-    sum_zm: float = 0
-    for i in range(npp):
-        m_vec[i] = 4 / 3 * np.pi * np.power(R[i], 3)
-        sum_xm += X[i] * m_vec[i]
-        sum_ym += Y[i] * m_vec[i]
-        sum_zm += Z[i] * m_vec[i]
+) -> tuple[float, float, np.float64, npt.NDArray[np.float64]]:
+    m_vec = 4 / 3 * np.pi * r**3
+    sum_pm = np.sum(p * m_vec[:, np.newaxis], axis=0)
 
-    m = float(np.sum(m_vec))
-    X_cm = sum_xm / m
-    Y_cm = sum_ym / m
-    Z_cm = sum_zm / m
+    m = np.sum(m_vec)
+    p_cm = sum_pm / m
 
-    rg = float(
-        (np.exp(np.sum(np.log(R) / np.log(R).size))) * np.power(npp / kf, 1 / Df)
-    )
-    for i in range(npp):
-        R_i[i] = np.sqrt(
-            np.power(X_cm - X[i], 2)
-            + np.power(Y_cm - Y[i], 2)
-            + np.power(Z_cm - Z[i], 2)
-        )
+    rg = gmean(r) * np.power(r.size / kf, 1 / Df)
+    r_i = np.sqrt(np.sum((p_cm - p) ** 2, axis=1))
 
-    R_max = float(np.max(R_i))
-    return rg, R_max, m, X_cm, Y_cm, Z_cm
+    r_max = np.max(r_i)
+    X_cm, Y_cm, Z_cm = p_cm
+    return rg, r_max, m, p_cm
 
 
+@jit(cache=True)
 def CCA_identify_monomers(i_orden: np.ndarray):
     ID_mon = np.zeros((int(np.sum(i_orden[:, 2]))))
 
@@ -334,27 +326,25 @@ def CCA_identify_monomers(i_orden: np.ndarray):
     return ID_mon
 
 
-@numba.jit()
+@jit(cache=True)
 def CCA_random_select_list(
-    X1: np.ndarray,
-    Y1: np.ndarray,
-    Z1: np.ndarray,
-    R1: np.ndarray,
-    X_cm1: float,
-    Y_cm1: float,
-    Z_cm1: float,
-    X2: np.ndarray,
-    Y2: np.ndarray,
-    Z2: np.ndarray,
-    R2: np.ndarray,
-    X_cm2: float,
-    Y_cm2: float,
-    Z_cm2: float,
+    p1: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    p_cm1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
+    p_cm2: npt.NDArray[np.float64],
     curr_list: np.ndarray,
     gamma_pc: float,
     gamma_real: bool,
     ext_case: int,
 ):
+    X1, Y1, Z1 = p1.transpose()
+    R1 = r1
+    X_cm1, Y_cm1, Z_cm1 = p_cm1
+    X2, Y2, Z2 = p2.transpose()
+    R2 = r2
+    X_cm2, Y_cm2, Z_cm2 = p_cm2
     if gamma_real and ext_case == 1:
         for i in range(curr_list.shape[0] - 1):
             d_i_min = (
@@ -441,120 +431,67 @@ def CCA(
 ):
     CCA_ok = True
 
-    monomers_1 = 0
-    for i in range(N):
-        if ID_mon[i] + 1 == k:
-            monomers_1 += 1
-
-    X1 = np.zeros((monomers_1))
-    Y1 = np.zeros((monomers_1))
-    Z1 = np.zeros((monomers_1))
-    R1 = np.zeros((monomers_1))
-
-    monomers_1 = 0
-
-    for i in range(N):
-        if ID_mon[i] + 1 == k:
-            X1[monomers_1] = X[i]
-            Y1[monomers_1] = Y[i]
-            Z1[monomers_1] = Z[i]
-            R1[monomers_1] = R[i]
-            monomers_1 += 1
+    X1 = X[ID_mon + 1 == k]
+    Y1 = Y[ID_mon + 1 == k]
+    Z1 = Z[ID_mon + 1 == k]
+    R1 = R[ID_mon + 1 == k]
 
     n1 = X1.size
 
-    rg1, r1_max, m1, X_cm1, Y_cm1, Z_cm1 = CCA_agg_properties(
-        X1, Y1, Z1, R1, n1, Df, kf
+    rg1, r1_max, m1, p_cm1 = CCA_agg_properties(
+        np.column_stack([X1, Y1, Z1]), R1, Df, kf
     )
+    X_cm1, Y_cm1, Z_cm1 = p_cm1
 
-    monomers_2 = 0
-    for i in range(N):
-        if ID_mon[i] + 1 == other:
-            monomers_2 += 1
-
-    X2 = np.zeros((monomers_2))
-    Y2 = np.zeros((monomers_2))
-    Z2 = np.zeros((monomers_2))
-    R2 = np.zeros((monomers_2))
-
-    monomers_2 = 0
-
-    for i in range(N):
-        if ID_mon[i] + 1 == other:
-            X2[monomers_2] = X[i]
-            Y2[monomers_2] = Y[i]
-            Z2[monomers_2] = Z[i]
-            R2[monomers_2] = R[i]
-            monomers_2 += 1
+    X2 = X[ID_mon + 1 == other]
+    Y2 = Y[ID_mon + 1 == other]
+    Z2 = Z[ID_mon + 1 == other]
+    R2 = R[ID_mon + 1 == other]
 
     n2 = X2.size
 
-    rg2, r2_max, m2, X_cm2, Y_cm2, Z_cm2 = CCA_agg_properties(
-        X2, Y2, Z2, R2, n2, Df, kf
+    rg2, r2_max, m2, p_cm2 = CCA_agg_properties(
+        np.column_stack([X2, Y2, Z2]), R2, Df, kf
     )
+    X_cm2, Y_cm2, Z_cm2 = p_cm2
 
     m3 = m1 + m2
     n3 = n1 + n2
 
     r_com = np.hstack((R1, R2))
-    rg3 = (np.exp(np.sum(np.log(r_com)) / (np.log(r_com).size))) * (
-        np.power((n3) / kf, (1.0 / Df))
-    )
+    rg3 = gmean(r_com) * np.power((n3) / kf, (1.0 / Df))
 
-    if np.power(m3, 2) * np.power(rg3, 2) > m3 * (
-        m1 * np.power(rg1, 2) + m2 * np.power(rg2, 2)
-    ):
+    gamma_real = False
+    if rg3**2 > (m1 * rg1**2 + m2 * rg2**2) / m3:
         gamma_pc = np.sqrt(
-            (
-                np.power(m3, 2) * np.power(rg3, 2)
-                - m3 * (m1 * np.power(rg1, 2) + m2 * np.power(rg2, 2))
-            )
-            / (m1 * m2)
+            (m3**2 * rg3**2 - m3 * (m1 * rg1**2 + m2 * rg2**2)) / (m1 * m2)
         )
         gamma_real = True
-    else:
-        gamma_real = False
 
-    CM1 = np.zeros((3))
-    CM2 = np.zeros((3))
-
-    CM1[0] = X_cm1
-    CM1[1] = Y_cm1
-    CM1[2] = Z_cm1
-
-    CM2[0] = X_cm2
-    CM2[1] = Y_cm2
-    CM2[2] = Z_cm2
+    CM1 = np.array([X_cm1, Y_cm1, Z_cm1])
+    CM2 = np.array([X_cm2, Y_cm2, Z_cm2])
 
     curr_list = np.zeros((n1, n2))
     curr_list = CCA_random_select_list(
-        X1,
-        Y1,
-        Z1,
+        np.column_stack([X1, Y1, Z1]),
         R1,
-        X_cm1,
-        Y_cm1,
-        Z_cm1,
-        X2,
-        Y2,
-        Z2,
+        np.array([X_cm1, Y_cm1, Z_cm1]),
+        np.column_stack([X2, Y2, Z2]),
         R2,
-        X_cm2,
-        Y_cm2,
-        Z_cm2,
+        np.array([X_cm2, Y_cm2, Z_cm2]),
         curr_list,
         gamma_pc,
         gamma_real,
         ext_case,
     )
 
-    COR1 = np.zeros((n1, 4))
-    COR2 = np.zeros((n2, 4))
+    # COR1 = np.zeros((n1, 4))
+    # COR2 = np.zeros((n2, 4))
 
     list_sum = 0
 
     while list_sum == 0:
-        prev_cand1: int = 0
+        prev_cand1 = 0
         prev_cand2 = 0
         cov_max = 1
 
@@ -562,28 +499,19 @@ def CCA(
         while cov_max > tolerance:
             if np.sum(curr_list) > 1:
                 prev_cand1 = CCA_random_pick(curr_list, prev_cand1)
-                prev_cand2 = 0
-                prev_cand2 = CCA_random_pick(curr_list, prev_cand1, prev_cand2)
+                prev_cand2 = CCA_random_pick(curr_list, prev_cand1, 0.0)
             else:
                 CCA_ok = False
 
-            curr_try = 1
+            # COR1 = np.column_stack([X1, Y1, Z1, R1])
+            # COR2 = np.column_stack([X2, Y2, Z2, R2])
 
-            COR1[:, 0] = X1
-            COR1[:, 1] = Y1
-            COR1[:, 2] = Z1
-            COR1[:, 3] = R1
-
-            COR2[:, 0] = X2
-            COR2[:, 1] = Y2
-            COR2[:, 2] = Z2
-            COR2[:, 3] = R2
-
-            COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(
+            # SLOW:
+            p1, r1, p2, r2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(
                 gamma_real,
                 gamma_pc,
-                COR1,
-                COR2,
+                np.column_stack([X1, Y1, Z1, R1]),
+                np.column_stack([X2, Y2, Z2, R2]),
                 CM1,
                 CM2,
                 prev_cand1,
@@ -592,48 +520,53 @@ def CCA(
                 n1,
                 n2,
             )
+            # print(f"After {COR1=}")
+            # print(f"After {COR2=}")
 
-            X1 = COR1[:, 0]
-            Y1 = COR1[:, 1]
-            Z1 = COR1[:, 2]
+            X1, Y1, Z1 = p1.transpose()
+            X2, Y2, Z2 = p2.transpose()
+            # X_cm2, Y_cm2, Z_cm2 = CM2
 
-            X2 = COR2[:, 0]
-            Y2 = COR2[:, 1]
-            Z2 = COR2[:, 2]
+            cov_max = CCA_overlap_check(
+                p1,
+                r1,
+                p2,
+                r2,
+            )
 
-            X_cm2 = CM2[0]
-            Y_cm2 = CM2[1]
-            Z_cm2 = CM2[2]
-
-            cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
-
-            while cov_max > tolerance and curr_try < 360:
+            CURR_TRY_MAX = 360
+            curr_try = 1
+            while cov_max > tolerance and curr_try < CURR_TRY_MAX:
+                # for curr_try in range(CURR_TRY_MAX):
+                # print("hi1")
+                if cov_max <= tolerance:
+                    break
                 X2, Y2, Z2 = CCA_sticking_process_v2(
                     CM2, vec0, X2, Y2, Z2, i_vec, j_vec, prev_cand2
                 )
-                cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
+                # SLOW:
+                cov_max = CCA_overlap_check(
+                    np.column_stack([X1, Y1, Z1]),
+                    R1,
+                    np.column_stack([X2, Y2, Z2]),
+                    R2,
+                )
                 curr_try += 1
 
                 if (
-                    int(np.mod(curr_try, 359)) == 0
+                    curr_try % CURR_TRY_MAX - 1 == 0
                     and np.sum(curr_list[prev_cand1, :]) > 1
                 ):
+                    print("hi2")
                     prev_cand2 = CCA_random_pick(curr_list, prev_cand1, prev_cand2)
 
-                    COR1[:, 0] = X1
-                    COR2[:, 0] = X2
-
-                    COR1[:, 1] = Y1
-                    COR2[:, 1] = Y2
-
-                    COR1[:, 2] = Z1
-                    COR2[:, 2] = Z2
-
-                    COR1, COR2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(
+                    p1, r1, p2, r2, CM2, vec0, i_vec, j_vec = CCA_sticking_process(
                         gamma_real,
                         gamma_pc,
-                        COR1,
-                        COR2,
+                        # COR1,
+                        # COR2,
+                        np.column_stack([X1, Y1, Z1, R1]),
+                        np.column_stack([X2, Y2, Z2, R2]),
                         CM1,
                         CM2,
                         prev_cand1,
@@ -642,56 +575,77 @@ def CCA(
                         n1,
                         n2,
                     )
-                    cov_max = CCA_overlap_check(n1, n2, X1, X2, Y1, Y2, Z1, Z2, R1, R2)
-                    curr_try += 1
+                    curr_try = 1
+                    cov_max = CCA_overlap_check(p1, r1, p2, r2)
+                # curr_try += 1
             list_sum = np.sum(curr_list[prev_cand1, :])
 
-    X1 = COR1[:, 0]
-    Y1 = COR1[:, 1]
-    Z1 = COR1[:, 2]
+    # X1 = COR1[:, 0]
+    # Y1 = COR1[:, 1]
+    # Z1 = COR1[:, 2]
 
-    X2 = COR2[:, 0]
-    Y2 = COR2[:, 1]
-    Z2 = COR2[:, 2]
+    # X2 = COR2[:, 0]
+    # Y2 = COR2[:, 1]
+    # Z2 = COR2[:, 2]
 
-    X_cm2 = CM2[0]
-    Y_cm2 = CM2[1]
-    Z_cm2 = CM2[2]
+    # X_cm2 = CM2[0]
+    # Y_cm2 = CM2[1]
+    # Z_cm2 = CM2[2]
 
-    monomers_1 = 0
-    for i in range(N - 1):
-        if ID_mon[i] + 1 == k:
-            X[i] = X1[monomers_1]
-            Y[i] = Y1[monomers_1]
-            Z[i] = Z1[monomers_1]
-            R[i] = R1[monomers_1]
-            monomers_1 += 1
+    # X1, Y1, Z1, _ = COR1.transpose()
+    # X2, Y2, Z2, _ = COR2.transpose()
+    # X_cm2, Y_cm2, Z_cm2 = CM2
 
-    monomers_2 = 0
-    for i in range(N - 1):
-        if ID_mon[i] + 1 == other:
-            X[i] = X2[monomers_2]
-            Y[i] = Y2[monomers_2]
-            Z[i] = Z2[monomers_2]
-            R[i] = R2[monomers_2]
-            monomers_2 += 1
+    # monomers_1 = 0
+    # for i in range(N - 1):
+    #     if ID_mon[i] + 1 == k:
+    #         X[i] = X1[monomers_1]
+    #         Y[i] = Y1[monomers_1]
+    #         Z[i] = Z1[monomers_1]
+    #         R[i] = R1[monomers_1]
+    #         monomers_1 += 1
 
-    Xn = np.zeros((n1 + n2))
-    Yn = np.zeros((n1 + n2))
-    Zn = np.zeros((n1 + n2))
-    Rn = np.zeros((n1 + n2))
+    # monomers_2 = 0
+    # for i in range(N - 1):
+    #     if ID_mon[i] + 1 == other:
+    #         X[i] = X2[monomers_2]
+    #         Y[i] = Y2[monomers_2]
+    #         Z[i] = Z2[monomers_2]
+    #         R[i] = R2[monomers_2]
+    #         monomers_2 += 1
 
-    Xn[0:n1] = X1
-    Xn[n1 : n1 + n2] = X2
+    # New
+    # X[ID_mon + 1 == k] = X1
+    # Y[ID_mon + 1 == k] = Y1
+    # Z[ID_mon + 1 == k] = Z1
+    # R[ID_mon + 1 == k] = R1
 
-    Yn[0:n1] = Y1
-    Yn[n1 : n1 + n2] = Y2
+    # X[ID_mon + 1 == other] = X2
+    # Y[ID_mon + 1 == other] = Y2
+    # Z[ID_mon + 1 == other] = Z2
+    # R[ID_mon + 1 == other] = R2
 
-    Zn[0:n1] = Z1
-    Zn[n1 : n2 + n1] = Z2
+    # Xn = np.zeros((n1 + n2))
+    # Yn = np.zeros((n1 + n2))
+    # Zn = np.zeros((n1 + n2))
+    # Rn = np.zeros((n1 + n2))
 
-    Rn[0:n1] = R1
-    Rn[n1 : n2 + n1] = R2
+    # Xn[0:n1] = X1
+    # Xn[n1 : n1 + n2] = X2
+
+    # Yn[0:n1] = Y1
+    # Yn[n1 : n1 + n2] = Y2
+
+    # Zn[0:n1] = Z1
+    # Zn[n1 : n2 + n1] = Z2
+
+    # Rn[0:n1] = R1
+    # Rn[n1 : n2 + n1] = R2
+
+    Xn = np.hstack([X1, X2])
+    Yn = np.hstack([Y1, Y2])
+    Zn = np.hstack([Z1, Z2])
+    Rn = np.hstack([R1, R2])
 
     if cov_max > tolerance:
         CCA_ok = False
@@ -699,9 +653,14 @@ def CCA(
     return Xn, Yn, Zn, Rn, CCA_ok
 
 
-def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
+# @jit(cache=True)
+def CCA_random_pick(
+    curr_list: np.ndarray,
+    prev_cand1: int,
+    prev_cand2: int = -1,
+):
     selected_real = 0
-    if prev_cand2 is None:
+    if prev_cand2 == -1:
         if prev_cand1 > 0:
             curr_list[prev_cand1, :] = curr_list[prev_cand1, :] * 0
         list_sum = np.array(
@@ -721,11 +680,11 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
             if sel == selected:
                 selected_real = i
                 break
-        prev_cand1 = selected_real
-        return prev_cand1
     else:
         if prev_cand2 > 0:
+            print(prev_cand1, prev_cand2)
             curr_list[prev_cand1, prev_cand2] = curr_list[prev_cand1, prev_cand2] * 0
+            # curr_list[prev_cand1, prev_cand2] = 0
         list_sum = curr_list[prev_cand1, :]
         curr_list2 = list_sum[list_sum > 0]
 
@@ -741,253 +700,321 @@ def CCA_random_pick(curr_list: np.ndarray, prev_cand1: int, prev_cand2=None):
             if sel == selected:
                 selected_real = i
                 break
-        prev_cand2 = selected_real
-        return prev_cand2
+    return selected_real
+
+
+# FIX: not used
+def update_monomer_coordinates(p, p1, p_cm1, prev_cand1):
+    x, y, z = p.transpose()
+    X1, Y1, Z1 = p1.transpose()
+    X_cm1, Y_cm1, Z_cm1 = p_cm1
+
+    x_cm11 = X_cm1
+    y_cm11 = Y_cm1
+    z_cm11 = Z_cm1
+
+    Z1_new = Z1
+    Y1_new = Y1
+    X1_new = X1
+
+    v1 = p1[prev_cand1, :] - p_cm1
+    v2 = np.array([x - x_cm11, y - y_cm11, z - z_cm11])
+    v2 = p - p_cm1
+    s_vec = np.cross(v1, v2)
+    s_vec /= np.linalg.norm(s_vec)
+    angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+
+    As = np.array(
+        [
+            [0, -s_vec[2], s_vec[1]],
+            [s_vec[2], 0, -s_vec[0]],
+            [-s_vec[1], s_vec[0], 0],
+        ]
+    )
+    rot = np.identity(3) + np.sin(angle) * As + (1 - np.cos(angle)) * np.matmul(As, As)
+
+    for i in range(p1.shape[0]):
+        new_c = np.matmul(
+            rot,
+            np.array([X1_new[i] - x_cm11, Y1_new[i] - y_cm11, Z1_new[i] - z_cm11]),
+        )
+        X1_new[i] = x_cm11 + new_c[0]
+        Y1_new[i] = y_cm11 + new_c[1]
+        Z1_new[i] = z_cm11 + new_c[2]
 
 
 def CCA_sticking_process(
     gamma_real: bool,
     gamma_pc: float,
-    COR1,
-    COR2,
-    CM1,
-    CM2,
+    COR1: npt.NDArray[np.float64],
+    COR2: npt.NDArray[np.float64],
+    CM1: npt.NDArray[np.float64],
+    CM2: npt.NDArray[np.float64],
     prev_cand1: int,
     prev_cand2: int,
     ext_case: int,
     n1: int,
     n2: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    if gamma_real:
-        X1 = COR1[:, 0]
-        Y1 = COR1[:, 1]
-        Z1 = COR1[:, 2]
-        R1 = COR1[:, 3]
-
-        X2 = COR2[:, 0]
-        Y2 = COR2[:, 1]
-        Z2 = COR2[:, 2]
-        R2 = COR2[:, 3]
-
-        X_cm1 = CM1[0]
-        Y_cm1 = CM1[1]
-        Z_cm1 = CM1[2]
-
-        X_cm2 = CM2[0]
-        Y_cm2 = CM2[1]
-        Z_cm2 = CM2[2]
-
-        vect_x = X1[prev_cand1] - X_cm1
-        vect_y = Y1[prev_cand1] - Y_cm1
-        vect_z = Z1[prev_cand1] - Z_cm1
-        vect_mag = np.sqrt(
-            np.power(vect_x, 2) + np.power(vect_y, 2) + np.power(vect_z, 2)
+) -> tuple[
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+]:
+    if not gamma_real:
+        return (
+            # COR1.copy(),
+            # COR2.copy(),
+            # CM2.copy(),
+            COR1[:, :3],
+            COR1[:, 3],
+            COR2[:, :3],
+            COR2[:, 3],
+            CM2,
+            np.zeros(()),
+            np.zeros(()),
+            np.zeros(()),
         )
 
-        vect_x /= vect_mag
-        vect_y /= vect_mag
-        vect_z /= vect_mag
+    # X1 = COR1[:, 0]
+    # Y1 = COR1[:, 1]
+    # Z1 = COR1[:, 2]
+    # R1 = COR1[:, 3]
 
-        x_cm22 = X_cm1 + gamma_pc * vect_x
-        y_cm22 = Y_cm1 + gamma_pc * vect_y
-        z_cm22 = Z_cm1 + gamma_pc * vect_z
+    # X2 = COR2[:, 0]
+    # Y2 = COR2[:, 1]
+    # Z2 = COR2[:, 2]
+    # R2 = COR2[:, 3]
 
-        # displacement of aggregate 2
-        disp_x = x_cm22 - X_cm2
-        disp_y = y_cm22 - Y_cm2
-        disp_z = z_cm22 - Z_cm2
+    # X_cm1 = CM1[0]
+    # Y_cm1 = CM1[1]
+    # Z_cm1 = CM1[2]
 
-        X2_new = X2 + disp_x
-        Y2_new = Y2 + disp_y
-        Z2_new = Z2 + disp_z
+    # X_cm2 = CM2[0]
+    # Y_cm2 = CM2[1]
+    # Z_cm2 = CM2[2]
 
-        # sphere 1
-        x1_sph1 = X_cm1
-        y1_sph1 = Y_cm1
-        z1_sph1 = Z_cm1
+    # X1, Y1, Z1, R1 = COR1.transpose().copy()
+    # X2, Y2, Z2, R2 = COR2.transpose().copy()
+    X1, Y1, Z1, R1 = COR1.transpose()
+    X2, Y2, Z2, R2 = COR2.transpose()
 
-        d1_min = (
-            np.sqrt(
-                np.power(X1[prev_cand1] - X_cm1, 2)
-                + np.power(Y1[prev_cand1] - Y_cm1, 2)
-                + np.power(Z1[prev_cand1] - Z_cm1, 2)
-            )
-            - R1[prev_cand1]
-        )
-        d1_max = (
-            np.sqrt(
-                np.power(X1[prev_cand1] - X_cm1, 2)
-                + np.power(Y1[prev_cand1] - Y_cm1, 2)
-                + np.power(Z1[prev_cand1] - Z_cm1, 2)
-            )
-            + R1[prev_cand1]
-        )
+    X_cm1, Y_cm1, Z_cm1 = CM1
+    X_cm2, Y_cm2, Z_cm2 = CM2
 
-        # sphere 2
-        x2_sph2 = x_cm22
-        y2_sph2 = y_cm22
-        z2_sph2 = z_cm22
-        d2_min = (
-            np.sqrt(
-                np.power(X2_new[prev_cand2] - x_cm22, 2)
-                + np.power(Y2_new[prev_cand2] - y_cm22, 2)
-                + np.power(Z2_new[prev_cand2] - z_cm22, 2)
-            )
-            - R2[prev_cand2]
-        )
-        d2_max = (
-            np.sqrt(
-                np.power(X2_new[prev_cand2] - x_cm22, 2)
-                + np.power(Y2_new[prev_cand2] - y_cm22, 2)
-                + np.power(Z2_new[prev_cand2] - z_cm22, 2)
-            )
-            + R2[prev_cand2]
-        )
+    vect_x = X1[prev_cand1] - X_cm1
+    vect_y = Y1[prev_cand1] - Y_cm1
+    vect_z = Z1[prev_cand1] - Z_cm1
+    vect_mag = np.sqrt(vect_x**2 + vect_y**2 + vect_z**2)
 
+    vect_x /= vect_mag
+    vect_y /= vect_mag
+    vect_z /= vect_mag
+
+    x_cm22 = X_cm1 + gamma_pc * vect_x
+    y_cm22 = Y_cm1 + gamma_pc * vect_y
+    z_cm22 = Z_cm1 + gamma_pc * vect_z
+
+    # displacement of aggregate 2
+    disp_x = x_cm22 - X_cm2
+    disp_y = y_cm22 - Y_cm2
+    disp_z = z_cm22 - Z_cm2
+
+    X2_new = X2 + disp_x
+    Y2_new = Y2 + disp_y
+    Z2_new = Z2 + disp_z
+
+    # sphere 1
+    x1_sph1 = X_cm1
+    y1_sph1 = Y_cm1
+    z1_sph1 = Z_cm1
+
+    d1 = np.sqrt(
+        (X1[prev_cand1] - X_cm1) ** 2
+        + (Y1[prev_cand1] - Y_cm1) ** 2
+        + (Z1[prev_cand1] - Z_cm1) ** 2
+    )
+    d1_min = d1 - R1[prev_cand1]
+    d1_max = d1 + R1[prev_cand1]
+
+    # sphere 2
+    x2_sph2 = x_cm22
+    y2_sph2 = y_cm22
+    z2_sph2 = z_cm22
+
+    d2 = np.sqrt(
+        (X2_new[prev_cand2] - x_cm22) ** 2
+        + (Y2_new[prev_cand2] - y_cm22) ** 2
+        + (Z2_new[prev_cand2] - z_cm22) ** 2
+    )
+    d2_min = d2 - R2[prev_cand2]
+    d2_max = d2 + R2[prev_cand2]
+
+    u_s1_cm1 = np.array([X_cm1, Y_cm1, Z_cm1])
+    if ext_case == 1:
         sphere1 = np.array([x1_sph1, y1_sph1, z1_sph1, d1_min, d1_max])
         sphere2 = np.array([x2_sph2, y2_sph2, z2_sph2, d2_min, d2_max])
+        if np.abs(d2_max - d1_max) < gamma_pc:
+            case = 1
+            x, y, z, sph1_r = random_point_SC(case, sphere1, sphere2)
+            u_s1_cm1 = np.array([(X_cm1 - x), (Y_cm1 - y), (Z_cm1 - z)])
+        elif d2_max - d1_max > gamma_pc and d2_min - d1_max < gamma_pc:
+            case = 2
+            x, y, z, sph1_r = random_point_SC(case, sphere1, sphere2)
+            u_s1_cm1 = np.array([(X_cm1 - x), (Y_cm1 - y), (Z_cm1 - z)])
+        elif d1_max - d2_max > gamma_pc and d1_min - d2_max < gamma_pc:
+            case = 3
+            x, y, z, sph1_r = random_point_SC(case, sphere1, sphere2)
+            u_s1_cm1 = np.array([(x - X_cm1), (y - Y_cm1), (z - Z_cm1)])
+    elif ext_case == 0:
+        sph1_r = d1_max
+        sph2_r = d2_max
 
-        u_s1_cm1 = np.array([X_cm1, Y_cm1, Z_cm1])
-        if ext_case == 1:
-            if np.abs(d2_max - d1_max) < gamma_pc:
-                case = 1
-                x, y, z, sph1_r = random_point_SC(case, sphere1, sphere2)
-                u_s1_cm1 = np.array([(X_cm1 - x), (Y_cm1 - y), (Z_cm1 - z)])
-            elif d2_max - d1_max > gamma_pc and d2_min - d1_max < gamma_pc:
-                case = 2
-                x, y, z, sph1_r = random_point_SC(case, sphere1, sphere2)
-                u_s1_cm1 = np.array([(X_cm1 - x), (Y_cm1 - y), (Z_cm1 - z)])
-            elif d1_max - d2_max > gamma_pc and d1_min - d2_max < gamma_pc:
-                case = 3
-                x, y, z, sph1_r = random_point_SC(case, sphere1, sphere2)
-                u_s1_cm1 = np.array([(x - X_cm1), (y - Y_cm1), (z - Z_cm1)])
-        elif ext_case == 0:
-            sph1_r = d1_max
-            sph2_r = d2_max
+        sphere1 = np.array([x1_sph1, y1_sph1, z1_sph1, sph1_r])
+        sphere2 = np.array([x2_sph2, y2_sph2, z2_sph2, sph2_r])
+        x, y, z, _, _, _ = CCA_2_sphere_intersec(sphere1, sphere2)
+        u_s1_cm1 = np.array([X_cm1 - x, Y_cm1 - y, Z_cm1 - z])
 
-            sphere1 = np.array([x1_sph1, y1_sph1, z1_sph1, sph1_r])
-            sphere2 = np.array([x2_sph2, y2_sph2, z2_sph2, sph2_r])
-            x, y, z, _, _, _ = CCA_2_sphere_intersec(sphere1, sphere2)
-            u_s1_cm1 = np.array([X_cm1 - x, Y_cm1 - y, Z_cm1 - z])
+    u_s1_cm1 = u_s1_cm1 / np.linalg.norm(u_s1_cm1)
+    disp_s1 = R1[prev_cand1]
 
-        u_s1_cm1 = u_s1_cm1 / np.linalg.norm(u_s1_cm1)
-        disp_s1 = R1[prev_cand1]
+    x = x + disp_s1 * u_s1_cm1[0]
+    y = y + disp_s1 * u_s1_cm1[1]
+    z = z + disp_s1 * u_s1_cm1[2]
 
-        x = x + disp_s1 * u_s1_cm1[0]
-        y = y + disp_s1 * u_s1_cm1[1]
-        z = z + disp_s1 * u_s1_cm1[2]
+    # update coordinates of monomers of aggregate 1
+    # TODO: replace the following parts with the function above
+    x_cm11 = X_cm1
+    y_cm11 = Y_cm1
+    z_cm11 = Z_cm1
 
-        # update coordinates of monomers of aggregate 1
-        x_cm11 = X_cm1
-        y_cm11 = Y_cm1
-        z_cm11 = Z_cm1
+    Z1_new = Z1
+    Y1_new = Y1
+    X1_new = X1
 
-        Z1_new = Z1
-        Y1_new = Y1
-        X1_new = X1
+    v1 = np.array(
+        [
+            X1_new[prev_cand1] - x_cm11,
+            Y1_new[prev_cand1] - y_cm11,
+            Z1_new[prev_cand1] - z_cm11,
+        ]
+    )
+    v2 = np.array([x - x_cm11, y - y_cm11, z - z_cm11])
+    s_vec = np.cross(v1, v2) / np.linalg.norm(np.cross(v1, v2))
+    angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
 
-        v1 = np.array(
-            [
-                X1_new[prev_cand1] - x_cm11,
-                Y1_new[prev_cand1] - y_cm11,
-                Z1_new[prev_cand1] - z_cm11,
-            ]
+    As = np.array(
+        [
+            [0, -s_vec[2], s_vec[1]],
+            [s_vec[2], 0, -s_vec[0]],
+            [-s_vec[1], s_vec[0], 0],
+        ]
+    )
+    rot = np.identity(3) + np.sin(angle) * As + (1 - np.cos(angle)) * np.matmul(As, As)
+
+    for i in range(n1):
+        new_c = np.matmul(
+            rot,
+            np.array(
+                [
+                    X1_new[i] - x_cm11,
+                    Y1_new[i] - y_cm11,
+                    Z1_new[i] - z_cm11,
+                ]
+            ),
         )
-        v2 = np.array([x - x_cm11, y - y_cm11, z - z_cm11])
-        s_vec = np.cross(v1, v2) / np.linalg.norm(np.cross(v1, v2))
-        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+        X1_new[i] = x_cm11 + new_c[0]
+        Y1_new[i] = y_cm11 + new_c[1]
+        Z1_new[i] = z_cm11 + new_c[2]
 
-        As = np.array(
-            [
-                [0, -s_vec[2], s_vec[1]],
-                [s_vec[2], 0, -s_vec[0]],
-                [-s_vec[1], s_vec[0], 0],
-            ]
+    sph2_r = np.sqrt(
+        (X2_new[prev_cand2] - x_cm22) ** 2
+        + (Y2_new[prev_cand2] - y_cm22) ** 2
+        + (Z2_new[prev_cand2] - z_cm22) ** 2
+    )
+    sph2_x = x_cm22
+    sph2_y = y_cm22
+    sph2_z = z_cm22
+
+    sph1_r = R1[prev_cand1] + R2[prev_cand2]
+    sph1_x = X1_new[prev_cand1]
+    sph1_y = Y1_new[prev_cand1]
+    sph1_z = Z1_new[prev_cand1]
+
+    x, y, z, vec0, i_vec, j_vec = CCA_2_sphere_intersec(
+        np.array([sph1_x, sph1_y, sph1_z, sph1_r]),
+        np.array([sph2_x, sph2_y, sph2_z, sph2_r]),
+    )
+    # sphere1 = np.array([sph1_x, sph1_y, sph1_z, sph1_r])
+    # sphere2 = np.array([sph2_x, sph2_y, sph2_z, sph2_r])
+
+    # x, y, z, vec0, i_vec, j_vec = CCA_2_sphere_intersec(
+    #     sphere1,
+    #     sphere2,
+    # )
+
+    v1 = np.array(
+        [
+            X2_new[prev_cand2] - x_cm22,
+            Y2_new[prev_cand2] - y_cm22,
+            Z2_new[prev_cand2] - z_cm22,
+        ]
+    )
+    v2 = np.array([x - x_cm22, y - y_cm22, z - z_cm22])
+    s_vec = np.cross(v1, v2)
+    s_vec /= np.linalg.norm(s_vec)
+    angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+
+    As = np.array(
+        [
+            [0, -s_vec[2], s_vec[1]],
+            [s_vec[2], 0, -s_vec[0]],
+            [-s_vec[1], s_vec[0], 0],
+        ]
+    )
+    rot = np.identity(3) + np.sin(angle) * As + (1 - np.cos(angle)) * np.matmul(As, As)
+
+    for i in range(n2):
+        new_c = np.matmul(
+            rot,
+            np.array([X2_new[i] - x_cm22, Y2_new[i] - y_cm22, Z2_new[i] - z_cm22]),
         )
-        rot = (
-            np.identity(3)
-            + np.sin(angle) * As
-            + (1 - np.cos(angle)) * np.matmul(As, As)
-        )
+        X2_new[i] = x_cm22 + new_c[0]
+        Y2_new[i] = y_cm22 + new_c[1]
+        Z2_new[i] = z_cm22 + new_c[2]
 
-        for i in range(n1):
-            new_c = np.matmul(
-                rot,
-                np.array([X1_new[i] - x_cm11, Y1_new[i] - y_cm11, Z1_new[i] - z_cm11]),
-            )
-            X1_new[i] = x_cm11 + new_c[0]
-            Y1_new[i] = y_cm11 + new_c[1]
-            Z1_new[i] = z_cm11 + new_c[2]
+    # FIXME: don't touch this.. need to figure out why..
+    # Probably overriding the reference
+    # -> one function does not use the updated values from this function
 
-        sph2_r = np.sqrt(
-            np.power(X2_new[prev_cand2] - x_cm22, 2)
-            + np.power(Y2_new[prev_cand2] - y_cm22, 2)
-            + np.power(Z2_new[prev_cand2] - z_cm22, 2)
-        )
-        sph2_x = x_cm22
-        sph2_y = y_cm22
-        sph2_z = z_cm22
+    # COR1[:, 0] = X1_new
+    # COR1[:, 1] = Y1_new
+    # COR1[:, 2] = Z1_new
 
-        sph1_r = R1[prev_cand1] + R2[prev_cand2]
-        sph1_x = X1_new[prev_cand1]
-        sph1_y = Y1_new[prev_cand1]
-        sph1_z = Z1_new[prev_cand1]
+    # COR2[:, 0] = X2_new
+    # COR2[:, 1] = Y2_new
+    # COR2[:, 2] = Z2_new
 
-        sphere1 = np.array([sph1_x, sph1_y, sph1_z, sph1_r])
-        sphere2 = np.array([sph2_x, sph2_y, sph2_z, sph2_r])
+    # COR1 = np.column_stack([X1_new, Y1_new, Z1_new, R1])
+    # COR2 = np.column_stack([X2_new, Y2_new, Z2_new, R2])
 
-        x, y, z, vec0, i_vec, j_vec = CCA_2_sphere_intersec(sphere1, sphere2)
-
-        v1 = np.array(
-            [
-                X2_new[prev_cand2] - x_cm22,
-                Y2_new[prev_cand2] - y_cm22,
-                Z2_new[prev_cand2] - z_cm22,
-            ]
-        )
-        v2 = np.array([x - x_cm22, y - y_cm22, z - z_cm22])
-        s_vec = np.cross(v1, v2) / np.linalg.norm(np.cross(v1, v2))
-        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
-
-        As = np.array(
-            [
-                [0, -s_vec[2], s_vec[1]],
-                [s_vec[2], 0, -s_vec[0]],
-                [-s_vec[1], s_vec[0], 0],
-            ]
-        )
-        rot = (
-            np.identity(3)
-            + np.sin(angle) * As
-            + (1 - np.cos(angle)) * np.matmul(As, As)
-        )
-
-        for i in range(n2):
-            new_c = np.matmul(
-                rot,
-                np.array([X2_new[i] - x_cm22, Y2_new[i] - y_cm22, Z2_new[i] - z_cm22]),
-            )
-            X2_new[i] = x_cm22 + new_c[0]
-            Y2_new[i] = y_cm22 + new_c[1]
-            Z2_new[i] = z_cm22 + new_c[2]
-
-        CM2 = np.array([x_cm22, y_cm22, z_cm22])
-        COR1[:, 0] = X1_new
-        COR1[:, 1] = Y1_new
-        COR1[:, 2] = Z1_new
-
-        COR2[:, 0] = X2_new
-        COR2[:, 1] = Y2_new
-        COR2[:, 2] = Z2_new
-
-        return COR1, COR2, CM2, vec0, i_vec, j_vec
-    else:
-        vec0 = np.zeros(())
-        i_vec = np.zeros(())
-        j_vec = np.zeros(())
-        return COR1, COR2, CM2, vec0, i_vec, j_vec
+    return (
+        np.column_stack([X1_new, Y1_new, Z1_new]),
+        R1,
+        np.column_stack([X2_new, Y2_new, Z2_new]),
+        R2,
+        np.array([x_cm22, y_cm22, z_cm22]),
+        vec0,
+        i_vec,
+        j_vec,
+    )
 
 
+@jit(cache=True)
 def random_point_SC(case: int, sphere1: np.ndarray, sphere2: np.ndarray):
     phi_crit_max = 0
     phi_crit_min = 0
@@ -1039,7 +1066,8 @@ def random_point_SC(case: int, sphere1: np.ndarray, sphere2: np.ndarray):
     r12 = r12 / np.linalg.norm(r12)
 
     v1 = np.array([0, 0, 1])
-    v2 = copy.deepcopy(r12)
+    v2 = r12.copy()
+    # v2 = copy.deepcopy(r12)
     s_vec = np.cross(v1, v2)
     s_vec /= np.linalg.norm(s_vec)
     angle = np.arccos((np.dot(v1, v2)) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
@@ -1058,19 +1086,21 @@ def random_point_SC(case: int, sphere1: np.ndarray, sphere2: np.ndarray):
     return x, y, z, sph1_r
 
 
+@jit(cache=True)
 def spherical_cap_angle(sphere1: np.ndarray, sphere2: np.ndarray):
-    A = 2 * (sphere2[0] - sphere1[0])
-    B = 2 * (sphere2[1] - sphere1[1])
-    C = 2 * (sphere2[2] - sphere1[2])
+    # A = 2 * (sphere2[0] - sphere1[0])
+    # B = 2 * (sphere2[1] - sphere1[1])
+    # C = 2 * (sphere2[2] - sphere1[2])
+    A, B, C = 2 * (sphere2[:3] - sphere1[:3])
     D = (
-        np.power(sphere1[0], 2)
-        - np.power(sphere2[0], 2)
-        + np.power(sphere1[1], 2)
-        - np.power(sphere2[1], 2)
-        + np.power(sphere1[2], 2)
-        - np.power(sphere2[2], 2)
-        - np.power(sphere1[3], 2)
-        + np.power(sphere2[3], 2)
+        sphere1[0] ** 2
+        - sphere2[0] ** 2
+        + sphere1[1] ** 2
+        - sphere2[1] ** 2
+        + sphere1[2] ** 2
+        - sphere2[2] ** 2
+        - sphere1[3] ** 2
+        + sphere2[3] ** 2
     )
 
     t = (sphere1[0] * A + sphere1[1] * B + sphere1[2] * C + D) / (
@@ -1106,90 +1136,205 @@ def spherical_cap_angle(sphere1: np.ndarray, sphere2: np.ndarray):
     return phi_crit
 
 
-def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
-    A = 2 * (sphere2[0] - sphere1[0])
-    B = 2 * (sphere2[1] - sphere1[1])
-    C = 2 * (sphere2[2] - sphere1[2])
-    D = (
-        np.power(sphere1[0], 2)
-        - np.power(sphere2[0], 2)
-        + np.power(sphere1[1], 2)
-        - np.power(sphere2[1], 2)
-        + np.power(sphere1[2], 2)
-        - np.power(sphere2[2], 2)
-        - np.power(sphere1[3], 2)
-        + np.power(sphere2[3], 2)
+# TODO: hstack is a bit weird... need to fix it
+# @jit(cache=True)
+def CCA_2_sphere_intersec(
+    sphere1: npt.NDArray[np.float64],
+    sphere2: npt.NDArray[np.float64],
+) -> tuple[
+    float,
+    float,
+    float,
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+]:
+    p, p0, r0, i_vec, j_vec = sphere_sphere_intersection(
+        sphere1[:3],
+        sphere1[3],
+        sphere2[:3],
+        sphere2[3],
     )
-    t = (sphere1[0] * A + sphere1[1] * B + sphere1[2] * C + D) / (
-        A * (sphere1[0] - sphere2[0])
-        + B * (sphere1[1] - sphere2[1])
-        + C * (sphere1[2] - sphere2[2])
-    )
-
-    x0 = sphere1[0] + t * (sphere2[0] - sphere1[0])
-    y0 = sphere1[1] + t * (sphere2[1] - sphere1[1])
-    z0 = sphere1[2] + t * (sphere2[2] - sphere1[2])
-
-    distance = np.sqrt(
-        np.power(sphere2[0] - sphere1[0], 2)
-        + np.power(sphere2[1] - sphere1[1], 2)
-        + np.power(sphere2[2] - sphere1[2], 2)
-    )
-
-    alpha_0 = np.arccos(
-        (np.power(sphere1[3], 2) + np.power(distance, 2) - np.power(sphere2[3], 2))
-        / (2 * sphere1[3] * distance)
-    )
-    r0 = sphere1[3] * np.sin(alpha_0)
-
-    AmBdC = -(A + B) / C
-
-    k_vec = np.array([A, B, C]) / np.sqrt(
-        np.power(A, 2) + np.power(B, 2) + np.power(C, 2)
-    )
-    i_vec = np.array([1, 1, AmBdC]) / np.sqrt(1 + 1 + np.power(AmBdC, 2))
-    j_vec = np.cross(k_vec, i_vec)
-
-    uu = np.random.rand()
-    theta = np.pi * 2 * uu
-
-    x = x0 + r0 * np.cos(theta) * i_vec[0] + r0 * np.sin(theta) * j_vec[0]
-    y = y0 + r0 * np.cos(theta) * i_vec[1] + r0 * np.sin(theta) * j_vec[1]
-    z = z0 + r0 * np.cos(theta) * i_vec[2] + r0 * np.sin(theta) * j_vec[2]
-    vec0 = np.array([x0, y0, z0, r0])
-    return x, y, z, vec0, i_vec, j_vec
+    return p[0], p[1], p[2], np.hstack([p0, r0]), i_vec, j_vec
+    # return p[0], p[1], p[2], np.hstack((p0, r0, [])), i_vec, j_vec
 
 
-@numba.jit()
+# def CCA_2_sphere_intersec(sphere1: np.ndarray, sphere2: np.ndarray):
+#     A = 2 * (sphere2[0] - sphere1[0])
+#     B = 2 * (sphere2[1] - sphere1[1])
+#     C = 2 * (sphere2[2] - sphere1[2])
+#     D = (
+#         np.power(sphere1[0], 2)
+#         - np.power(sphere2[0], 2)
+#         + np.power(sphere1[1], 2 -> tuple[
+# npt.NDArray[np.float64]]),
+# npt.NDArray[np.float64]]),
+# npt.NDArray[np.float64]])
+#       ,  - np.power(sphere2[1], 2)
+#         + np.power(sphere1[2], 2)
+#         - np.power(sphere2[2], 2)
+#         - np.power(sphere1[3], 2)
+#         + np.power(sphere2[3], 2)
+#     )
+#     t = (sphere1[0] * A + sphere1[1] * B + sphere1[2] * C + D) / (
+#         A * (sphere1[0] - sphere2[0])
+#         + B * (sphere1[1] - sphere2[1])
+#         + C * (sphere1[2] - sphere2[2])
+#     )
+
+#     x0 = sphere1[0] + t * (sphere2[0] - sphere1[0])
+#     y0 = sphere1[1] + t * (sphere2[1] - sphere1[1])
+#     z0 = sphere1[2] + t * (sphere2[2] - sphere1[2])
+
+#     distance = np.sqrt(
+#         np.power(sphere2[0] - sphere1[0], 2)
+#         + np.power(sphere2[1] - sphere1[1], 2)
+#
+# # p = vec0        + np.power(sphere2[2] - sphere1[2], 2)
+#     )
+#     arg = (sphere1[3] ** 2 + distance**2 - sphere2[3] ** 2) / (
+#         2 * sphere1[3] * distance
+#     )
+#     # FIXME: does not work, urgh...
+#     alpha_0 = np.arccos(arg)
+#     r0 = sphere1[3] * np.sin(alpha_0)
+
+#     AmBdC = -(A + B) / C
+
+#     k_vec = np.array([A, B, C]) / np.sqrt(
+#         np.power(A, 2) + np.power(B, 2) + np.power(C, 2)
+#     )
+#     i_vec = np.array([1, 1, AmBdC]) / np.sqrt(1 + 1 + np.power(AmBdC, 2))
+#     j_vec = np.cross(k_vec, i_vec)
+
+#     uu = np.random.rand()
+#     theta = np.pi * 2 * uu
+
+#     x = x0 + r0 * np.cos(theta) * i_vec[0] + r0 * np.sin(theta) * j_vec[0]
+#     y = y0 + r0 * np.cos(theta) * i_vec[1] + r0 * np.sin(theta) * j_vec[1]
+#     z = z0 + r0 * np.cos(theta) * i_vec[2] + r0 * np.sin(theta) * j_vec[2]
+#     vec0 = np.array([x0, y0, z0, r0])
+#     return x, y, z, vec0, i_vec, j_vec
+
+
+@jit(cache=True)
+def bounding_sphere(
+    p: npt.NDArray[np.float64],
+    r: npt.NDArray[np.float64],
+) -> tuple[npt.NDArray[np.float64], float]:
+    """
+    Computes a bounding sphere, not the minimal one
+    """
+    # center of sphere
+    p_c = np.sum(p * r[:, np.newaxis] ** 3, axis=0) / np.sum(r**3)
+    r_c = np.max(np.sqrt(np.sum((p - p_c) ** 2, axis=1)) + r)
+
+    return p_c, r_c
+
+
+@jit(parallel=True, cache=True)
+def overlap_filter(
+    p: npt.NDArray[np.float64],
+    r: npt.NDArray[np.float64],
+    p_c: npt.NDArray[np.float64],
+    r_c: float,
+) -> npt.NDArray[np.bool_]:
+    """
+    Checks if any point p intersacts with a bounding sphere p_c.
+    The entry of the particle is True if it overlaps -> needs further checks.
+    """
+    # out = np.zeros(r.size, dtype=np.bool_)
+    # for i in prange(r.size):
+    #     out[i] = np.sum((p[i] - p_c) ** 2) < (r_c + r[i]) ** 2
+    # return out
+    return np.sum((p - p_c) ** 2, axis=1) < (r_c + r) ** 2
+
+
+# @jit(cache=True)
 def CCA_overlap_check(
-    n1: int,
-    n2: int,
-    X1: np.ndarray,
-    X2: np.ndarray,
-    Y1: np.ndarray,
-    Y2: np.ndarray,
-    Z1: np.ndarray,
-    Z2: np.ndarray,
-    R1: np.ndarray,
-    R2: np.ndarray,
+    p1: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
 ):
-    cov_max = 0
+    p_c1, r_c1 = bounding_sphere(p1, r1)
+    p_c2, r_c2 = bounding_sphere(p2, r2)
+    mask1 = overlap_filter(p1, r1, p_c2, r_c2)
+    mask2 = overlap_filter(p2, r2, p_c1, r_c1)
+    # print(
+    #     np.sum(p_c1),
+    #     np.sum(r_c1),
+    #     np.sum(p_c2),
+    #     np.sum(r_c2),
+    #     np.sum(mask1),
+    #     np.sum(mask2),
+    # )
+    return CCA_overlap_check_fast(p1[mask1], r1[mask1], p2[mask2], r2[mask2])
+    # return CCA_overlap_check_fast(p1[mask1], p2[mask2], r1[mask1], r2[mask2])
+    # return CCA_overlap_check_fast(p1, r1, p2, r2)
 
+
+@jit(fastmath=True, cache=True)
+def CCA_overlap_check_old(
+    p1: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
+):
+    n1 = r1.size
+    n2 = r2.size
+    cov_max = 0
     for i in range(n1):
         for j in range(n2):
             d_ij = np.sqrt(
-                np.power(X1[i] - X2[j], 2)
-                + np.power(Y1[i] - Y2[j], 2)
-                + np.power(Z1[i] - Z2[j], 2)
+                (p1[i, 0] - p2[j, 0]) ** 2
+                + (p1[i, 1] - p2[j, 1]) ** 2
+                + (p1[i, 2] - p2[j, 2]) ** 2
             )
-            if d_ij < R1[i] + R2[j]:
-                c_ij = (R1[i] + R2[j] - d_ij) / (R1[i] + R2[j])
+            if d_ij < r1[i] + r2[j]:
+                c_ij = (r1[i] + r2[j] - d_ij) / (r1[i] + r2[j])
                 if c_ij > cov_max:
                     cov_max = c_ij
     return cov_max
 
 
-@numba.jit()
+@jit(parallel=True, fastmath=True, cache=True)
+def CCA_overlap_check_fast(
+    p1: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
+):
+    c_ij = np.zeros((r1.size, r2.size))
+
+    for k in prange(c_ij.size):
+        i = k % r1.size
+        j = k // r1.size
+        d_ij_2 = (
+            (p1[i, 0] - p2[j, 0]) ** 2
+            + (p1[i, 1] - p2[j, 1]) ** 2
+            + (p1[i, 2] - p2[j, 2]) ** 2
+        )
+        if d_ij_2 < (r1[i] + r2[j]) ** 2:
+            c_ij[i, j] = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
+
+    return np.max(c_ij)
+
+
+def CCA_overlap_check_scipy(
+    p1: npt.NDArray[np.float64],
+    r1: npt.NDArray[np.float64],
+    p2: npt.NDArray[np.float64],
+    r2: npt.NDArray[np.float64],
+):
+    dist_ij_2 = cdist(p1, p2, metric="sqeuclidean")
+    r_ij = np.add.outer(r1, r2)
+    c_ij = np.where(dist_ij_2 < r_ij**2, 1 - np.sqrt(dist_ij_2) / r_ij, 0)
+
+    return np.max(c_ij)
+
+
+@jit(cache=True)
 def CCA_sticking_process_v2(
     CM2: np.ndarray,
     vec0: np.ndarray,
@@ -1199,7 +1344,12 @@ def CCA_sticking_process_v2(
     i_vec: np.ndarray,
     j_vec: np.ndarray,
     prev_cand: int,
-):
+) -> tuple[
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+]:
+    # TODO: implement Euler-Rodriges and apply here!
     uu = np.random.rand()
     theta_a = 2 * np.pi * uu
 
@@ -1227,7 +1377,9 @@ def CCA_sticking_process_v2(
         ]
     )
     v2 = np.array([x - CM2[0], y - CM2[1], z - CM2[2]])
-    s_vec = np.cross(v1, v2) / my_norm(np.cross(v1, v2))
+    # s_vec = np.cross(v1, v2) / my_norm(np.cross(v1, v2))
+    s_vec = np.cross(v1, v2)
+    s_vec /= np.linalg.norm(s_vec)
     # print(f"{np.linalg.norm(np.cross(v1,v2)) = }")
     # print(f"{my_norm(np.cross(v1,v2)) = }")
 
@@ -1237,10 +1389,15 @@ def CCA_sticking_process_v2(
     ):
         angle = np.arccos(1)
     else:
-        angle = np.arccos(np.dot(v1, v2) / (my_norm(v1) * my_norm(v2)))
+        angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+        # angle = np.arccos(np.dot(v1, v2) / (my_norm(v1) * my_norm(v2)))
 
     As = np.array(
-        [[0, -s_vec[2], s_vec[1]], [s_vec[2], 0, -s_vec[0]], [-s_vec[1], s_vec[0], 0]]
+        [
+            [0, -s_vec[2], s_vec[1]],
+            [s_vec[2], 0, -s_vec[0]],
+            [-s_vec[1], s_vec[0], 0],
+        ]
     )
     # rot = np.identity(3) + np.sin(angle)*As + (1-np.cos(angle)) * np.matmul(As,As)
     rot = np.identity(3) + np.sin(angle) * As + (1 - np.cos(angle)) * (As @ As)
@@ -1269,7 +1426,6 @@ def save_results(
     filename: str = "test",
 ):
     path = Path(folder)
-    print(path)
     if not path.exists():
         print(f"`{path}` does not exist. Making the directory for you!")
         path.mkdir(parents=True, exist_ok=True)
@@ -1277,19 +1433,22 @@ def save_results(
     data.write_csv(path)
 
 
+# Is deepcopy needed? I guess not
+@jit(cache=True)
 def sort_rows(i_orden: np.ndarray):
     c_sort = 2
     for irow in range(i_orden.shape[0]):
         krow = np.argmin(i_orden[irow : i_orden.shape[0], c_sort]) + irow
 
-        temp = copy.deepcopy(i_orden[irow, :])
+        # temp = copy.deepcopy(i_orden[irow, :])
+        temp = i_orden[irow, :].copy()
         i_orden[irow, :] = i_orden[krow, :]
         i_orden[krow, :] = temp
 
     return i_orden
 
 
-@numba.jit()
-def my_norm(a: np.ndarray) -> float:
-    n = np.sqrt(np.power(a[0], 2) + np.power(a[1], 2) + np.power(a[2], 2))
-    return n
+# @jit(cache=True)
+# def my_norm(a: np.ndarray) -> float:
+#     n = np.sqrt(np.power(a[0], 2) + np.power(a[1], 2) + np.power(a[2], 2))
+#     return n

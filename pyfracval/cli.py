@@ -62,7 +62,7 @@ EXT_CASE = 0
 @click.option(
     "-f",
     "--folder",
-    default="",
+    default="results",
     help="Folder to save the results",
 )
 def cli(
@@ -106,7 +106,8 @@ def cli(
     print("Successfully generated aggregate")
 
 
-def plot_particles(position, radii) -> pv.Plotter:
+# def plot_particles(position, radii) -> pv.Plotter:
+def plot_particles(position, radii):
     point_cloud = pv.PolyData(position)
     point_cloud["radius"] = [2 * i for i in radii]
 
@@ -124,7 +125,7 @@ def plot_particles(position, radii) -> pv.Plotter:
 @click.option(
     "--path",
     type=str,
-    default="",
+    default="results",
     help="Path where to look for data files to be displayed",
 )
 def explore(path: str):  # pragma: no cover

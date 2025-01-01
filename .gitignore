@@ -1,3 +1,5 @@
+FracVAL
+*.speedscope.json
 .envrc
 .direnv
 
