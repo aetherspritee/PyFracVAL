@@ -68,28 +68,21 @@
             numba = prev.numba.overrideAttrs (old: {
               buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.tbb_2021_11 ];
             });
-            # scipy = prev.scipy.overrideAttrs (old: {
-            #   build-system =
-            #     (old.build-system or [ ])
-            #     ++ (with final; [
-            #       cython
-            #       meson-python
-            #       # pythran
-            #       setuptools
-            #     ])
-            #     ++ (with pkgs; [
-            #       gfortran
-            #       nukeReferences
-            #       pkg-config
-            #     ])
-            #     ++ lib.optionals final.stdenv.hostPlatform.isDarwin [
-            #       # Minimal version required according to:
-            #       # https://github.com/scipy/scipy/blob/v1.14.0/scipy/meson.build#L185-L188
-            #       (final.xcbuild.override {
-            #         sdkVer = "13.3";
-            #       })
-            #     ];
-            # });
+            taichi = prev.taichi.overrideAttrs (old: {
+              # buildInputs =
+              #   (old.buildInputs or [ ])
+              #   ++ (with pkgs; [
+              #     libGL
+              #     vulkan-loader
+              #   ]);
+              propagatedBuildInputs =
+                (old.propagatedBuildInputs or [ ])
+                ++ (with pkgs; [
+                  libGL
+                  vulkan-loader
+                ]);
+              pythonImportsCheck = "OpenGL";
+            });
           };
 
           python = pkgs.python3;
@@ -172,6 +165,15 @@
                 shellHook = ''
                   unset PYTHONPATH
                   export REPO_ROOT=$(git rev-parse --show-toplevel)
+                  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${
+                    lib.makeLibraryPath (
+                      with pkgs;
+                      [
+                        libGL
+                        vulkan-loader
+                      ]
+                    )
+                  }
                 '';
               };
           };
