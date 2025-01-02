@@ -528,13 +528,18 @@ def CCA(
             X2, Y2, Z2 = p2.transpose()
             # X_cm2, Y_cm2, Z_cm2 = CM2
 
-            print(p1, r1, p2, r2)
             cov_max = CCA_overlap_check(
-                p1.astype("float32"),
-                r1.astype("float32"),
-                p2.astype("float32"),
-                r2.astype("float32"),
+                p1.astype(np.float32),
+                r1.astype(np.float32),
+                p2.astype(np.float32),
+                r2.astype(np.float32),
             )
+            # cov_max = CCA_overlap_check(
+            #     p1=ti.ndarray(dtype=ti.math.vec3, shape=r1.size).from_numpy(p1),
+            #     p2=ti.ndarray(dtype=ti.math.vec3, shape=r2.size).from_numpy(p2),
+            #     r1=ti.ndarray(dtype=float, shape=r1.size).from_numpy(r1),
+            #     r2=ti.ndarray(dtype=float, shape=r2.size).from_numpy(r2),
+            # )
 
             CURR_TRY_MAX = 360
             curr_try = 1
@@ -1219,31 +1224,48 @@ def CCA_2_sphere_intersec(
 #     return x, y, z, vec0, i_vec, j_vec
 
 
-@ti.func
+@ti.kernel
 def bounding_sphere(
-    p: ti.types.ndarray(dtype=float, ndim=2),
-    r: ti.types.ndarray(dtype=float, ndim=1),
+    p: ti.types.ndarray(dtype=ti.types.vector(3, ti.f32), ndim=1),
+    r: ti.types.ndarray(dtype=ti.f32, ndim=1),
+    t: ti.types.ndarray(dtype=ti.f32, ndim=1),
 ) -> tuple[
-    ti.types.ndarray(dtype=float, ndim=1),
+    ti.types.vector(3, ti.f32),
     ti.f32,
 ]:
     """
     Computes a bounding sphere, not the minimal one
     """
     # center of sphere
-    p_c = np.sum(p * ti.pow(r, 3), axis=0) / np.sum(ti.pow(r, 3))
-    r_c = np.max(np.sqrt(np.sum((p - p_c) ** 2, axis=1)) + r)
+    p_c = ti.Vector([0.0, 0.0, 0.0])
+    r3_total = 0.0
+    for i in range(p.shape[0]):
+        r3 = r[i] ** 3
+        ti.atomic_add(r3_total, r3)
+        ti.atomic_add(p_c, p[i] * r[i] ** 3)
+
+    p_c /= r3_total
+
+    r_c = 0.0
+    for i in range(p.shape[0]):
+        dist = (p[i] - p_c).norm() + r[i]
+        ti.atomic_max(r_c, dist)
+    # p_c = np.sum(p * ti.pow(r, 3), axis=0) / np.sum(ti.pow(r, 3))
+    # r_c = np.max(np.sqrt(np.sum((p - p_c) ** 2, axis=1)) + r)
+
+    t[0] += 1
 
     return p_c, r_c
 
 
-@ti.func
+@ti.kernel
 def overlap_filter(
-    p: ti.types.ndarray(),
-    r: ti.types.ndarray(),
-    p_c: ti.types.ndarray(),
-    r_c: float,
-) -> ti.types.ndarray():
+    p: ti.types.ndarray(dtype=ti.types.vector(3, ti.f32), ndim=1),
+    r: ti.types.ndarray(dtype=ti.f32, ndim=1),
+    p_c: ti.types.vector(3, ti.f32),
+    r_c: ti.f32,
+    result: ti.types.ndarray(dtype=ti.u1, ndim=1),
+):
     """
     Checks if any point p intersacts with a bounding sphere p_c.
     The entry of the particle is True if it overlaps -> needs further checks.
@@ -1252,36 +1274,61 @@ def overlap_filter(
     # for i in prange(r.size):
     #     out[i] = np.sum((p[i] - p_c) ** 2) < (r_c + r[i]) ** 2
     # return out
-    result = ti.field(dtype=ti.bool, shape=r.shape)
+    # result = ti.ndarray(dtype=ti.u1, shape=r.shape[0])
     for i in range(r.shape[0]):
         diff_2 = (p[i] - p_c) ** 2
         result[i] = diff_2.sum() < (r_c + r[i]) ** 2
-    return result
 
 
 # @jit(cache=True)
-@ti.kernel
+# @ti.kernel
 def CCA_overlap_check(
-    p1: ti.types.ndarray(),
-    r1: ti.types.ndarray(),
-    p2: ti.types.ndarray(),
-    r2: ti.types.ndarray(),
+    p1: ti.types.ndarray(dtype=ti.math.vec3, ndim=1),
+    r1: ti.types.ndarray(dtype=ti.f32, ndim=1),
+    p2: ti.types.ndarray(dtype=ti.math.vec3, ndim=1),
+    r2: ti.types.ndarray(dtype=ti.f32, ndim=1),
 ):
-    p_c1, r_c1 = bounding_sphere(p1, r1)
-    p_c2, r_c2 = bounding_sphere(p2, r2)
-    mask1 = overlap_filter(p1, r1, p_c2, r_c2)
-    mask2 = overlap_filter(p2, r2, p_c1, r_c1)
-    # print(
-    #     np.sum(p_c1),
-    #     np.sum(r_c1),
-    #     np.sum(p_c2),
-    #     np.sum(r_c2),
-    #     np.sum(mask1),
-    #     np.sum(mask2),
-    # )
-    return CCA_overlap_check_fast(p1[mask1], r1[mask1], p2[mask2], r2[mask2])
-    # return CCA_overlap_check_fast(p1[mask1], p2[mask2], r1[mask1], r2[mask2])
-    # return CCA_overlap_check_fast(p1, r1, p2, r2)
+    t = ti.ndarray(dtype=ti.f32, shape=r1.shape[0])
+    p_c1, r_c1 = bounding_sphere(p1, r1, t)
+    p_c2, r_c2 = bounding_sphere(p2, r2, t)
+
+    mask1 = ti.ndarray(dtype=ti.u1, shape=r1.shape[0])
+    mask2 = ti.ndarray(dtype=ti.u1, shape=r2.shape[0])
+    return CCA_overlap_check_fast(
+        p1[mask1.to_numpy()],
+        r1[mask1.to_numpy()],
+        p2[mask2.to_numpy()],
+        r2[mask2.to_numpy()],
+    )
+
+
+@ti.kernel
+def CCA_overlap_check_fast(
+    p1: ti.types.ndarray(dtype=ti.math.vec3, ndim=1),
+    r1: ti.types.ndarray(dtype=ti.f32, ndim=1),
+    p2: ti.types.ndarray(dtype=ti.math.vec3, ndim=1),
+    r2: ti.types.ndarray(dtype=ti.f32, ndim=1),
+) -> ti.f32:
+    # c_ij = ti.ndarray(dtype=float, shape=(r1.size, r2.size))
+
+    # for k in prange(c_ij.size):
+    # i = k % r1.size
+    # j = k // r1.size
+    max = 0.0
+    for k in range(r1.shape[0] * r2.shape[0]):
+        i = k % r1.shape[0]
+        j = k // r1.shape[0]
+        d_ij_2 = (
+            (p1[i][0] - p2[j][0]) ** 2
+            + (p1[i][1] - p2[j][1]) ** 2
+            + (p1[i][2] - p2[j][2]) ** 2
+        )
+        if d_ij_2 < (r1[i] + r2[j]) ** 2:
+            c_ij = 1 - ti.math.sqrt(d_ij_2) / (r1[i] + r2[j])
+            max = ti.atomic_max(max, c_ij)
+            # c_ij[i, j] = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
+
+    return max
 
 
 @jit(fastmath=True, cache=True)
@@ -1306,35 +1353,6 @@ def CCA_overlap_check_old(
                 if c_ij > cov_max:
                     cov_max = c_ij
     return cov_max
-
-
-@ti.kernel
-def CCA_overlap_check_fast(
-    p1: ti.types.ndarray(dtype=float, ndim=2),
-    r1: ti.types.ndarray(dtype=float, ndim=1),
-    p2: ti.types.ndarray(dtype=float, ndim=2),
-    r2: ti.types.ndarray(dtype=float, ndim=1),
-):
-    # c_ij = ti.ndarray(dtype=float, shape=(r1.size, r2.size))
-
-    # for k in prange(c_ij.size):
-    # i = k % r1.size
-    # j = k // r1.size
-    max = 0.0
-    for k in range(r1.shape[0] * r2.shape[0]):
-        i = k % r1.shape[0]
-        j = k // r1.shape[0]
-        d_ij_2 = (
-            (p1[i, 0] - p2[j, 0]) ** 2
-            + (p1[i, 1] - p2[j, 1]) ** 2
-            + (p1[i, 2] - p2[j, 2]) ** 2
-        )
-        if d_ij_2 < (r1[i] + r2[j]) ** 2:
-            c_ij = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
-            max = ti.atomic_max(max, c_ij)
-            # c_ij[i, j] = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
-
-    return max
 
 
 def CCA_overlap_check_scipy(
