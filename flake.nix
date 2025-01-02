@@ -171,6 +171,7 @@
                       [
                         libGL
                         vulkan-loader
+                        xorg.libX11
                       ]
                     )
                   }
