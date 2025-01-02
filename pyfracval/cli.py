@@ -4,10 +4,13 @@ from pathlib import Path
 import click
 import numpy as np
 import pyvista as pv
+import taichi as ti
 from streamlit import runtime
 from streamlit.web import cli as stcli
 
 from pyfracval.CCA import CCA_subcluster
+
+ti.init()
 
 # config
 DF = 1.8

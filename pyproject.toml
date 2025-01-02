@@ -10,7 +10,6 @@ authors = [
 requires-python = ">=3.10,<3.13"
 dependencies = [
   "click>=8.1.7",
-  "jax>=0.4.28",
   "numba>=0.60.0",
   "numpy>=1.26.4,<2.0.0",
   "polars>=1.12.0",
@@ -19,10 +18,14 @@ dependencies = [
   "pyvista>=0.44.1",
   "stpyvista>=0.1.4",
   "streamlit>=1.41.1",
+  "taichi>=1.7.3",
 ]
 
 [project.scripts]
 pyfracval = "pyfracval.cli:cli"
+
+[tool.pyright]
+reportInvalidTypeForm = false
 
 [build-system]
 requires = ["hatchling"]

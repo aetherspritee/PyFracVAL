@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import taichi as ti
 from numba import jit, prange
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
@@ -527,11 +528,12 @@ def CCA(
             X2, Y2, Z2 = p2.transpose()
             # X_cm2, Y_cm2, Z_cm2 = CM2
 
+            print(p1, r1, p2, r2)
             cov_max = CCA_overlap_check(
-                p1,
-                r1,
-                p2,
-                r2,
+                p1.astype("float32"),
+                r1.astype("float32"),
+                p2.astype("float32"),
+                r2.astype("float32"),
             )
 
             CURR_TRY_MAX = 360
@@ -1217,28 +1219,31 @@ def CCA_2_sphere_intersec(
 #     return x, y, z, vec0, i_vec, j_vec
 
 
-@jit(cache=True)
+@ti.func
 def bounding_sphere(
-    p: npt.NDArray[np.float64],
-    r: npt.NDArray[np.float64],
-) -> tuple[npt.NDArray[np.float64], float]:
+    p: ti.types.ndarray(dtype=float, ndim=2),
+    r: ti.types.ndarray(dtype=float, ndim=1),
+) -> tuple[
+    ti.types.ndarray(dtype=float, ndim=1),
+    ti.f32,
+]:
     """
     Computes a bounding sphere, not the minimal one
     """
     # center of sphere
-    p_c = np.sum(p * r[:, np.newaxis] ** 3, axis=0) / np.sum(r**3)
+    p_c = np.sum(p * ti.pow(r, 3), axis=0) / np.sum(ti.pow(r, 3))
     r_c = np.max(np.sqrt(np.sum((p - p_c) ** 2, axis=1)) + r)
 
     return p_c, r_c
 
 
-@jit(parallel=True, cache=True)
+@ti.func
 def overlap_filter(
-    p: npt.NDArray[np.float64],
-    r: npt.NDArray[np.float64],
-    p_c: npt.NDArray[np.float64],
+    p: ti.types.ndarray(),
+    r: ti.types.ndarray(),
+    p_c: ti.types.ndarray(),
     r_c: float,
-) -> npt.NDArray[np.bool_]:
+) -> ti.types.ndarray():
     """
     Checks if any point p intersacts with a bounding sphere p_c.
     The entry of the particle is True if it overlaps -> needs further checks.
@@ -1247,15 +1252,20 @@ def overlap_filter(
     # for i in prange(r.size):
     #     out[i] = np.sum((p[i] - p_c) ** 2) < (r_c + r[i]) ** 2
     # return out
-    return np.sum((p - p_c) ** 2, axis=1) < (r_c + r) ** 2
+    result = ti.field(dtype=ti.bool, shape=r.shape)
+    for i in range(r.shape[0]):
+        diff_2 = (p[i] - p_c) ** 2
+        result[i] = diff_2.sum() < (r_c + r[i]) ** 2
+    return result
 
 
 # @jit(cache=True)
+@ti.kernel
 def CCA_overlap_check(
-    p1: npt.NDArray[np.float64],
-    r1: npt.NDArray[np.float64],
-    p2: npt.NDArray[np.float64],
-    r2: npt.NDArray[np.float64],
+    p1: ti.types.ndarray(),
+    r1: ti.types.ndarray(),
+    p2: ti.types.ndarray(),
+    r2: ti.types.ndarray(),
 ):
     p_c1, r_c1 = bounding_sphere(p1, r1)
     p_c2, r_c2 = bounding_sphere(p2, r2)
@@ -1298,27 +1308,33 @@ def CCA_overlap_check_old(
     return cov_max
 
 
-@jit(parallel=True, fastmath=True, cache=True)
+@ti.kernel
 def CCA_overlap_check_fast(
-    p1: npt.NDArray[np.float64],
-    r1: npt.NDArray[np.float64],
-    p2: npt.NDArray[np.float64],
-    r2: npt.NDArray[np.float64],
+    p1: ti.types.ndarray(dtype=float, ndim=2),
+    r1: ti.types.ndarray(dtype=float, ndim=1),
+    p2: ti.types.ndarray(dtype=float, ndim=2),
+    r2: ti.types.ndarray(dtype=float, ndim=1),
 ):
-    c_ij = np.zeros((r1.size, r2.size))
+    # c_ij = ti.ndarray(dtype=float, shape=(r1.size, r2.size))
 
-    for k in prange(c_ij.size):
-        i = k % r1.size
-        j = k // r1.size
+    # for k in prange(c_ij.size):
+    # i = k % r1.size
+    # j = k // r1.size
+    max = 0.0
+    for k in range(r1.shape[0] * r2.shape[0]):
+        i = k % r1.shape[0]
+        j = k // r1.shape[0]
         d_ij_2 = (
             (p1[i, 0] - p2[j, 0]) ** 2
             + (p1[i, 1] - p2[j, 1]) ** 2
             + (p1[i, 2] - p2[j, 2]) ** 2
         )
         if d_ij_2 < (r1[i] + r2[j]) ** 2:
-            c_ij[i, j] = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
+            c_ij = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
+            max = ti.atomic_max(max, c_ij)
+            # c_ij[i, j] = 1 - np.sqrt(d_ij_2) / (r1[i] + r2[j])
 
-    return np.max(c_ij)
+    return max
 
 
 def CCA_overlap_check_scipy(
