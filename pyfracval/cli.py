@@ -10,14 +10,6 @@ from streamlit.web import cli as stcli
 
 from pyfracval.CCA import CCA_subcluster
 
-ti.init()
-
-# config
-DF = 1.8
-Kf = 1.0
-N = 1024
-R0 = 1
-SIGMA = 0
 EXT_CASE = 0
 
 
@@ -68,6 +60,23 @@ EXT_CASE = 0
     default="results",
     help="Folder to save the results",
 )
+@click.option(
+    "-t",
+    "--target",
+    type=click.Choice(
+        [
+            "default",
+            "gpu",
+            "cuda",
+            "vulkan",
+            "opengl",
+            "cpu",
+        ],
+        case_sensitive=False,
+    ),
+    default="default",
+    help="Hardware/Software target for taichi. Defaults to providing no target (usually meaning CPU)",
+)
 def cli(
     ctx,
     fractal_dimension: float,
@@ -77,9 +86,23 @@ def cli(
     std_radius: float,
     plot: bool,
     folder: str,
+    target: str,
 ) -> None:
     if ctx.invoked_subcommand:
         return
+    match target:
+        case "default":
+            ti.init()
+        case "gpu":
+            ti.init(arch=ti.gpu)
+        case "cuda":
+            ti.init(arch=ti.cuda)
+        case "vulkan":
+            ti.init(arch=ti.vulkan)
+        case "opengl":
+            ti.init(arch=ti.opengl)
+        case "cpu":
+            ti.init(arch=ti.cpu)
     R = np.ones((number_of_particles)) * mean_radius
     isFine = False
     N_subcl_perc = 0.1
