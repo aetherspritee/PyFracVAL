@@ -462,6 +462,7 @@ def CCA(
     r_com = np.hstack((R1, R2))
     rg3 = gmean(r_com) * np.power((n3) / kf, (1.0 / Df))
 
+    gamma_pc = np.inf
     gamma_real = False
     if rg3**2 > (m1 * rg1**2 + m2 * rg2**2) / m3:
         gamma_pc = np.sqrt(
@@ -500,7 +501,7 @@ def CCA(
         while cov_max > tolerance:
             if np.sum(curr_list) > 1:
                 prev_cand1 = CCA_random_pick(curr_list, prev_cand1)
-                prev_cand2 = CCA_random_pick(curr_list, prev_cand1, 0.0)
+                prev_cand2 = CCA_random_pick(curr_list, prev_cand1, 0)
             else:
                 CCA_ok = False
 
