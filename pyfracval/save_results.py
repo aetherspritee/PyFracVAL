@@ -1,11 +1,14 @@
 # save_results.py
 """Function to save simulation results."""
 
-import numpy as np
 from pathlib import Path
-import config
 
-def save_aggregate_data(coords: np.ndarray, radii: np.ndarray, iteration: int, output_dir: str = "RESULTS"):
+import numpy as np
+
+
+def save_aggregate_data(
+    coords: np.ndarray, radii: np.ndarray, iteration: int, output_dir: str = "RESULTS"
+):
     """
     Saves the coordinates and radii of the final aggregate.
 
@@ -35,7 +38,7 @@ def save_aggregate_data(coords: np.ndarray, radii: np.ndarray, iteration: int, o
     # Save to file
     try:
         # Use a space delimiter, adjust format if needed
-        np.savetxt(filename, data_to_save, fmt='%18.10e', delimiter=' ')
+        np.savetxt(filename, data_to_save, fmt="%18.10e", delimiter=" ")
         print(f"Successfully saved aggregate data to: {filename}")
     except Exception as e:
         print(f"Error saving results to {filename}: {e}")
