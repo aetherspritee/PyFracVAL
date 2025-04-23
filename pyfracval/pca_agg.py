@@ -5,9 +5,9 @@ Implements Particle-Cluster Aggregation (PCA) used for creating initial subclust
 
 from typing import List, Optional, Tuple
 
-import config
 import numpy as np
-import utils  # Import utility functions
+
+from . import config, utils
 
 
 class PCAggregator:

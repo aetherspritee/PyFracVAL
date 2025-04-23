@@ -6,9 +6,9 @@ Implements the Cluster-Cluster Aggregation (CCA) algorithm.
 import math
 from typing import Optional, Set, Tuple
 
-import config
 import numpy as np
-import utils
+
+from . import config, utils
 
 
 class CCAggregator:

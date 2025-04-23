@@ -6,9 +6,9 @@ Divides initial particles into subclusters using Particle-Cluster Aggregation (P
 import math
 from typing import Optional, Tuple
 
-import config
 import numpy as np
-from pca_agg import PCAggregator  # Import the PCA class
+
+from .pca_agg import PCAggregator
 
 
 class Subclusterer:

@@ -4,14 +4,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# import numpy as np
-# import plotly.graph_objects as go
+import pandas as pd
 import polars as pl
-import pyvista as pv
 import streamlit as st
 from stpyvista import stpyvista
 
-from pyfracval.cli import plot_particles
+from .cli import plot_particles
 
 st.set_page_config(layout="wide")
 st.title("PyFracVAL")
@@ -36,6 +34,7 @@ for path in args.path:
         st.warning(f"Path {p.resolve()} does not exist")
         continue
     files.extend([item for item in p.rglob("*.csv") if item.is_file()])
+    files.extend([item for item in p.rglob("*.dat") if item.is_file()])
 file = st.selectbox(
     "File",
     files,
@@ -43,9 +42,16 @@ file = st.selectbox(
     help="Resize the sidebar if the paths are cut off",
 )
 
-data = pl.read_csv(file)
+match Path(file).suffix:
+    case ".csv":
+        data = pl.read_csv(file)
+    case ".dat":
+        # data = pd.read_table(file, delim_whitespace=True, header=None)
+        data = pd.read_csv(file, sep=r"\s+", header=None, names=["x", "y", "z", "r"])
+    case _:
+        st.error("File type not supported")
 
-pl = plot_particles(data["x", "y", "z"].to_numpy(), data["r"].to_numpy())
+pl = plot_particles(data[["x", "y", "z"]].to_numpy(), data["r"].to_numpy())
 stpyvista(pl)
 
 with st.expander("Full file path"):

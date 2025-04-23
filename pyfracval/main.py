@@ -6,13 +6,11 @@ Main script to run the FracVAL Cluster-Cluster Aggregation simulation.
 import time
 from typing import Optional
 
-import config  # Import parameters
 import numpy as np
-import particle_generation
-import save_results
-import utils
-from cca_agg import CCAggregator
-from pca_subclusters import Subclusterer
+
+from . import config, particle_generation, save_results, utils
+from .cca_agg import CCAggregator
+from .pca_subclusters import Subclusterer
 
 
 def run_simulation(iteration: int, seed: Optional[int] = None):
