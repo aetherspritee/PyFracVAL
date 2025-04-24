@@ -13,6 +13,8 @@ from stpyvista import stpyvista
 
 from pyfracval.cli import plot_particles
 
+pv.start_xvfb()
+
 st.set_page_config(layout="wide")
 st.title("PyFracVAL")
 
