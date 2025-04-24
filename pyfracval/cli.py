@@ -1,8 +1,11 @@
+import logging
 import sys
 import time  # For seeding if needed
 from pathlib import Path
 
 import click
+
+from .coloredlogs import CustomLogFormatter
 
 # Make sure the package is importable
 try:
@@ -137,10 +140,72 @@ DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
     show_default=True,
     help="Maximum number of attempts to generate each aggregate if it fails.",
 )
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Increase verbosity (-v for INFO, -vv for DEBUG)",
+)
+@click.option(
+    "--log-file",
+    type=click.Path(dir_okay=False, writable=True, resolve_path=True),  # Path to a file
+    default=None,  # Default is None (log to console)
+    help="Path to file for logging output instead of console.",
+)
 def cli(ctx, **kwargs) -> None:
     """Main CLI entry point."""
     if ctx.invoked_subcommand:
         return
+
+    match kwargs["verbose"]:
+        case 1:
+            log_level = logging.INFO
+        case 2:
+            log_level = logging.DEBUG
+        case _:
+            log_level = logging.WARNING
+
+    log_format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    date_format = "%Y-%m-%d %H:%M:%S"
+    logging.basicConfig(
+        level=log_level,
+        format=log_format,
+        datefmt=date_format,
+    )
+
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Create console handler (defaults to stderr)
+    console_handler = logging.StreamHandler(sys.stdout)  # Log to stdout
+    console_handler.setLevel(log_level)  # Handler level also respects verbosity
+    console_handler.setFormatter(CustomLogFormatter())  # Use the custom color formatter
+    root_logger.addHandler(console_handler)
+
+    log_file = kwargs["log_file"]
+    # TODO: can be done easier with a dict
+    if log_file:
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            datefmt=date_format,
+            filename=log_file,
+            filemode="a",  # Append mode (or 'w' to overwrite)
+        )
+        print(f"Logging output to file: {log_file}")
+    else:
+        # Log to console (stderr by default with basicConfig stream)
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            datefmt=date_format,
+            stream=sys.stdout,  # Explicitly set to stdout if preferred over stderr
+        )
+
+    logger = logging.getLogger("pyfracval")  # Get your application's logger
+    logger.info(f"Logging configured at level: {logging.getLevelName(log_level)}")
 
     # --- Validate Inputs ---
     if kwargs["rp_gstd"] < 1.0:
@@ -195,8 +260,8 @@ def cli(ctx, **kwargs) -> None:
 
         while not success and attempt < kwargs["max_attempts"]:
             attempt += 1
-            print(
-                f"\n--- Generating Aggregate {agg_num}/{kwargs['num_aggregates']}, Attempt {attempt}/{kwargs['max_attempts']} ---"
+            logger.info(
+                f"--- Generating Aggregate {agg_num}/{kwargs['num_aggregates']}, Attempt {attempt}/{kwargs['max_attempts']} ---"
             )
             success, final_coords, final_radii = run_simulation(
                 iteration=agg_num,
@@ -205,10 +270,15 @@ def cli(ctx, **kwargs) -> None:
                 seed=current_seed,  # Use specific seed for this run
             )
             if not success:
-                print(
-                    f"--- Aggregate {agg_num} generation failed on attempt {attempt}. Retrying... ---"
+                # Log the specific error from the runner first
+                logger.error(
+                    f"Aggregate {agg_num} generation failed on attempt {attempt}."
                 )
-                time.sleep(0.5)  # Small pause
+                # Provide general retry advice (specific advice logged by runner)
+                logger.info(
+                    f"--- Retrying (up to {kwargs['max_attempts']} attempts)... ---"
+                )
+                # time.sleep(0.5)  # Small pause
 
         if success:
             aggregates_generated += 1
@@ -224,35 +294,39 @@ def cli(ctx, **kwargs) -> None:
                     )
                     plotters.append(pl)
                 except ImportError:
-                    print(
-                        "\nWarning: PyVista not installed. Cannot plot results. Install with 'pip install pyvista'"
+                    logger.warning(
+                        "PyVista not installed. Cannot plot results. Install with 'pip install pyvista'"
                     )
                 except Exception as e:
-                    print(f"\nWarning: Error during plotting: {e}")
+                    logger.warning(f"Error during plotting: {e}")
         else:
-            print(
-                f"\nERROR: Failed to generate aggregate {agg_num} after {kwargs['max_attempts']} attempts."
+            logger.critical(
+                f"FATAL: Failed to generate aggregate {agg_num} after {kwargs['max_attempts']} attempts."
             )
             # Optionally exit early on failure
             # ctx.fail(f"Failed to generate aggregate {agg_num}")
 
     # --- Final Summary ---
     global_end_time = time.time()
-    print("\n--------------------------------------------------")
-    print(f"Generated {aggregates_generated}/{kwargs['num_aggregates']} aggregates.")
-    print(f"Results saved to: {output_folder.resolve()}")
-    print(f"Total Simulation Time: {global_end_time - global_start_time:.2f} seconds")
-    print("--------------------------------------------------")
+    logger.info("--------------------------------------------------")
+    logger.info(
+        f"Generated {aggregates_generated}/{kwargs['num_aggregates']} aggregates."
+    )
+    logger.info(f"Results saved to: {output_folder.resolve()}")
+    logger.info(
+        f"Total Simulation Time: {global_end_time - global_start_time:.2f} seconds"
+    )
+    logger.info("--------------------------------------------------")
 
     # --- Show Plots ---
     # Show plots sequentially after all simulations are done
     if plotters:
-        print("Displaying plots...")
+        logger.info("Displaying plots...")
         first_plotter = plotters[0]
         if len(plotters) > 1:
             # Link cameras if multiple plots exist for consistent view manipulation
             # This might require careful handling depending on PyVista version
-            print(f"Linking {len(plotters)} plot windows...")
+            logger.info(f"Linking {len(plotters)} plot windows...")
             # Simple linking (may not work perfectly across separate plotters)
             # for i in range(1, len(plotters)):
             #    plotters[i].link_views(first_plotter) # Try linking to the first one
@@ -268,12 +342,19 @@ def cli(ctx, **kwargs) -> None:
             # --> Showing sequentially is simpler for now <--
 
         for i, pl in enumerate(plotters):
-            print(f"Showing plot for Aggregate {i + 1}...")
+            logger.info(f"Showing plot for Aggregate {i + 1}...")
             pl.show()  # Blocking call, shows one plot at a time
-            print(f"Plot {i + 1} closed.")
+            logger.info(f"Plot {i + 1} closed.")
 
     if aggregates_generated < kwargs["num_aggregates"]:
-        ctx.exit(1)  # Exit with error code if not all generated
+        logger.warning(
+            f"Only {aggregates_generated}/{kwargs['num_aggregates']} aggregates were generated successfully."
+        )
+        ctx.exit(1)  # Exit with error code
+    else:
+        logger.info(
+            f"Finished generating {aggregates_generated} aggregates successfully."
+        )
 
 
 # --- Streamlit Command (keep as is if needed) ---
@@ -289,7 +370,7 @@ def explore(path: str):  # pragma: no cover
         from streamlit import runtime
         from streamlit.web import cli as stcli
     except ImportError:
-        print(
+        logger.info(
             "Error: Streamlit is not installed. Please install it: pip install streamlit"
         )
         sys.exit(1)
@@ -298,11 +379,13 @@ def explore(path: str):  # pragma: no cover
         # app_path = Path(__file__).parent / "pyfracval" / "app.py"
         app_path = Path(__file__).parent / "app.py"
         if not app_path.exists():
-            print(f"Error: Streamlit app not found at expected location: {app_path}")
-            print("Please ensure app.py exists within the pyfracval directory.")
+            logger.info(
+                f"Error: Streamlit app not found at expected location: {app_path}"
+            )
+            logger.info("Please ensure app.py exists within the pyfracval directory.")
             sys.exit(1)
 
-        print(f"Launching Streamlit app: {app_path}")
+        logger.info(f"Launching Streamlit app: {app_path}")
         sys.argv = [
             "streamlit",
             "run",
@@ -312,7 +395,7 @@ def explore(path: str):  # pragma: no cover
         ]
         sys.exit(stcli.main())
     else:
-        print(
+        logger.info(
             "Streamlit runtime already exists (maybe running from within Streamlit?)."
         )
 

@@ -3,12 +3,15 @@
 Implements the Cluster-Cluster Aggregation (CCA) algorithm.
 """
 
+import logging
 import math
-from typing import Optional, Set, Tuple
+from typing import Set, Tuple
 
 import numpy as np
 
 from . import config, utils
+
+logger = logging.getLogger(__name__)
 
 
 class CCAggregator:
@@ -35,8 +38,8 @@ class CCAggregator:
             raise ValueError("initial_i_orden must be an Mx3 array")
         # Ensure i_orden covers all particles
         if initial_i_orden.shape[0] > 0 and (initial_i_orden[-1, 1] + 1) != n_total:
-            print(
-                f"Warning: initial_i_orden last index ({initial_i_orden[-1, 1]}) does not match N-1 ({n_total - 1}). Total particles in i_orden: {np.sum(initial_i_orden[:, 2])}"
+            logger.warning(
+                f"initial_i_orden last index ({initial_i_orden[-1, 1]}) does not match N-1 ({n_total - 1}). Total particles in i_orden: {np.sum(initial_i_orden[:, 2])}"
             )
             # This could indicate an issue from PCA subclustering stage.
 
@@ -71,7 +74,7 @@ class CCAggregator:
 
         if start_idx < 0 or end_idx > self.N or count <= 0 or start_idx >= end_idx:
             # Return empty arrays for invalid/empty clusters defined in i_orden
-            # print(f"Warning: Cluster {cluster_idx} has invalid definition in i_orden: start={start_idx}, end={end_idx-1}, count={count}. Returning empty.")
+            # logger.warning(f"Cluster {cluster_idx} has invalid definition in i_orden: start={start_idx}, end={end_idx-1}, count={count}. Returning empty.")
             return np.array([]).reshape(0, 3), np.array([])
 
         cluster_coords = self.coords[start_idx:end_idx, :]
@@ -79,8 +82,8 @@ class CCAggregator:
 
         # Basic check
         if cluster_coords.shape[0] != count or cluster_radii.shape[0] != count:
-            print(
-                f"Warning: Mismatch between i_orden count ({count}) and sliced data length for cluster {cluster_idx} (Coords: {cluster_coords.shape[0]}, Radii: {cluster_radii.shape[0]})."
+            logger.warning(
+                f"Mismatch between i_orden count ({count}) and sliced data length for cluster {cluster_idx} (Coords: {cluster_coords.shape[0]}, Radii: {cluster_radii.shape[0]})."
             )
             # Attempt to use the sliced data length if possible
             # Or handle as error? Let's proceed with caution.
@@ -114,12 +117,12 @@ class CCAggregator:
                 gamma_pc = np.sqrt((term1 - term2) / denominator)
                 gamma_real = True
         except (ValueError, ZeroDivisionError, OverflowError) as e:
-            # print(f"Warning: CCA Gamma calculation failed: {e}")
+            logger.warning(f"CCA Gamma calculation failed: {e}")
             gamma_real = False
 
         return gamma_real, gamma_pc
 
-    def _identify_monomers(self) -> Optional[np.ndarray]:
+    def _identify_monomers(self) -> np.ndarray | None:
         """Creates an array mapping each monomer index (0..N-1) to its cluster index (0..i_t-1)."""
         try:
             id_monomers = np.zeros(self.N, dtype=int) - 1  # Initialize with -1
@@ -133,21 +136,21 @@ class CCAggregator:
             # Check if all monomers were assigned
             if np.any(id_monomers < 0):
                 unassigned = np.where(id_monomers < 0)[0]
-                print(
-                    f"Warning: {len(unassigned)} monomers not assigned to any cluster based on i_orden. Indices: {unassigned[:10]}..."
+                logger.warning(
+                    f"{len(unassigned)} monomers not assigned to any cluster based on i_orden. Indices: {unassigned[:10]}..."
                 )
                 # This shouldn't happen if i_orden is correct. Force assign or error?
                 # Let's allow it but CCA might fail later if it tries to access them.
             return id_monomers
         except IndexError:
-            print("Error: Index out of bounds in _identify_monomers. Check i_orden.")
+            logger.error("Index out of bounds in _identify_monomers. Check i_orden.")
             return None
 
     # --------------------------------------------------------------------------
     # Pair Generation Logic
     # --------------------------------------------------------------------------
 
-    def _generate_pairs(self) -> Optional[np.ndarray]:
+    def _generate_pairs(self) -> np.ndarray | None:
         """
         Generates the ID_agglomerated matrix indicating potential pairs.
         Returns the matrix or None on failure.
@@ -223,8 +226,8 @@ class CCAggregator:
                     loc = actual_unpaired[0]
                     id_agglomerated[loc, loc] = 1
                 elif len(actual_unpaired) > 1:
-                    print(
-                        f"Warning: Found {len(actual_unpaired)} non-empty unpaired clusters for odd i_t={self.i_t}. Pairing may fail."
+                    logger.warning(
+                        f"Found {len(actual_unpaired)} non-empty unpaired clusters for odd i_t={self.i_t}. Pairing may fail."
                     )
                     # Should we force a pair or fail? Let's try failing later if needed.
                 # else: all unpaired were empty, which is fine.
@@ -240,8 +243,8 @@ class CCAggregator:
             failed_indices = np.where(
                 (final_paired_status == 0) & should_be_paired_mask
             )[0]
-            print(
-                f"Error: Could not find pairs for all non-empty clusters. Failed indices: {failed_indices}"
+            logger.error(
+                f"Could not find pairs for all non-empty clusters. Failed indices: {failed_indices}"
             )
             # Fortran code has a path to set not_able_CCA = .true. here in the 'listo' loop failure.
             self.not_able_cca = True
@@ -329,9 +332,9 @@ class CCAggregator:
     def _cca_sticking_v1(
         self, cluster1_data, cluster2_data, cand1_idx, cand2_idx, gamma_pc, gamma_real
     ) -> Tuple[
-        Optional[np.ndarray],
-        Optional[np.ndarray],
-        Optional[np.ndarray],
+        np.ndarray | None,
+        np.ndarray | None,
+        np.ndarray | None,
         float,
         np.ndarray,
         np.ndarray,
@@ -367,7 +370,7 @@ class CCAggregator:
         vec_cm1_p1 = coords1[cand1_idx] - cm1
         vec_cm1_p1 = utils.normalize(vec_cm1_p1)
         if np.linalg.norm(vec_cm1_p1) < 1e-9:
-            print("Warning: CCA Stick V1 - Selected particle coincides with CM1.")
+            logger.warning("CCA Stick V1 - Selected particle coincides with CM1.")
             vec_cm1_p1 = np.array([1.0, 0.0, 0.0])  # Arbitrary direction
 
         cm2_target = cm1 + gamma_pc * vec_cm1_p1
@@ -430,11 +433,10 @@ class CCAggregator:
                 contact_point = np.array([x_cp, y_cp, z_cp])
 
         if not point_valid or contact_point is None:
-            print(
-                f"Warning: CCA Stick V1 - Failed to find initial contact point (ext_case={self.ext_case}, case={case})."
+            logger.warning(
+                f"CCA Stick V1 - Failed to find initial contact point (ext_case={self.ext_case}, case={case})."
             )
             return (
-                None,
                 None,
                 None,
                 None,
@@ -449,7 +451,7 @@ class CCAggregator:
         vec_p1_contact = contact_point - coords1[cand1_idx]
         vec_p1_contact = utils.normalize(vec_p1_contact)
         if np.linalg.norm(vec_p1_contact) < 1e-9:
-            # print("Warning: CCA Stick V1 - Contact point direction undefined.")
+            # logger.warning("CCA Stick V1 - Contact point direction undefined.")
             # If direction is undefined, maybe stick along original cm1-p1 vector?
             final_contact_point_p1 = coords1[cand1_idx] + radii1[
                 cand1_idx
@@ -517,15 +519,14 @@ class CCAggregator:
         )
 
         if not intersection_valid:
-            print(
-                f"Warning: CCA Stick V1 - Failed sphere intersection A/B. cand1={cand1_idx}, cand2={cand2_idx}"
+            logger.warning(
+                f"CCA Stick V1 - Failed sphere intersection A/B. cand1={cand1_idx}, cand2={cand2_idx}"
             )
             distAB = np.linalg.norm(center_A - center_B)
-            print(
+            logger.warning(
                 f"  Dist={distAB:.4f}, R_A={radius_A:.4f}, R_B={radius_B:.4f}, Sum={radius_A + radius_B:.4f}"
             )
             return (
-                None,
                 None,
                 None,
                 None,
@@ -578,7 +579,7 @@ class CCAggregator:
             # Update CM? No.
 
         # Return final state after initial sticking
-        return coords1, cm1, coords2, cm2, theta_a, vec_0, i_vec, j_vec
+        return coords1, coords2, cm2, theta_a, vec_0, i_vec, j_vec
 
     def _cca_overlap_check(
         self,
@@ -687,7 +688,7 @@ class CCAggregator:
 
     def _perform_cca_sticking(
         self, cluster_idx1: int, cluster_idx2: int
-    ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    ) -> Tuple[np.ndarray, np.ndarray] | None:
         """
         Manages the process of sticking two clusters (idx1, idx2).
         Corresponds to the Fortran CCA subroutine.
@@ -702,8 +703,8 @@ class CCAggregator:
         n2 = coords2_in.shape[0]
 
         if n1 == 0 or n2 == 0:
-            print(
-                f"Error: Cannot stick empty cluster(s): idx1({n1} particles), idx2({n2} particles)"
+            logger.error(
+                f"Cannot stick empty cluster(s): idx1({n1} particles), idx2({n2} particles)"
             )
             return None  # Cannot stick empty clusters
 
@@ -724,8 +725,8 @@ class CCAggregator:
         )
 
         if np.sum(list_matrix) == 0:
-            print(
-                f"Warning: No initial candidates found for sticking clusters {cluster_idx1} and {cluster_idx2}. Gamma_real={gamma_real}"
+            logger.warning(
+                f"No initial candidates found for sticking clusters {cluster_idx1} and {cluster_idx2}. Gamma_real={gamma_real}"
             )
             # Can this happen if _generate_pairs said they *could* pair? Maybe due to Rmax vs Gamma criteria?
             # Or if gamma_real is false.
@@ -744,11 +745,11 @@ class CCAggregator:
             )
 
             if cand1_idx < 0:  # No more available pairs
-                # print(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): No more candidate pairs to try.")
+                # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): No more candidate pairs to try.")
                 break
 
             tried_pairs.add((cand1_idx, cand2_idx))
-            # print(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): Trying pair ({cand1_idx}, {cand2_idx}). Attempt {attempt+1}/{max_candidate_attempts}")
+            # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): Trying pair ({cand1_idx}, {cand2_idx}). Attempt {attempt+1}/{max_candidate_attempts}")
 
             # Perform initial sticking placement
             stick_results = self._cca_sticking_v1(
@@ -759,12 +760,12 @@ class CCAggregator:
                 gamma_pc,
                 gamma_real,
             )
-            coords1_stick, _, coords2_stick, cm2_stick, theta_a, vec_0, i_vec, j_vec = (
+            coords1_stick, coords2_stick, cm2_stick, theta_a, vec_0, i_vec, j_vec = (
                 stick_results
             )
 
             if coords1_stick is None:  # Initial sticking failed for this pair
-                # print(f"    Initial sticking failed for pair ({cand1_idx}, {cand2_idx}).")
+                # logger.info(f"    Initial sticking failed for pair ({cand1_idx}, {cand2_idx}).")
                 continue  # Try next pair
 
             # Check initial overlap
@@ -777,7 +778,7 @@ class CCAggregator:
                 coords2_stick,
                 radii2_in,
             )
-            # print(f"    Pair ({cand1_idx}, {cand2_idx}): Initial overlap = {cov_max:.4e}")
+            # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Initial overlap = {cov_max:.4e}")
 
             # Rotation attempts if needed
             intento = 0
@@ -807,17 +808,17 @@ class CCAggregator:
                 current_coords2 = (
                     coords2_rotated  # Update coords for next potential rotation
                 )
-                # print(f"    Rotation {intento}: Overlap = {cov_max:.4e}")
+                # logger.info(f"    Rotation {intento}: Overlap = {cov_max:.4e}")
 
                 # Fortran logic for picking new *candidate* after 359 rotations is complex.
                 # If max rotations fail here, we consider this candidate pair (cand1, cand2) failed.
                 if intento >= max_rotations and cov_max > self.tol_ov:
-                    # print(f"    Pair ({cand1_idx}, {cand2_idx}): Failed after {max_rotations} rotations.")
+                    # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Failed after {max_rotations} rotations.")
                     break  # Exit rotation loop for this pair
 
             # Check if overlap is acceptable
             if cov_max <= self.tol_ov:
-                # print(f"    Pair ({cand1_idx}, {cand2_idx}): Success! Overlap = {cov_max:.4e} after {intento} rotations.")
+                # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Success! Overlap = {cov_max:.4e} after {intento} rotations.")
                 sticking_successful = True
                 final_coords1 = coords1_stick  # Cluster 1 might have rotated
                 final_coords2 = (
@@ -838,8 +839,8 @@ class CCAggregator:
             combined_radii = np.concatenate((radii1_in, radii2_in))
             return combined_coords, combined_radii
         else:
-            print(
-                f"Warning: CCA sticking failed for clusters {cluster_idx1} and {cluster_idx2} after trying {attempt + 1} pairs."
+            logger.warning(
+                f"CCA sticking failed for clusters {cluster_idx1} and {cluster_idx2} after trying {attempt + 1} pairs."
             )
             return None  # Failed to find non-overlapping configuration
 
@@ -849,7 +850,7 @@ class CCAggregator:
 
     def _run_iteration(self) -> bool:
         """Performs one iteration of the CCA process."""
-        print(f"--- CCA Iteration Start - Clusters: {self.i_t} ---")
+        logger.info(f"--- CCA Iteration Start - Clusters: {self.i_t} ---")
 
         # Sort clusters by size (optional, matches Fortran)
         # self.i_orden = utils.sort_clusters(self.i_orden) # Sorts by count
@@ -857,14 +858,14 @@ class CCAggregator:
         # Generate pairs
         id_agglomerated = self._generate_pairs()
         if id_agglomerated is None or self.not_able_cca:
-            print("Failed to generate valid pairs.")
+            logger.error("Failed to generate valid pairs.")
             self.not_able_cca = True
             return False  # Cannot continue
 
         # Identify monomers
         id_monomers = self._identify_monomers()
         if id_monomers is None:
-            print("Failed to identify monomers.")
+            logger.error("Failed to identify monomers.")
             self.not_able_cca = True
             return False
 
@@ -889,7 +890,7 @@ class CCAggregator:
 
             if len(partners) == 0:
                 # Should only happen if it's an empty cluster that wasn't skipped, or error.
-                print(f"Warning: Cluster {k} is not considered but has no partners.")
+                logger.warning(f"Cluster {k} is not considered but has no partners.")
                 continue  # Skip this presumably empty or problematic cluster
             elif len(partners) == 1 and partners[0] == k:
                 # This is the self-paired odd cluster
@@ -910,16 +911,16 @@ class CCAggregator:
                         other = k  # It's the odd one
                     else:
                         # Should have been marked considered earlier
-                        # print(f"Debug: Cluster {k} seems orphaned.")
+                        # logger.debug(f"Cluster {k} seems orphaned.")
                         continue  # Skip
 
             # --- Process the pair (k, other) ---
             if k == other:  # Handle single cluster (odd number case)
-                # print(f"Passing through single cluster {k}")
+                # logger.info(f"Passing through single cluster {k}")
                 coords_k, radii_k = self._get_cluster_data(k)
                 count_k = coords_k.shape[0]
                 if count_k == 0:
-                    # print(f"  Skipping empty single cluster {k}")
+                    # logger.info(f"  Skipping empty single cluster {k}")
                     considered[k] = 1
                     continue  # Skip empty cluster
 
@@ -927,11 +928,13 @@ class CCAggregator:
                 combined_radii = radii_k
                 considered[k] = 1
             else:  # Handle a pair (k, other)
-                # print(f"Attempting to stick pair ({k}, {other})")
+                # logger.info(f"Attempting to stick pair ({k}, {other})")
                 stick_result = self._perform_cca_sticking(k, other)
 
                 if stick_result is None:
-                    print(f"Sticking failed for pair ({k}, {other}). Cannot continue.")
+                    logger.info(
+                        f"Sticking failed for pair ({k}, {other}). Cannot continue."
+                    )
                     self.not_able_cca = True
                     return False  # Critical failure
 
@@ -942,13 +945,13 @@ class CCAggregator:
             # --- Update next iteration arrays ---
             num_added = combined_coords.shape[0]
             if fill_idx + num_added > self.N:
-                print(f"Error: Exceeding total particle count N during CCA iteration.")
+                logger.error(f"Exceeding total particle count N during CCA iteration.")
                 self.not_able_cca = True
                 return False
 
             if next_cluster_idx >= num_clusters_next:
-                print(
-                    f"Error: Exceeding expected number of clusters for next CCA iteration."
+                logger.error(
+                    "Exceeding expected number of clusters for next CCA iteration."
                 )
                 self.not_able_cca = True
                 return False
@@ -966,12 +969,12 @@ class CCAggregator:
         # --- Post-Iteration Update ---
         # Check if expected number of clusters were formed
         if next_cluster_idx != num_clusters_next:
-            print(
-                f"Warning: CCA iteration formed {next_cluster_idx} clusters, expected {num_clusters_next}."
+            logger.warning(
+                f"CCA iteration formed {next_cluster_idx} clusters, expected {num_clusters_next}."
             )
             # This could happen if empty clusters were skipped.
             if next_cluster_idx == 0 and self.i_t > 1:  # Check if any clusters remain
-                print("Error: No clusters formed in CCA iteration.")
+                logger.error("No clusters formed in CCA iteration.")
                 self.not_able_cca = True
                 return False
             # Adjust i_orden_next size if fewer clusters were formed
@@ -984,10 +987,10 @@ class CCAggregator:
         self.i_orden = i_orden_next
         self.i_t = num_clusters_next
 
-        print(f"--- CCA Iteration End - Clusters Remaining: {self.i_t} ---")
+        logger.info(f"--- CCA Iteration End - Clusters Remaining: {self.i_t} ---")
         return True  # Iteration successful
 
-    def run_cca(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    def run_cca(self) -> Tuple[np.ndarray, np.ndarray] | None:
         """
         Runs the complete CCA process until only one cluster remains.
 
@@ -999,7 +1002,7 @@ class CCAggregator:
             success = self._run_iteration()
             if not success:
                 self.not_able_cca = True
-                print("CCA aggregation failed.")
+                logger.error("CCA aggregation failed.")
                 return None
             cca_iteration += 1
 
@@ -1008,7 +1011,7 @@ class CCAggregator:
             return None
 
         if self.i_t != 1:
-            print(f"Error: CCA finished but i_t = {self.i_t} (expected 1).")
+            logger.error(f"CCA finished but i_t = {self.i_t} (expected 1).")
             self.not_able_cca = True
             return None
 
@@ -1019,11 +1022,11 @@ class CCAggregator:
             or np.any(np.isinf(self.coords))
             or np.any(np.isinf(self.radii))
         ):
-            print("Error: NaN or Inf detected in final CCA coordinates/radii.")
+            logger.error("NaN or Inf detected in final CCA coordinates/radii.")
             self.not_able_cca = True
             return None
 
-        print("CCA aggregation completed successfully.")
+        logger.info("CCA aggregation completed successfully.")
         # Return only the valid part of the arrays corresponding to the final cluster
         final_count = self.i_orden[0, 2]
         return self.coords[:final_count, :], self.radii[:final_count]
