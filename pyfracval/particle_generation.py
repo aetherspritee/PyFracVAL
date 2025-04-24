@@ -1,8 +1,13 @@
 # particle_generation.py
 """Functions for generating primary particle radii."""
 
-import numpy as np
+import logging
 from typing import Optional
+
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
 
 def random_normal_custom() -> float:
     """
@@ -14,7 +19,10 @@ def random_normal_custom() -> float:
     # For standard normal distribution, numpy's is highly optimized and recommended.
     return np.random.normal(0.0, 1.0)
 
-def lognormal_pp_radii(rp_gstd: float, rp_g: float, n: int, seed: Optional[int] = None) -> np.ndarray:
+
+def lognormal_pp_radii(
+    rp_gstd: float, rp_g: float, n: int, seed: Optional[int] = None
+) -> np.ndarray:
     """
     Generates N random radii from a lognormal distribution.
 
@@ -31,15 +39,15 @@ def lognormal_pp_radii(rp_gstd: float, rp_g: float, n: int, seed: Optional[int] 
         np.random.seed(seed)
 
     if rp_gstd < 1.0:
-        print("Warning: Geometric standard deviation should be >= 1.0. Setting to 1.0.")
+        logger.warning("Geometric standard deviation should be >= 1.0. Setting to 1.0.")
         rp_gstd = 1.0
 
     if rp_g <= 0:
-         raise ValueError("Geometric mean radius (rp_g) must be positive.")
+        raise ValueError("Geometric mean radius (rp_g) must be positive.")
 
     if rp_gstd == 1.0:
         # Monodisperse case
-        print("Generating monodisperse particles.")
+        logger.info("Generating monodisperse particles.")
         return np.full(n, rp_g, dtype=float)
     else:
         # Polydisperse case using numpy's lognormal
@@ -74,5 +82,7 @@ def lognormal_pp_radii(rp_gstd: float, rp_g: float, n: int, seed: Optional[int] 
         # return radii_out
         # --- End Optional Truncation ---
 
-        print(f"Generated polydisperse particles (mean={np.mean(radii):.2f}, std={np.std(radii):.2f}).")
+        logger.info(
+            f"Generated polydisperse particles (mean={np.mean(radii):.2f}, std={np.std(radii):.2f})."
+        )
         return radii

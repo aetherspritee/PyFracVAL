@@ -1,10 +1,15 @@
 # utils.py
 """Utility functions for vector operations and array manipulation."""
 
+import logging
 from typing import Tuple
 
 import numpy as np
 from numba import jit, prange
+
+logger = logging.getLogger(__name__)
+
+FLOATING_POINT_ERROR = 1e-9
 
 
 def shuffle_array(arr: np.ndarray) -> np.ndarray:
@@ -92,8 +97,8 @@ def calculate_rg(radii: np.ndarray, npp: int, df: float, kf: float) -> float:
         # else: rg remains 0.0
     except (ValueError, ZeroDivisionError, OverflowError, RuntimeWarning) as e:
         # Catch potential warnings from log(<=0) as well
-        print(
-            f"Warning: Could not calculate rg ({e}). npp={npp}, len(valid_r)={len(valid_r)}"
+        logger.warning(
+            f"Could not calculate rg ({e}). npp={npp}, len(valid_r)={len(valid_r)}"
         )
         rg = 0.0  # Assign a default value
 
@@ -155,7 +160,7 @@ def rodrigues_rotation(
         The rotated vectors (Nx3 or 3D).
     """
     axis = normalize(axis)
-    if np.linalg.norm(axis) < 1e-9:  # No rotation if axis is zero
+    if np.linalg.norm(axis) < FLOATING_POINT_ERROR:  # No rotation if axis is zero
         return vectors
 
     k = axis
@@ -214,33 +219,37 @@ def cca_two_sphere_intersection(
 
     # --- Check for edge cases ---
     # 1. Spheres are too far apart
-    if distance > r1 + r2 + 1e-9:
-        # print(f"Debug TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1+r2:.4f})")
+    if distance > r1 + r2 + FLOATING_POINT_ERROR:
+        logger.debug(
+            f"TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1 + r2:.4f})"
+        )
         return invalid_ret
     # 2. One sphere is contained within the other without touching
-    if distance < abs(r1 - r2) - 1e-9:
-        # print(f"Debug TSI: Sphere contained within other (d={distance:.4f}, |r1-r2|={abs(r1-r2):.4f})")
+    if distance < abs(r1 - r2) - FLOATING_POINT_ERROR:
+        logger.debug(
+            f"TSI: Sphere contained within other (d={distance:.4f}, |r1-r2|={abs(r1 - r2):.4f})"
+        )
         return invalid_ret
     # 3. Spheres coincide
-    if distance < 1e-9 and abs(r1 - r2) < 1e-9:
-        # print("Debug TSI: Spheres coincide")
+    if distance < FLOATING_POINT_ERROR and abs(r1 - r2) < FLOATING_POINT_ERROR:
+        logger.debug("TSI: Spheres coincide")
         # Intersection is the whole sphere surface - requires different handling if needed
         return invalid_ret  # Cannot define a unique circle
 
     # --- Handle Touching Point Case ---
     is_touching = False
     touch_point = np.zeros(3)
-    if abs(distance - (r1 + r2)) < 1e-9:  # Touching externally
+    if abs(distance - (r1 + r2)) < FLOATING_POINT_ERROR:  # Touching externally
         is_touching = True
         # Point is on the line segment between centers
-        if distance > 1e-9:
+        if distance > FLOATING_POINT_ERROR:
             touch_point = center1 + v12 * (r1 / distance)
         else:  # Should be caught by coincident case, but fallback
             touch_point = center1
-    elif abs(distance - abs(r1 - r2)) < 1e-9:  # Touching internally
+    elif abs(distance - abs(r1 - r2)) < FLOATING_POINT_ERROR:  # Touching internally
         is_touching = True
         # Point is on the line extending from centers
-        if distance > 1e-9:
+        if distance > FLOATING_POINT_ERROR:
             if r1 > r2:
                 touch_point = center1 + v12 * (r1 / distance)
             else:  # r2 > r1
@@ -251,7 +260,7 @@ def cca_two_sphere_intersection(
             touch_point = center1
 
     if is_touching:
-        # print(f"Debug TSI: Spheres touching at point {touch_point}")
+        logger.debug(f"TSI: Spheres touching at point {touch_point}")
         # Return the single point, theta=0, r0=0
         vec_0_touch = np.concatenate((touch_point, [0.0]))
         # i_vec, j_vec are ill-defined, return zeros
@@ -274,8 +283,10 @@ def cca_two_sphere_intersection(
 
         # Radius of the intersection circle squared
         r0_sq = r1**2 - dist1_plane**2
-        if r0_sq < -1e-9:  # Tolerance check for numerical issues
-            # print(f"Warning TSI: Negative r0^2 ({r0_sq}) in sphere intersection. d={distance}, r1={r1}, r2={r2}")
+        if r0_sq < -FLOATING_POINT_ERROR:  # Tolerance check for numerical issues
+            logger.warning(
+                f"TSI: Negative r0^2 ({r0_sq}) in sphere intersection. d={distance}, r1={r1}, r2={r2}"
+            )
             return invalid_ret
         r0 = np.sqrt(max(0.0, r0_sq))  # Ensure non-negative before sqrt
 
@@ -313,7 +324,7 @@ def cca_two_sphere_intersection(
         return x, y, z, theta, vec_0, i_vec, j_vec, True
 
     except (ZeroDivisionError, ValueError) as e:
-        print(f"Error during sphere intersection calculation: {e}")
+        logger.error(f"Error during sphere intersection calculation: {e}")
         return invalid_ret
 
 
@@ -361,7 +372,7 @@ def calculate_max_overlap_cca(
         dist_ij = np.sqrt(d_sq)
         sum_r = radius1_i + radius2_j
 
-        if dist_ij < sum_r - 1e-9:
+        if dist_ij < sum_r - FLOATING_POINT_ERROR:
             if sum_r > 1e-12:
                 overlap = (sum_r - dist_ij) / sum_r
             else:
@@ -424,7 +435,7 @@ def calculate_max_overlap_pca(
         dist_kj = np.sqrt(d_sq)
         sum_r = radius_new + radius_agg_j
 
-        if dist_kj < sum_r - 1e-9:
+        if dist_kj < sum_r - FLOATING_POINT_ERROR:
             if sum_r > 1e-12:
                 overlap = (sum_r - dist_kj) / sum_r
             else:

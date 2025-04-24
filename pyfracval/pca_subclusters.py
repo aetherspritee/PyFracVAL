@@ -3,12 +3,15 @@
 Divides initial particles into subclusters using Particle-Cluster Aggregation (PCA).
 """
 
+import logging
 import math
 from typing import Optional, Tuple
 
 import numpy as np
 
 from .pca_agg import PCAggregator
+
+logger = logging.getLogger(__name__)
 
 
 class Subclusterer:
@@ -34,6 +37,7 @@ class Subclusterer:
         self.i_orden: Optional[np.ndarray] = None
         self.number_clusters: int = 0
         self.not_able_pca: bool = False
+        self.number_clusters_processed = 0
 
     def _determine_subcluster_sizes(self) -> np.ndarray:
         """Calculates the size of each subcluster."""
@@ -61,8 +65,8 @@ class Subclusterer:
 
         # Sanity check
         if np.sum(subcluster_sizes) != self.N:
-            print(
-                f"Warning: Sum of subcluster sizes ({np.sum(subcluster_sizes)}) does not equal N ({self.N}). Adjusting last."
+            logger.warning(
+                "Sum of subcluster sizes does not equal N. Adjusting last size."
             )
             subcluster_sizes[-1] = self.N - np.sum(subcluster_sizes[:-1])
             if subcluster_sizes[-1] < 0:
@@ -70,10 +74,10 @@ class Subclusterer:
                     "Subcluster size calculation resulted in negative size."
                 )
 
-        print(
+        logger.info(
             f"Subclustering N={self.N} into {self.number_clusters} clusters with target size {n_subcl}."
         )
-        print(f"Actual sizes: {subcluster_sizes}")
+        logger.info(f"Actual sizes: {subcluster_sizes}")
         return subcluster_sizes
 
     def run_subclustering(self) -> bool:
@@ -89,15 +93,31 @@ class Subclusterer:
         current_n_start_idx = 0  # Index in the initial_radii array
         current_fill_idx = 0  # Index in the final all_coords/all_radii
 
+        # Option 1: Always use relaxed parameters (e.g., typical monodisperse values)
+        # pca_df = 1.79  # Typical DLCA/Filippov mono value
+        # pca_kf = 1.40  # Typical DLCA/Filippov mono value
+        # logger.info(
+        #     f"--- Using relaxed parameters for PCA stage: Df={pca_df}, kf={pca_kf} ---"
+        # )
+
+        # Option 2: Use override values if provided during init
+        # pca_df = self.pca_df_override if self.pca_df_override is not None else self.df
+        # pca_kf = self.pca_kf_override if self.pca_kf_override is not None else self.kf
+
+        # Option 3: Use target Df/kf (Original way, prone to failure)
+        pca_df = self.df
+        pca_kf = self.kf
+
         for i in range(self.number_clusters):
+            self.number_clusters_processed = i
             num_particles_in_subcluster = subcluster_sizes[i]
-            print(
+            logger.info(
                 f"--- Processing Subcluster {i + 1}/{self.number_clusters} (Size: {num_particles_in_subcluster}) ---"
             )
 
             if num_particles_in_subcluster < 2:
-                print(
-                    f"Error: Subcluster {i + 1} has size {num_particles_in_subcluster}, needs >= 2 for PCA."
+                logger.error(
+                    f"Subcluster {i + 1} has size {num_particles_in_subcluster}, needs >= 2 for PCA."
                 )
                 self.not_able_pca = True
                 return False  # Cannot proceed
@@ -108,18 +128,18 @@ class Subclusterer:
             subcluster_radii = self.initial_radii[idx_start:idx_end]
 
             # Run PCA for this subcluster
-            pca_runner = PCAggregator(subcluster_radii, self.df, self.kf, self.tol_ov)
+            pca_runner = PCAggregator(subcluster_radii, pca_df, pca_kf, self.tol_ov)
             subcluster_data = pca_runner.run()  # Returns Nx4 [X,Y,Z,R] or None
 
             if subcluster_data is None or pca_runner.not_able_pca:
-                print(f"Error: PCA failed for subcluster {i + 1}.")
+                logger.error(f"PCA failed for subcluster {i + 1}.")
                 self.not_able_pca = True
                 return False  # PCA failed for this subcluster
 
             # Store the results
             num_added = subcluster_data.shape[0]
             if current_fill_idx + num_added > self.N:
-                print(f"Error: Exceeding total particle count N during subclustering.")
+                logger.error(f"Exceeding total particle count N during subclustering.")
                 self.not_able_pca = True
                 return False
 
@@ -138,12 +158,12 @@ class Subclusterer:
 
         # Final check
         if current_fill_idx != self.N:
-            print(
-                f"Warning: Final particle count ({current_fill_idx}) after subclustering does not match N ({self.N})."
+            logger.warning(
+                f"Final particle count ({current_fill_idx}) after subclustering does not match N ({self.N})."
             )
             # This might indicate an issue in size calculation or PCA runs returning unexpected sizes.
 
-        print("PCA Subclustering completed.")
+        logger.info("PCA Subclustering completed.")
         return True  # Success
 
     def get_results(

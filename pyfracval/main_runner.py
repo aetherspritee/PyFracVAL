@@ -3,6 +3,7 @@
 Core function to run the FracVAL simulation.
 """
 
+import logging
 import time
 from typing import Any, Dict, Optional, Tuple
 
@@ -12,6 +13,8 @@ import numpy as np
 from . import particle_generation, save_results, utils
 from .cca_agg import CCAggregator
 from .pca_subclusters import Subclusterer
+
+logger = logging.getLogger(__name__)
 
 
 def run_simulation(
@@ -35,8 +38,8 @@ def run_simulation(
             (success_flag, final_coords, final_radii)
             Coords and radii are returned only on success.
     """
-    print(f"\n===== Starting Aggregate Generation {iteration} =====")
-    print(
+    logger.info(f"===== Starting Aggregate Generation {iteration} =====")
+    logger.info(
         f"Config: N={sim_config['N']}, Df={sim_config['Df']}, kf={sim_config['kf']}, "
         f"rp_g={sim_config['rp_g']}, rp_gstd={sim_config['rp_gstd']}"
     )
@@ -44,7 +47,7 @@ def run_simulation(
 
     if seed is not None:
         np.random.seed(seed)  # Use the provided seed directly for this run
-        print(f"Using random seed: {seed}")
+        logger.info(f"Using random seed: {seed}")
 
     # --- Use parameters from sim_config ---
     N = sim_config["N"]
@@ -64,15 +67,18 @@ def run_simulation(
             rp_g,
             N,  # Seed handled above
         )
+        logger.info(
+            f"Generated initial radii (Mean: {np.mean(initial_radii):.2f}, Std: {np.std(initial_radii):.2f})"
+        )
     except ValueError as e:
-        print(f"Error generating radii: {e}")
+        logger.error(f"Error generating radii: {e}")
         return False, None, None
 
     # 2. Shuffle Radii
     shuffled_radii = utils.shuffle_array(initial_radii.copy())
 
     # 3. PCA Subclustering
-    print("\n--- Starting PCA Subclustering ---")
+    logger.info("--- Starting PCA Subclustering ---")
     pca_start_time = time.time()
     subcluster_runner = Subclusterer(
         initial_radii=shuffled_radii,
@@ -83,10 +89,21 @@ def run_simulation(
     )
     pca_success = subcluster_runner.run_subclustering()
     pca_end_time = time.time()
-    print(f"PCA Subclustering Time: {pca_end_time - pca_start_time:.2f} seconds")
+    logger.info(f"PCA Subclustering Time: {pca_end_time - pca_start_time:.2f} seconds")
 
     if not pca_success:
-        print("PCA Subclustering failed.")
+        logger.error(
+            f"PCA Subclustering failed (Subcluster {subcluster_runner.number_clusters_processed + 1 if hasattr(subcluster_runner, 'number_clusters_processed') else 'N/A'})."
+        )
+        logger.error("Potential Causes/Fixes for PCA Failure:")
+        logger.error(
+            "  - Try reducing subcluster size with '--n-subcl-perc' (e.g., --n-subcl-perc 0.05)."
+        )
+        logger.error("  - Increase max attempts with '--max-attempts'.")
+        logger.error(
+            "  - Check simulation parameters (Df, kf, rp_gstd) - may be geometrically constrained."
+        )
+        logger.error("  - Try a different '--seed' for a new particle configuration.")
         return False, None, None
 
     num_clusters, not_able_pca, pca_coords_radii, pca_i_orden, _ = (
@@ -94,11 +111,11 @@ def run_simulation(
     )
 
     if not_able_pca or pca_coords_radii is None or pca_i_orden is None:
-        print("PCA returned invalid results.")
+        logger.error("PCA returned invalid results.")
         return False, None, None
 
     # 4. Cluster-Cluster Aggregation
-    print("\n--- Starting Cluster-Cluster Aggregation ---")
+    logger.info("--- Starting Cluster-Cluster Aggregation ---")
     cca_start_time = time.time()
     cca_runner = CCAggregator(
         initial_coords=pca_coords_radii[:, :3],
@@ -112,10 +129,19 @@ def run_simulation(
     )
     cca_result = cca_runner.run_cca()
     cca_end_time = time.time()
-    print(f"CCA Aggregation Time: {cca_end_time - cca_start_time:.2f} seconds")
+    logger.info(f"CCA Aggregation Time: {cca_end_time - cca_start_time:.2f} seconds")
 
     if cca_result is None or cca_runner.not_able_cca:
-        print("CCA Aggregation failed.")
+        logger.error(
+            "CCA Aggregation failed."
+        )  # CCA errors are often harder to diagnose simply
+        logger.error("Potential Causes/Fixes for CCA Failure:")
+        logger.error("  - Increase max attempts with '--max-attempts'.")
+        logger.error(
+            "  - Check simulation parameters (Df, kf) - may be geometrically constrained."
+        )
+        logger.error("  - Ensure PCA stage produced valid subclusters.")
+        logger.error("  - Try a different '--seed'.")
         return False, None, None
 
     # 5. Prepare Results
@@ -124,11 +150,11 @@ def run_simulation(
     # 6. Save Results (Optional, can be done by caller)
     # Make sure save_results can handle output directory argument
     save_results.save_aggregate_data(
-        final_coords, final_radii, iteration, output_dir=output_base_dir
+        final_coords, final_radii, iteration, sim_config, output_dir=output_base_dir
     )
 
     end_time = time.time()
-    print(
+    logger.info(
         f"===== Aggregate {iteration} Finished Successfully ({end_time - start_time:.2f} seconds) ====="
     )
     return True, final_coords, final_radii

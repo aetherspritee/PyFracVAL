@@ -3,6 +3,7 @@
 Main script to run the FracVAL Cluster-Cluster Aggregation simulation.
 """
 
+import logging
 import time
 from typing import Optional
 
@@ -12,11 +13,13 @@ from . import config, particle_generation, save_results, utils
 from .cca_agg import CCAggregator
 from .pca_subclusters import Subclusterer
 
+logger = logging.getLogger(__name__)
+
 
 def run_simulation(iteration: int, seed: Optional[int] = None):
     """Runs one full aggregate generation."""
-    print(
-        f"\n===== Starting Aggregate Generation {iteration}/{config.QUANTITY_AGGREGATES} ====="
+    logger.info(
+        f"===== Starting Aggregate Generation {iteration}/{config.QUANTITY_AGGREGATES} ====="
     )
     start_time = time.time()
 
@@ -24,7 +27,7 @@ def run_simulation(iteration: int, seed: Optional[int] = None):
         np.random.seed(
             seed + iteration
         )  # Ensure different seed per iteration if base seed provided
-        print(f"Using random seed: {seed + iteration}")
+        logger.info(f"Using random seed: {seed + iteration}")
 
     # 1. Generate Initial Particle Radii
     try:
@@ -32,14 +35,14 @@ def run_simulation(iteration: int, seed: Optional[int] = None):
             config.RP_GEOMETRIC_STD, config.RP_GEOMETRIC_MEAN, config.N
         )
     except ValueError as e:
-        print(f"Error generating radii: {e}")
+        logger.info(f"Error generating radii: {e}")
         return False  # Cannot proceed
 
     # 2. Shuffle Radii (like Fortran's randsample)
     shuffled_radii = utils.shuffle_array(initial_radii.copy())  # Shuffle a copy
 
     # 3. PCA Subclustering
-    print("\n--- Starting PCA Subclustering ---")
+    logger.info("--- Starting PCA Subclustering ---")
     pca_start_time = time.time()
     subcluster_runner = Subclusterer(
         initial_radii=shuffled_radii,
@@ -50,10 +53,10 @@ def run_simulation(iteration: int, seed: Optional[int] = None):
     )
     pca_success = subcluster_runner.run_subclustering()
     pca_end_time = time.time()
-    print(f"PCA Subclustering Time: {pca_end_time - pca_start_time:.2f} seconds")
+    logger.info(f"PCA Subclustering Time: {pca_end_time - pca_start_time:.2f} seconds")
 
     if not pca_success:
-        print("PCA Subclustering failed. Restarting generation...")
+        logger.info("PCA Subclustering failed. Restarting generation...")
         return False  # Indicate failure for restart logic
 
     num_clusters, not_able_pca, pca_coords_radii, pca_i_orden, pca_radii = (
@@ -67,11 +70,11 @@ def run_simulation(iteration: int, seed: Optional[int] = None):
         or pca_i_orden is None
         or pca_radii is None
     ):
-        print("PCA returned invalid results. Restarting generation...")
+        logger.info("PCA returned invalid results. Restarting generation...")
         return False
 
     # 4. Cluster-Cluster Aggregation
-    print("\n--- Starting Cluster-Cluster Aggregation ---")
+    logger.info("--- Starting Cluster-Cluster Aggregation ---")
     cca_start_time = time.time()
     cca_runner = CCAggregator(
         initial_coords=pca_coords_radii[:, :3],
@@ -85,10 +88,10 @@ def run_simulation(iteration: int, seed: Optional[int] = None):
     )
     cca_result = cca_runner.run_cca()
     cca_end_time = time.time()
-    print(f"CCA Aggregation Time: {cca_end_time - cca_start_time:.2f} seconds")
+    logger.info(f"CCA Aggregation Time: {cca_end_time - cca_start_time:.2f} seconds")
 
     if cca_result is None or cca_runner.not_able_cca:
-        print("CCA Aggregation failed. Restarting generation...")
+        logger.info("CCA Aggregation failed. Restarting generation...")
         return False  # Indicate failure
 
     # 5. Save Results
@@ -96,7 +99,7 @@ def run_simulation(iteration: int, seed: Optional[int] = None):
     save_results.save_aggregate_data(final_coords, final_radii, iteration)
 
     end_time = time.time()
-    print(
+    logger.info(
         f"===== Aggregate {iteration} Finished Successfully ({end_time - start_time:.2f} seconds) ====="
     )
     return True  # Indicate success
@@ -117,14 +120,18 @@ if __name__ == "__main__":
         if success:
             aggregates_generated += 1
         else:
-            print(f"--- Attempt {attempt} failed, trying again ---")
+            logger.info(f"--- Attempt {attempt} failed, trying again ---")
             time.sleep(0.5)  # Small pause before restart
 
     total_end_time = time.time()
-    print("\n--------------------------------------------------")
+    logger.info("--------------------------------------------------")
     if aggregates_generated == config.QUANTITY_AGGREGATES:
-        print(f"Finished generating {aggregates_generated} aggregates successfully.")
+        logger.info(
+            f"Finished generating {aggregates_generated} aggregates successfully."
+        )
     else:
-        print(f"Failed to generate all aggregates after {max_attempts} attempts.")
-    print(f"Total Simulation Time: {total_end_time - total_start_time:.2f} seconds")
-    print("--------------------------------------------------")
+        logger.info(f"Failed to generate all aggregates after {max_attempts} attempts.")
+    logger.info(
+        f"Total Simulation Time: {total_end_time - total_start_time:.2f} seconds"
+    )
+    logger.info("--------------------------------------------------")
