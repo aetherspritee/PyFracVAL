@@ -13,7 +13,6 @@ try:
 
     from . import config as default_config
     from .main_runner import run_simulation
-    from .visualization import plot_particles
 except ImportError:
     # If running script directly without installing package, adjust path
     script_dir = Path(__file__).resolve().parent
@@ -21,7 +20,6 @@ except ImportError:
     # import pyfracval  # Assuming your package is named pyfracval
     from pyfracval import config as default_config
     from pyfracval.main_runner import run_simulation
-    from pyfracval.visualization import plot_particles
 
 
 # --- Default values from config (or override here) ---
@@ -379,13 +377,11 @@ def explore(path: str):  # pragma: no cover
         # app_path = Path(__file__).parent / "pyfracval" / "app.py"
         app_path = Path(__file__).parent / "app.py"
         if not app_path.exists():
-            logger.info(
-                f"Error: Streamlit app not found at expected location: {app_path}"
-            )
-            logger.info("Please ensure app.py exists within the pyfracval directory.")
+            print(f"Error: Streamlit app not found at expected location: {app_path}")
+            print("Please ensure app.py exists within the pyfracval directory.")
             sys.exit(1)
 
-        logger.info(f"Launching Streamlit app: {app_path}")
+        print(f"Launching Streamlit app: {app_path}")
         sys.argv = [
             "streamlit",
             "run",
@@ -395,7 +391,7 @@ def explore(path: str):  # pragma: no cover
         ]
         sys.exit(stcli.main())
     else:
-        logger.info(
+        print(
             "Streamlit runtime already exists (maybe running from within Streamlit?)."
         )
 
