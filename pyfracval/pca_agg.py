@@ -1,4 +1,3 @@
-# pca_agg.py
 """
 Implements Particle-Cluster Aggregation (PCA) used for creating initial subclusters.
 """
@@ -10,6 +9,8 @@ import numpy as np
 from . import config, utils
 
 logger = logging.getLogger(__name__)
+
+FLOATING_POINT_ERROR = 1e-9  # Defined in utils, but maybe locally needed? Use utils.
 
 
 class PCAggregator:
@@ -24,6 +25,7 @@ class PCAggregator:
             raise ValueError("PCA requires at least 2 particles.")
 
         self.initial_radii = initial_radii.copy()
+        # Calculate initial mass using utils consistently
         self.initial_mass = utils.calculate_mass(self.initial_radii)
 
         self.df = df
@@ -46,12 +48,16 @@ class PCAggregator:
     def _random_point_sphere(self) -> tuple[float, float]:
         """Generates random angles (theta, phi) for a point on a sphere."""
         u, v = np.random.rand(2)
+        # Use constant from config
         theta = 2.0 * config.PI * u
         phi = np.arccos(2.0 * v - 1.0)
         return theta, phi
 
     def _first_two_monomers(self):
         """Places the first two monomers."""
+        if self.N < 2:
+            return  # Should be caught by __init__ but safe check
+
         self.radii[0] = self.initial_radii[0]
         self.radii[1] = self.initial_radii[1]
         self.mass[0] = self.initial_mass[0]
@@ -60,11 +66,11 @@ class PCAggregator:
         # Place first particle at origin
         self.coords[0, :] = 0.0
 
+        # Place second particle touching the first (deterministically on X for consistency)
         distance = self.radii[0] + self.radii[1]
-        # Place deterministically along X-axis
         self.coords[1, :] = [distance, 0.0, 0.0]
 
-        # Place second particle touching the first at a random orientation
+        # # Alternative: random orientation (original Fortran way)
         # theta, phi = self._random_point_sphere()
         # distance = self.radii[0] + self.radii[1]
         # self.coords[1, 0] = self.coords[0, 0] + distance * np.cos(theta) * np.sin(phi)
@@ -73,50 +79,71 @@ class PCAggregator:
 
         self.n1 = 2
         self.m1 = self.mass[0] + self.mass[1]
-        self.rg1 = utils.calculate_rg(self.radii[:2], self.n1, self.df, self.kf)
-        if self.m1 > 1e-12:
+        # Use utils for rg calculation
+        self.rg1 = utils.calculate_rg(self.radii[: self.n1], self.n1, self.df, self.kf)
+        if self.m1 > utils.FLOATING_POINT_ERROR:  # Use utils tolerance
             self.cm = (
                 self.coords[0] * self.mass[0] + self.coords[1] * self.mass[1]
             ) / self.m1
         else:
-            self.cm = np.mean(self.coords[:2], axis=0)
+            self.cm = np.mean(self.coords[: self.n1], axis=0)  # Use n1 slice
+
+        # Initial r_max (max distance from CM)
+        dist_0_cm = np.linalg.norm(self.coords[0] - self.cm)
+        dist_1_cm = np.linalg.norm(self.coords[1] - self.cm)
+        self.r_max = max(dist_0_cm, dist_1_cm)
 
     def _gamma_calculation(self, m2: float, rg2: float) -> tuple[bool, float]:
         """
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
-        Note: Fortran version had slightly different logic using n1, n2, n3 directly
-              instead of masses, and used rg3_auxiliar. Let's stick closer
-              to the physics-based mass calculation from CCA.
         """
         n2 = 1
         n3 = self.n1 + n2
         m3 = self.m1 + m2
-        # Use combined radii up to the current point + the next one
+
+        # Ensure index is valid before accessing initial_radii
+        if self.n1 >= self.N:
+            logger.error(
+                f"Gamma calculation requested for particle index {self.n1} >= N ({self.N})"
+            )
+            return False, 0.0
+
+        # Radii of particles already in cluster + the next one to be added
         combined_radii = np.concatenate(
             (self.radii[: self.n1], [self.initial_radii[self.n1]])
         )
         rg3 = utils.calculate_rg(combined_radii, n3, self.df, self.kf)
 
-        # Avoid comparing with zero if rg1 hasn't been calculated properly
-        if self.rg1 > 0:
-            rg3 = max(self.rg1, rg3)
+        # Heuristic from Fortran: ensure rg3 is not smaller than rg1
+        # (avoids issues if rg calculation is noisy for small N)
+        # if self.rg1 > 0 and rg3 < self.rg1:
+        #     rg3 = self.rg1
+        # logger.debug(f"Gamma calc: Adjusted rg3 from {utils.calculate_rg(combined_radii, n3, self.df, self.kf):.2e} to match rg1 {self.rg1:.2e}")
 
         gamma_pc = 0.0
         gamma_real = False
 
         try:
             term1 = (m3**2) * (rg3**2)
-            term2 = m3 * (self.m1 * self.rg1**2 + m2 * rg2**2)  # rg2 for monomer
+            term2 = m3 * (self.m1 * self.rg1**2 + m2 * rg2**2)  # rg2 is for monomer
             denominator = self.m1 * m2
 
             # Check if radicand is positive and denominator is non-zero
-            if term1 > term2 and denominator > 1e-12:
-                gamma_pc = np.sqrt((term1 - term2) / denominator)
+            radicand = term1 - term2
+            if (
+                radicand > utils.FLOATING_POINT_ERROR
+                and denominator > utils.FLOATING_POINT_ERROR
+            ):  # Use tolerance
+                gamma_pc = np.sqrt(radicand / denominator)
                 gamma_real = True
-            # else: gamma_real remains False
-            if not gamma_real:
+            else:
+                # Keep gamma_real False
                 logger.debug(
-                    f"Gamma_pc calculation non-real: m1={self.m1:.2e}, rg1={self.rg1:.2e}, m2={m2:.2e}, rg2={rg2:.2e}, m3={m3:.2e}, rg3={rg3:.2e}, term1={term1:.2e}, term2={term2:.2e}"
+                    f"Gamma_pc calculation non-real or denominator zero: "
+                    f"n1={self.n1}, m1={self.m1:.2e}, rg1={self.rg1:.2e}, "
+                    f"m2={m2:.2e}, rg2={rg2:.2e}, "
+                    f"m3={m3:.2e}, rg3={rg3:.2e} -> "
+                    f"radicand={radicand:.2e}, denominator={denominator:.2e}"
                 )
 
         except (ValueError, ZeroDivisionError, OverflowError) as e:
@@ -126,51 +153,58 @@ class PCAggregator:
         return gamma_real, gamma_pc
 
     def _select_candidates(
-        self, radius_k: int, gamma_pc: float, gamma_real: bool
+        self, radius_k: float, gamma_pc: float, gamma_real: bool
     ) -> tuple[np.ndarray, float]:
         """
-        Generates the list of candidate particles within the current aggregate
-        that monomer 'k' could stick to. Similar to Random_select_list in Fortran PCA.
-        Returns the candidate list (indices) and Rmax.
+        Generates the list of candidate particles (indices within 0 to n1-1)
+        that monomer 'k' could stick to, based on Gamma_pc geometry.
+        Returns the candidate indices and Rmax (max distance from CM).
         """
         candidates = []
         r_max_current = 0.0
 
+        # If gamma is not real, sticking based on this criterion is impossible.
         if not gamma_real:
-            # If gamma is not real, potentially no sticking is possible based on this criterion.
-            # Fortran code returns. What should happen here? Maybe allow sticking based on proximity?
-            # For now, return empty list. Needs clarification on desired behavior.
-            # Alternative: Stick to the closest particle? Or the one extending furthest?
-            logger.warning(
+            logger.debug(
                 "Gamma_pc not real in PCA candidate selection. No candidates selected."
             )
-            return np.array([], dtype=int), r_max_current
+            return np.array([], dtype=int), self.r_max  # Return current r_max
 
-        for i in range(self.n1):  # Iterate through particles already in the cluster
+        # Rmax needs to be tracked based on *all* particles in the cluster
+        if self.n1 > 0:
+            distances_sq = np.sum((self.coords[: self.n1] - self.cm) ** 2, axis=1)
+            self.r_max = np.sqrt(np.max(distances_sq)) if distances_sq.size > 0 else 0.0
+
+        for i in range(self.n1):  # Iterate through particles 0 to n1-1
             dist_sq = np.sum((self.coords[i] - self.cm) ** 2)
             dist = np.sqrt(dist_sq)
-            r_max_current = max(r_max_current, dist)  # Keep track of Rmax
+            # r_max_current = max(r_max_current, dist) # Rmax updated above
 
             radius_i = self.radii[i]  # Radius of particle 'i' in the cluster
 
-            # Fortran condition: (dist > (Gamma_pc - R_k - R_i)) and (dist <= (Gamma_pc + R_k + R_i))
-            # AND (R_k + R_i) <= Gamma_pc
-            lower_bound = gamma_pc - radius_k - radius_i
-            upper_bound = gamma_pc + radius_k + radius_i
-            radius_sum_check = (radius_k + radius_i) <= gamma_pc
+            # Fortran conditions (translated):
+            # 1) (R_k + R_i) <= Gamma_pc
+            radius_sum_check = (
+                radius_k + radius_i
+            ) <= gamma_pc + utils.FLOATING_POINT_ERROR
 
-            # Add tolerance?
-            # lower_bound -= 1e-9
-            # upper_bound += 1e-9
-            # radius_sum_check = (radius_k + radius_i) <= gamma_pc + 1e-9
+            # 2) dist > (Gamma_pc - R_k - R_i)
+            lower_bound_check = (
+                dist > (gamma_pc - radius_k - radius_i) - utils.FLOATING_POINT_ERROR
+            )
 
-            if radius_sum_check and (dist > lower_bound) and (dist <= upper_bound):
+            # 3) dist <= (Gamma_pc + R_k + R_i)
+            upper_bound_check = (
+                dist <= (gamma_pc + radius_k + radius_i) + utils.FLOATING_POINT_ERROR
+            )
+
+            if radius_sum_check and lower_bound_check and upper_bound_check:
                 candidates.append(i)
 
         logger.debug(
-            f"PCA selecting candidates for radius {radius_k:.2f}: Found {len(candidates)} candidates."
+            f"PCA selecting candidates for radius {radius_k:.2f} (gamma={gamma_pc:.3f}): Found {len(candidates)} candidates from {self.n1} particles."
         )
-        return np.array(candidates, dtype=int), r_max_current
+        return np.array(candidates, dtype=int), self.r_max  # Return updated r_max
 
     def _search_and_select_candidate(
         self, k: int, considered_indices: list[int]
@@ -178,59 +212,62 @@ class PCAggregator:
         """
         Handles the complex logic of selecting a candidate, potentially swapping
         monomer 'k' with another if the initial attempt yields no candidates.
-        Corresponds roughly to the loop calling `Search_list` and `Random_select_list_pick_one`.
+        Corresponds roughly to the loop calling `Search_list` and `Random_select_list`.
 
         Returns:
-            tuple: (selected_idx, m2, rg2, gamma_real, gamma_pc)
-                   Returns -1 for selected_idx if no candidate found.
+            tuple: (selected_idx, m2, rg2, gamma_real, gamma_pc, candidate_list)
+                   Returns -1 for selected_idx if no candidate found after all attempts.
+                   candidate_list is the list of indices (0 to n1-1) found for the *final* particle k.
         """
-        available_monomers = list(
-            range(k, self.N)
-        )  # Indices of monomers not yet processed
-        tried_swaps = {
-            k
-        }  # Keep track of which monomers have been tried in position 'k'
+        available_monomers = list(range(k, self.N))  # Indices of unprocessed monomers
+        tried_swaps = {k}  # Monomers tried *at position k*
 
         while True:
             # --- Try with current monomer k ---
-            current_k_radius = self.initial_radii[k]
-            current_k_mass = self.initial_mass[k]
-            current_k_rg = np.sqrt(0.6) * current_k_radius  # Rg of a single sphere
+            current_k_idx = k  # The actual index in the original list being processed
+            current_k_radius = self.initial_radii[current_k_idx]
+            current_k_mass = self.initial_mass[current_k_idx]
+            # Rg of a single sphere = sqrt(3/5) * R => sqrt(0.6) * R
+            current_k_rg = np.sqrt(0.6) * current_k_radius
 
             gamma_real, gamma_pc = self._gamma_calculation(current_k_mass, current_k_rg)
             logger.debug(
                 f"PCA search k={k}: Radius={current_k_radius:.2f}, Gamma_real={gamma_real}, Gamma_pc={gamma_pc:.4f}"
             )
 
-            # candidates, self.r_max = self._select_candidates(k, gamma_pc, gamma_real)
             candidates = np.array([], dtype=int)
             if gamma_real:
+                # Rmax is updated inside _select_candidates
                 candidates, self.r_max = self._select_candidates(
                     current_k_radius, gamma_pc, gamma_real
                 )
-                logger.debug(f"PCA search k={k}: Found {len(candidates)} candidates.")
+                logger.debug(
+                    f"PCA search k={k}: Found {len(candidates)} candidates: {candidates}"
+                )
 
             if len(candidates) > 0:
-                # Select one candidate randomly
+                # Select one candidate randomly (will be used as starting point in run loop)
                 idx_in_candidates = np.random.randint(len(candidates))
-                selected_real_idx = candidates[idx_in_candidates]
+                selected_initial_candidate = candidates[idx_in_candidates]
                 logger.debug(
-                    f"PCA search k={k}: Selected candidate {selected_real_idx} from {len(candidates)} options."
+                    f"PCA search k={k}: Initial candidate {selected_initial_candidate} selected from {len(candidates)} options."
                 )
+                # Return the *full list* of candidates found for this k
                 return (
-                    selected_real_idx,
+                    selected_initial_candidate,
                     current_k_mass,
                     current_k_rg,
                     gamma_real,
                     gamma_pc,
-                    candidates,  # <<< ADD THIS
+                    candidates,  # Return the list of all candidates
                 )
             else:
                 logger.debug(
                     f"PCA search k={k}: No candidates found or gamma not real. Looking for swap."
                 )
                 # --- No candidates: Try swapping k with an untried, available monomer ---
-                # Find monomers available for swapping (not k and not already considered/tried)
+                # Find monomers eligible for swapping (not k itself, not already tried at pos k,
+                # and not already successfully placed in the aggregate)
                 eligible_for_swap = [
                     idx
                     for idx in available_monomers
@@ -239,139 +276,175 @@ class PCAggregator:
 
                 if not eligible_for_swap:
                     # No more monomers to swap with
-                    logger.debug(
-                        f"PCA k={k}: No candidates found and no more monomers to swap."
+                    logger.warning(
+                        f"PCA k={k}: No candidates found and no more available monomers to swap with."
                     )
                     return (
-                        -1,
+                        -1,  # Indicate failure
                         current_k_mass,
                         current_k_rg,
                         gamma_real,
                         gamma_pc,
-                        np.array([], dtype=int),  # <<< ADD EMPTY ARRAY
+                        np.array([], dtype=int),  # Empty candidate list
                     )
 
                 # Select a random monomer to swap with k
                 swap_idx_in_eligible = np.random.randint(len(eligible_for_swap))
-                swap_target_idx = eligible_for_swap[swap_idx_in_eligible]
-                # print(f"  PCA k={k}: Swapping with monomer index {swap_target_idx}.")
+                swap_target_original_idx = eligible_for_swap[swap_idx_in_eligible]
+                logger.debug(
+                    f"  PCA k={k}: Swapping with monomer original index {swap_target_original_idx}."
+                )
 
                 # Perform the swap in the initial_radii and initial_mass arrays
-                self.initial_radii[k], self.initial_radii[swap_target_idx] = (
-                    self.initial_radii[swap_target_idx],
+                # Swap particle at index k with particle at swap_target_original_idx
+                self.initial_radii[k], self.initial_radii[swap_target_original_idx] = (
+                    self.initial_radii[swap_target_original_idx],
                     self.initial_radii[k],
                 )
-                self.initial_mass[k], self.initial_mass[swap_target_idx] = (
-                    self.initial_mass[swap_target_idx],
+                self.initial_mass[k], self.initial_mass[swap_target_original_idx] = (
+                    self.initial_mass[swap_target_original_idx],
                     self.initial_mass[k],
                 )
+                # Note: The particle originally at k is now at swap_target_original_idx
+                # The particle originally at swap_target_original_idx is now at k
 
-                # Mark the swapped monomer as tried *in position k*
-                tried_swaps.add(swap_target_idx)
+                # Mark the monomer *originally* at swap_target_original_idx as having been tried *at position k*
+                tried_swaps.add(swap_target_original_idx)
 
-                # Loop continues, recalculating gamma/candidates with the new monomer at index k
+                # Loop continues, recalculating gamma/candidates with the new monomer now at index k
                 logger.debug(
-                    f"PCA search k={k}: Swapped with {swap_target_idx}. Retrying gamma/candidate search."
+                    f"PCA search k={k}: Swapped monomer from index {swap_target_original_idx} into position {k}. Retrying gamma/candidate search."
                 )
+                # The state of self.initial_radii/mass at index k has changed, restart loop
 
     def _sticking_process(
         self, k: int, selected_idx: int, gamma_pc: float
     ) -> tuple[np.ndarray | None, float, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Places monomer k based on intersection of two spheres.
-        Sphere 1: Center = selected particle, Radius = R_sel + R_k
+        Calculates the geometric parameters for placing monomer k based on
+        intersection of two spheres.
+        Sphere 1: Center = selected particle coords, Radius = R_sel + R_k
         Sphere 2: Center = CM of aggregate, Radius = Gamma_pc
 
         Returns:
-            tuple: (coord_k, theta_a, vec_0, i_vec, j_vec) or None if intersection fails.
+            tuple: (coord_k_initial, theta_a, vec_0, i_vec, j_vec) or (None, ...) if intersection fails.
+                   coord_k_initial is *one* point on the intersection circle.
+                   Other return values define the circle for rotation (_reintento).
         """
+        if selected_idx < 0 or selected_idx >= self.n1:
+            logger.error(
+                f"Sticking process called with invalid selected_idx={selected_idx} (n1={self.n1})"
+            )
+            return None, 0.0, np.zeros(4), np.zeros(3), np.zeros(3)
+        if k < 0 or k >= self.N:
+            logger.error(f"Sticking process called with invalid k={k} (N={self.N})")
+            return None, 0.0, np.zeros(4), np.zeros(3), np.zeros(3)
+
         coord_sel = self.coords[selected_idx]
         radius_sel = self.radii[selected_idx]
-        radius_k = self.initial_radii[k]  # Use initial radius before it's placed
+        # Use initial radius of particle k before it's placed
+        radius_k = self.initial_radii[k]
 
-        sphere1 = np.concatenate((coord_sel, [radius_sel + radius_k]))
-        sphere2 = np.concatenate((self.cm, [gamma_pc]))  # Use current aggregate CM
+        # Define the two spheres for intersection
+        sphere1_center = coord_sel
+        sphere1_radius = radius_sel + radius_k
+        sphere1 = np.concatenate((sphere1_center, [sphere1_radius]))
 
-        valid = False  # Default
-        try:  # Wrap intersection call
-            x_k, y_k, z_k, theta_a, vec_0, i_vec, j_vec, valid = (
-                utils.cca_two_sphere_intersection(sphere1, sphere2)
+        sphere2_center = self.cm  # Use current aggregate CM
+        sphere2_radius = gamma_pc
+        sphere2 = np.concatenate((sphere2_center, [sphere2_radius]))
+
+        intersection_valid = False
+        try:
+            # This utility finds the circle and returns *one* random point on it
+            x_k, y_k, z_k, theta_a, vec_0, i_vec, j_vec, intersection_valid = (
+                utils.two_sphere_intersection(sphere1, sphere2)
             )
         except Exception as e:
             logger.error(
-                f"Error during cca_two_sphere_intersection: {e}", exc_info=True
+                f"Error during two_sphere_intersection call: {e}", exc_info=True
             )
-            valid = False
+            intersection_valid = False  # Ensure it's false on exception
 
-        if not valid:
+        if not intersection_valid:
             logger.warning(
-                f"PCA sticking process sphere intersection failed for k={k}, sel={selected_idx}."
+                f"PCA sticking sphere intersection failed for k={k}, sel={selected_idx}."
             )
-            # Check conditions: dist, r1, r2
-            dist_check = np.linalg.norm(sphere1[:3] - sphere2[:3])
-            r1_check = sphere1[3]
-            r2_check = sphere2[3]
-            print(
-                f"  Dist={dist_check:.4f}, R1(sel+k)={r1_check:.4f}, R2(gamma)={r2_check:.4f}"
+            # Log details to help diagnose intersection failures
+            dist_centers = np.linalg.norm(sphere1_center - sphere2_center)
+            radius_sum = sphere1_radius + sphere2_radius
+            radius_diff = abs(sphere1_radius - sphere2_radius)
+            logger.warning(
+                f"  Intersection Fail Details: Center1={sphere1_center}, R1={sphere1_radius:.4f} | "
+                f"Center2={sphere2_center}, R2={sphere2_radius:.4f} | "
+                f"Dist={dist_centers:.4f}, R1+R2={radius_sum:.4f}, |R1-R2|={radius_diff:.4f}"
             )
-            print(
-                f"  R1+R2={r1_check + r2_check:.4f}, |R1-R2|={abs(r1_check - r2_check):.4f}"
-            )
-            # Handle failure - maybe return a default position or raise error?
-            # Returning None for now, let the caller handle failure.
-            return None, 0.0, np.zeros(4), np.zeros(3), np.zeros(3)
+            # Check conditions violated by intersection check in utils
+            if dist_centers > radius_sum + utils.FLOATING_POINT_ERROR:
+                logger.warning("  -> Spheres too far apart.")
+            if dist_centers < radius_diff - utils.FLOATING_POINT_ERROR:
+                logger.warning("  -> Sphere contained.")
+            if (
+                dist_centers < utils.FLOATING_POINT_ERROR
+                and abs(radius_diff) < utils.FLOATING_POINT_ERROR
+            ):
+                logger.warning("  -> Spheres coincide.")
 
-        coord_k = np.array([x_k, y_k, z_k])
-        return coord_k, theta_a, vec_0, i_vec, j_vec
+            return None, 0.0, np.zeros(4), np.zeros(3), np.zeros(3)  # Indicate failure
 
-    def _overlap_check(self, k: int) -> float:
-        """Checks overlap between monomer k and the existing aggregate (0 to k-1)."""
-        max_overlap = 0.0
-        coord_k = self.coords[k]
-        radius_k = self.radii[k]  # Use the radius *after* it's assigned
+        # Return the initial point found and the circle parameters for rotation
+        coord_k_initial = np.array([x_k, y_k, z_k])
+        return coord_k_initial, theta_a, vec_0, i_vec, j_vec
 
-        for j in range(self.n1):  # Compare with particles 0 to n1-1 (which is k-1 here)
-            if j == k:
-                continue  # Should not happen if called correctly before n1 update
-
-            dist_sq = np.sum((coord_k - self.coords[j]) ** 2)
-            dist = np.sqrt(dist_sq)
-            radius_sum = radius_k + self.radii[j]
-
-            if dist < radius_sum - 1e-9:  # Use tolerance
-                overlap = (
-                    (radius_sum - dist) / radius_sum if radius_sum > 1e-12 else 1.0
-                )
-                max_overlap = max(max_overlap, overlap)
-
-        return max_overlap
+    # Remove internal overlap check, use utils.calculate_max_overlap_pca
+    # def _overlap_check(self, k: int) -> float: ...
 
     def _reintento(
         self, k: int, vec_0: np.ndarray, i_vec: np.ndarray, j_vec: np.ndarray
     ) -> tuple[np.ndarray, float]:
-        """Rotates monomer k to a new point on the intersection circle."""
+        """
+        Calculates a *new* random point on the intersection circle defined by
+        vec_0 (center, radius) and basis vectors i_vec, j_vec.
+        This is used to rotate monomer k to try and resolve overlaps.
+
+        Returns:
+             tuple: (coord_k_new, theta_a_new) - the new coordinates and the angle used.
+        """
         x0, y0, z0, r0 = vec_0
+
+        # If radius of intersection is near zero (touching point case), rotation is meaningless
+        if r0 < utils.FLOATING_POINT_ERROR:
+            logger.debug(
+                f"Reintento k={k}: Intersection radius near zero, no rotation possible."
+            )
+            # Return the center of the 'circle' (the touch point)
+            return np.array([x0, y0, z0]), 0.0
 
         # Generate new random angle
         theta_a_new = 2.0 * config.PI * np.random.rand()
 
-        # Calculate new position
+        # Calculate new position using the circle equation
         coord_k_new = np.zeros(3)
-        coord_k_new[0] = (
-            x0
-            + r0 * np.cos(theta_a_new) * i_vec[0]
-            + r0 * np.sin(theta_a_new) * j_vec[0]
+        coord_k_new = (
+            np.array([x0, y0, z0])
+            + r0 * np.cos(theta_a_new) * i_vec
+            + r0 * np.sin(theta_a_new) * j_vec
         )
-        coord_k_new[1] = (
-            y0
-            + r0 * np.cos(theta_a_new) * i_vec[1]
-            + r0 * np.sin(theta_a_new) * j_vec[1]
-        )
-        coord_k_new[2] = (
-            z0
-            + r0 * np.cos(theta_a_new) * i_vec[2]
-            + r0 * np.sin(theta_a_new) * j_vec[2]
-        )
+        # coord_k_new[0] = (
+        #     x0
+        #     + r0 * np.cos(theta_a_new) * i_vec[0]
+        #     + r0 * np.sin(theta_a_new) * j_vec[0]
+        # )
+        # coord_k_new[1] = (
+        #     y0
+        #     + r0 * np.cos(theta_a_new) * i_vec[1]
+        #     + r0 * np.sin(theta_a_new) * j_vec[1]
+        # )
+        # coord_k_new[2] = (
+        #     z0
+        #     + r0 * np.cos(theta_a_new) * i_vec[2]
+        #     + r0 * np.sin(theta_a_new) * j_vec[2]
+        # )
 
         return coord_k_new, theta_a_new
 
@@ -383,166 +456,191 @@ class PCAggregator:
             An Nx4 NumPy array [X, Y, Z, R] of the final aggregate,
             or None if the aggregation fails.
         """
+        if self.N < 2:  # Should be caught by init
+            logger.error("PCA run called with N < 2.")
+            return None
+
         self._first_two_monomers()
 
-        considered_indices = list(range(2))  # Track indices of particles added
+        # Track indices of particles successfully added to the aggregate (0 to n1-1)
+        # Starts with [0, 1]
+        considered_indices = list(range(self.n1))
 
-        for k in range(2, self.N):  # Start aggregation from the 3rd particle (index 2)
-            # INFO: can be enabled, but bloats the logger
-            # logger.info(f"PCA Step: Aggregating particle k={k}")
+        # Aggregate remaining particles from k=2 up to N-1
+        for k in range(self.n1, self.N):
+            logger.debug(f"--- PCA Step: Aggregating particle k={k} ---")
 
-            # Find candidate to stick to, potentially swapping k
-            # This function returns: selected_idx, m2, rg2, gamma_real, gamma_pc
+            # Find candidate(s) to stick to, potentially swapping k
+            # Returns: initial_candidate_idx, m2, rg2, gamma_real, gamma_pc, full_candidate_list
             search_result = self._search_and_select_candidate(k, considered_indices)
-            selected_idx = search_result[
-                0
-            ]  # Initial candidate selected by the search function
-            m2 = search_result[1]
-            rg2 = search_result[2]
-            gamma_real = search_result[3]
-            gamma_pc = search_result[4]
-            candidates = search_result[
-                5
-            ]  # Get the list of candidates generated internally
 
-            if selected_idx < 0:  # _search_and_select_candidate failed entirely
+            # Unpack results
+            initial_candidate_idx = search_result[0]  # An index from 0 to n1-1
+            m2 = search_result[1]  # Mass of particle k (after potential swap)
+            rg2 = search_result[2]  # Rg of particle k
+            gamma_real = search_result[3]  # Gamma status for particle k
+            gamma_pc = search_result[4]  # Gamma value for particle k
+            candidates_list = search_result[
+                5
+            ]  # Full list of potential partners (indices 0 to n1-1)
+
+            # Check if search failed completely (no candidates found even after swaps)
+            if initial_candidate_idx < 0 or not gamma_real or len(candidates_list) == 0:
                 logger.error(
-                    f"PCA failed. Could not find ANY valid sticking candidate for particle {k}."
+                    f"PCA failed at k={k}. Could not find ANY valid sticking candidate "
+                    f"(Initial search index: {initial_candidate_idx}, Gamma real: {gamma_real}, "
+                    f"Num candidates: {len(candidates_list)}). Cannot continue."
                 )
                 self.not_able_pca = True
                 return None
 
-            # Store original state before attempting this candidate
-            # Note: search_and_select might have swapped initial_radii/mass
+            # Store radius/mass of the particle actually at index k (might have been swapped)
             radius_k_current = self.initial_radii[k]
             mass_k_current = self.initial_mass[k]
 
             # --- Sticking and Overlap Check Loop ---
-            # ****** START OF REPLACEMENT ******
+            # Iterate through the list of potential partners (candidates_list)
             sticking_successful = False
-            candidates_to_try = list(
-                candidates
-            )  # Get the list generated by _select_candidates inside _search_and_select...
-            utils.shuffle_array(candidates_to_try)  # Try them in random order
+            # Shuffle the candidate list to try partners in a random order
+            candidates_to_try = utils.shuffle_array(candidates_list.copy())
 
-            # If the initial selected_idx wasn't in candidates, add it?
-            # Or assume _select_candidates was called with the final k state by _search?
-            # Let's assume candidates list is correct for the final state of monomer k.
-            # Add the initially selected one if it wasn't in the list just in case? No, rely on _select_candidates output.
-
-            if not candidates_to_try:
-                # This might indicate a logic mismatch or edge case. Proceed to failure.
-                logger.warning(
-                    f"PCA k={k}: No candidates list to try, proceeding to failure."
-                )
-                # pass  # Will fall through to the failure print below
+            logger.debug(
+                f"PCA k={k}: Trying {len(candidates_to_try)} candidates: {candidates_to_try}"
+            )
 
             for current_selected_idx in candidates_to_try:
                 logger.debug(
-                    f"PCA k={k}: Trying candidate index {current_selected_idx}"
+                    f"PCA k={k}: Trying candidate partner index {current_selected_idx}"
                 )
 
+                # Calculate initial sticking geometry for this partner
                 stick_result = self._sticking_process(k, current_selected_idx, gamma_pc)
-                # Check if stick_result itself is None or if coord_k is None
+
+                # Check if sticking geometry calculation failed (e.g., no sphere intersection)
                 if stick_result is None or stick_result[0] is None:
-                    logger.warning(
-                        f"Initial sticking failed for candidate {current_selected_idx}."
+                    logger.debug(
+                        f"  PCA k={k}, cand={current_selected_idx}: Initial sticking geometry calculation failed. Skipping candidate."
                     )
-                    continue
+                    continue  # Try the next candidate partner
 
-                coord_k, theta_a, vec_0, i_vec, j_vec = stick_result
+                coord_k_initial, theta_a, vec_0, i_vec, j_vec = stick_result
 
-                if coord_k is None:
-                    # Sticking process failed for this candidate (e.g., no sphere intersection)
-                    # print(f"    Initial sticking failed for candidate {current_selected_idx}.")
-                    continue  # Try next candidate in candidates_to_try
+                # Tentatively place particle k at the initial position found
+                self.coords[k] = coord_k_initial
+                self.radii[k] = radius_k_current  # Assign radius now it's placed
+                self.mass[k] = mass_k_current  # Assign mass
 
-                # Tentatively place particle k
-                self.coords[k] = coord_k
-                self.radii[k] = radius_k_current  # Assign radius now
-                self.mass[k] = mass_k_current
-
-                # Check initial overlap
-                # Use the internal method, assuming it's correct
-                # cov_max = self._overlap_check(k)
+                # Check initial overlap using the Numba utility
+                # Compare new particle k with all existing particles (0 to n1-1)
                 cov_max = utils.calculate_max_overlap_pca(
-                    self.coords[: self.n1],
-                    self.radii[: self.n1],
-                    self.coords[k],
-                    self.radii[k],
+                    self.coords[: self.n1],  # Coords of existing aggregate
+                    self.radii[: self.n1],  # Radii of existing aggregate
+                    self.coords[k],  # Coord of new particle k
+                    self.radii[k],  # Radius of new particle k
                 )
-                # Or call the external one if you moved it:
                 logger.debug(
-                    f"PCA k={k}, cand={current_selected_idx}: Initial overlap = {cov_max:.4e}"
+                    f"  PCA k={k}, cand={current_selected_idx}: Initial overlap = {cov_max:.4e}"
                 )
 
-                # Rotation attempts if needed
+                # Rotation attempts if initial overlap is too high
                 intento = 0
-                max_rotations = 360
+                max_rotations = 360  # As per Fortran
                 while cov_max > self.tol_ov and intento < max_rotations:
+                    intento += 1
+                    # Get a new position by rotating around the intersection circle
                     coord_k_new, theta_a_new = self._reintento(k, vec_0, i_vec, j_vec)
                     self.coords[k] = coord_k_new  # Update position for overlap check
-                    # Check overlap again
+
+                    # Check overlap again with the new position
                     cov_max = utils.calculate_max_overlap_pca(
                         self.coords[: self.n1],
                         self.radii[: self.n1],
                         self.coords[k],
                         self.radii[k],
                     )
-                    # cov_max = self._overlap_check(k)
-                    # Or external:
-                    intento += 1
                     logger.debug(
-                        f"PCA k={k}, cand={current_selected_idx}, Rot {intento}: Overlap = {cov_max:.4e}"
+                        f"  PCA k={k}, cand={current_selected_idx}, Rot {intento}: New overlap = {cov_max:.4e}"
                     )
 
-                # Check if overlap is now acceptable for this candidate
+                # Check if overlap is now acceptable after rotations for this candidate
                 if cov_max <= self.tol_ov:
                     logger.debug(
-                        f"PCA k={k}, cand={current_selected_idx}: Sticking successful after {intento} rotations."
+                        f"PCA k={k}: Sticking successful with candidate {current_selected_idx} after {intento} rotations."
                     )
                     sticking_successful = True
+                    # Particle k is now successfully placed at self.coords[k]
                     break  # <<< EXIT the candidates_to_try loop, we found a working partner
 
-            # --- End of loop trying different candidates ---
+                else:
+                    # Rotations failed for this candidate partner
+                    logger.debug(
+                        f"  PCA k={k}, cand={current_selected_idx}: Failed to resolve overlap after {max_rotations} rotations (max_ov={cov_max:.4e})."
+                    )
+                    # Continue to the next candidate in candidates_to_try
+
+            # --- End of loop trying different candidate partners ---
 
             if sticking_successful:
-                # Update aggregate properties *after* successful placement
-                self.n1 += 1
+                # Update aggregate properties *after* successful placement of particle k
+                self.n1 += 1  # Increment count *after* placement (n1 was old count during checks)
                 m_old = self.m1
                 # Use mass_k_current which corresponds to the particle actually placed at index k
                 self.m1 += mass_k_current
-                self.cm = (
-                    (self.cm * m_old + self.coords[k] * mass_k_current) / self.m1
-                    if self.m1 > 1e-12
-                    else np.mean(self.coords[: self.n1], axis=0)
-                )
+                # Update Center of Mass
+                if self.m1 > utils.FLOATING_POINT_ERROR:
+                    self.cm = (
+                        self.cm * m_old + self.coords[k] * mass_k_current
+                    ) / self.m1
+                else:  # Avoid division by zero if mass is tiny
+                    self.cm = np.mean(self.coords[: self.n1], axis=0)
+
+                # Update Radius of Gyration for the new aggregate size n1
                 self.rg1 = utils.calculate_rg(
                     self.radii[: self.n1], self.n1, self.df, self.kf
                 )
-                considered_indices.append(k)  # Mark as added
-                # INFO: can be enabled, but bloats the logger
-                # logger.info(f"PCA Step: Successfully added particle {k}")
+                # Rmax is updated inside _select_candidates before next iteration
+
+                considered_indices.append(k)  # Mark particle k as successfully added
+                logger.debug(
+                    f"--- PCA Step: Successfully added particle k={k}. Aggregate size n1={self.n1} ---"
+                )
+
             else:
                 # If loop finished without sticking_successful being True
-                # Use the initially selected_idx in the error message as that's what search started with
                 logger.error(
-                    f"PCA failed. Could not find non-overlapping position for particle {k} after trying all {len(candidates_to_try)} candidates (initial search selected {selected_idx})."
+                    f"PCA failed at k={k}. Could not find non-overlapping position after trying all {len(candidates_to_try)} candidates and rotations."
                 )
                 self.not_able_pca = True
-                # Reset particle k state? Or just fail?
+                # Reset state of particle k? Or just fail? Let's just fail.
                 self.coords[k] = 0.0  # Reset position
                 self.radii[k] = 0.0
                 self.mass[k] = 0.0
                 return None  # Fail aggregation
-            # ****** END OF REPLACEMENT ******
 
-        # --- End of k loop ---
+        # --- End of k loop (all particles processed) ---
+
         if self.not_able_pca:
+            logger.error("PCA run finished with not_able_pca flag set.")
             return None
 
-        # Return combined data
-        final_data = np.hstack((self.coords, self.radii.reshape(-1, 1)))
+        # Final check: Ensure all particles seem to be placed
+        if self.n1 != self.N:
+            logger.warning(
+                f"PCA finished, but final count n1={self.n1} does not match N={self.N}."
+            )
+            # This might indicate an off-by-one error or failure to add the last particle
 
-        logger.info("PCA run completed.")
+        # Return combined data: Nx4 array [X, Y, Z, R]
+        # Use the final state of coords and radii up to N
+        final_data = np.hstack(
+            (self.coords[: self.N], self.radii[: self.N].reshape(-1, 1))
+        )
+
+        # Check for NaNs just in case
+        if np.any(np.isnan(final_data)):
+            logger.error("NaN detected in final PCA data.")
+            self.not_able_pca = True
+            return None
+
+        logger.info(f"PCA run completed successfully for N={self.N} particles.")
         return final_data
