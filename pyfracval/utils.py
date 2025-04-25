@@ -348,51 +348,32 @@ def calculate_max_overlap_cca(
     n1 = coords1.shape[0]
     n2 = coords2.shape[0]
 
-    if n1 == 0 or n2 == 0:
+    total_pairs = n1 * n2
+
+    if total_pairs == 0:
         return 0.0
 
-    # Array to store the maximum overlap found *for each thread/outer loop iteration*
-    thread_maxes = np.zeros(n1, dtype=np.float64)  # Size of the parallelized loop
+    max_overlap_val = 0.0
 
-    # Parallelize the outer loop
-    for ii in prange(n1 * n2):
-        max_overlap_thread = 0.0  # Max for this specific 'i'
-        i = ii % n1
-        j = ii // n1
+    for k in prange(total_pairs):
+        i = k % n1
+        j = k // n1
 
-        coord1_i = coords1[i]
-        radius1_i = radii1[i]
+        coord1 = coords1[i]
+        radius1 = radii1[i]
 
-        coord2_j = coords2[j]
-        radius2_j = radii2[j]
+        coord2 = coords2[j]
+        radius2 = radii2[j]
 
         d_sq = 0.0
         for dim in range(3):  # Assuming 3D
-            d_sq += (coord1_i[dim] - coord2_j[dim]) ** 2
+            d_sq += (coord1[dim] - coord2[dim]) ** 2
         dist_ij = np.sqrt(d_sq)
-        sum_r = radius1_i + radius2_j
 
-        if dist_ij < sum_r - FLOATING_POINT_ERROR:
-            if sum_r > 1e-12:
-                overlap = (sum_r - dist_ij) / sum_r
-            else:
-                overlap = 1.0
+        overlap = 1 - dist_ij / (radius1 + radius2)
+        max_overlap_val = max(overlap, max_overlap_val)  # no racing condition
 
-            # Update thread-local maximum
-            if overlap > max_overlap_thread:
-                max_overlap_thread = overlap
-
-        # Store the maximum found for this outer loop iteration 'i'
-        thread_maxes[i] = max_overlap_thread
-
-    # After the parallel loop, find the overall maximum from the stored results
-    # Check if the array is empty (only if n1 was 0, handled above, but safe check)
-    if thread_maxes.size == 0:
-        return 0.0
-
-    # Perform the final reduction sequentially (Numba optimizes np.max on arrays well)
-    final_max_overlap = np.max(thread_maxes)
-    return float(final_max_overlap)
+    return max_overlap_val
 
 
 @jit(parallel=True, fastmath=True, cache=True)
@@ -420,37 +401,18 @@ def calculate_max_overlap_pca(
     if n_agg == 0:
         return 0.0
 
-    # Array to store the maximum overlap found for each 'j' iteration
-    thread_maxes = np.zeros(n_agg, dtype=np.float64)  # Size of the parallelized loop
+    max_overlap_val = 0.0
 
-    # Parallelize the loop over the aggregate particles
     for j in prange(n_agg):
-        max_overlap_thread = 0.0  # Max for this specific 'j'
-        coord_agg_j = coords_agg[j]
-        radius_agg_j = radii_agg[j]
+        coord_agg = coords_agg[j]
+        radius_agg = radii_agg[j]
 
         d_sq = 0.0
         for dim in range(3):
-            d_sq += (coord_new[dim] - coord_agg_j[dim]) ** 2
-        dist_kj = np.sqrt(d_sq)
-        sum_r = radius_new + radius_agg_j
+            d_sq += (coord_new[dim] - coord_agg[dim]) ** 2
+        dist = np.sqrt(d_sq)
 
-        if dist_kj < sum_r - FLOATING_POINT_ERROR:
-            if sum_r > 1e-12:
-                overlap = (sum_r - dist_kj) / sum_r
-            else:
-                overlap = 1.0
+        overlap = 1 - dist / (radius_new + radius_agg)
+        max_overlap_val = max(overlap, max_overlap_val)  # no racing condition
 
-            # Update thread-local max
-            if overlap > max_overlap_thread:
-                max_overlap_thread = overlap
-
-        # Store the result for this iteration 'j'
-        thread_maxes[j] = max_overlap_thread
-
-    # After the parallel loop, find the overall maximum
-    if thread_maxes.size == 0:
-        return 0.0
-
-    final_max_overlap = np.max(thread_maxes)
-    return float(final_max_overlap)
+    return max_overlap_val
