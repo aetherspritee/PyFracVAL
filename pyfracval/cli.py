@@ -5,22 +5,9 @@ from pathlib import Path
 
 import click
 
-from .coloredlogs import CustomLogFormatter
-
-# Make sure the package is importable
-try:
-    # import pyfracval  # Assuming your package is named pyfracval
-
-    from . import config as default_config
-    from .main_runner import run_simulation
-except ImportError:
-    # If running script directly without installing package, adjust path
-    script_dir = Path(__file__).resolve().parent
-    sys.path.insert(0, str(script_dir.parent))  # Add project root to path
-    # import pyfracval  # Assuming your package is named pyfracval
-    from pyfracval import config as default_config
-    from pyfracval.main_runner import run_simulation
-
+from pyfracval import config as default_config
+from pyfracval.logs import create_logger
+from pyfracval.main_runner import run_simulation
 
 # --- Default values from config (or override here) ---
 # These will be used if the user doesn't provide options
@@ -33,51 +20,6 @@ DEFAULT_EXT_CASE = default_config.EXT_CASE
 DEFAULT_TOL_OV = default_config.TOL_OVERLAP
 DEFAULT_N_SUBCL_PERC = default_config.N_SUBCL_PERCENTAGE
 DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
-
-
-def create_logger(log_level: int, log_file: str | None = None) -> logging.Logger:
-    """Setup logging configuration."""
-
-    log_format = "%(asctime)s - %(levelname)s - %(name)30s - %(message)s"
-    date_format = "%Y-%m-%d %H:%M:%S"
-    logging.basicConfig(
-        level=log_level,
-        format=log_format,
-        datefmt=date_format,
-    )
-
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Create console handler (defaults to stderr)
-    console_handler = logging.StreamHandler(sys.stdout)  # Log to stdout
-    console_handler.setLevel(log_level)  # Handler level also respects verbosity
-    console_handler.setFormatter(CustomLogFormatter())  # Use the custom color formatter
-    root_logger.addHandler(console_handler)
-
-    # TODO: can be done easier with a dict
-    if log_file:
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            datefmt=date_format,
-            filename=log_file,
-            filemode="a",  # Append mode (or 'w' to overwrite)
-        )
-        print(f"Logging output to file: {log_file}")
-    else:
-        # Log to console (stderr by default with basicConfig stream)
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            datefmt=date_format,
-            stream=sys.stdout,  # Explicitly set to stdout if preferred over stderr
-        )
-
-    logger = logging.getLogger("pyfracval")  # Get your application's logger
-    logger.info(f"Logging configured at level: {logging.getLevelName(log_level)}")
-    return logger
 
 
 # --- Click Command Group ---
@@ -188,7 +130,7 @@ def create_logger(log_level: int, log_file: str | None = None) -> logging.Logger
     "--verbose",
     count=True,
     default=0,
-    help="Increase verbosity (-v for INFO, -vv for DEBUG)",
+    help="Increase verbosity (-v INFO, -vv DEBUG, -vvv TRACE)",
 )
 @click.option(
     "--log-file",
@@ -202,12 +144,14 @@ def cli(ctx, **kwargs) -> None:
         return
 
     match kwargs["verbose"]:
+        case 0:
+            log_level = logging.WARNING
         case 1:
             log_level = logging.INFO
         case 2:
             log_level = logging.DEBUG
         case _:
-            log_level = logging.WARNING
+            log_level = logging.TRACE  # pyright: ignore
 
     logger = create_logger(log_level, kwargs["log_file"])
 
