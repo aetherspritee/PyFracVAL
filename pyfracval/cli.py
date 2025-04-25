@@ -35,6 +35,51 @@ DEFAULT_N_SUBCL_PERC = default_config.N_SUBCL_PERCENTAGE
 DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
 
 
+def create_logger(log_level: int, log_file: str | None = None) -> logging.Logger:
+    """Setup logging configuration."""
+
+    log_format = "%(asctime)s - %(levelname)s - %(name)30s - %(message)s"
+    date_format = "%Y-%m-%d %H:%M:%S"
+    logging.basicConfig(
+        level=log_level,
+        format=log_format,
+        datefmt=date_format,
+    )
+
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Create console handler (defaults to stderr)
+    console_handler = logging.StreamHandler(sys.stdout)  # Log to stdout
+    console_handler.setLevel(log_level)  # Handler level also respects verbosity
+    console_handler.setFormatter(CustomLogFormatter())  # Use the custom color formatter
+    root_logger.addHandler(console_handler)
+
+    # TODO: can be done easier with a dict
+    if log_file:
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            datefmt=date_format,
+            filename=log_file,
+            filemode="a",  # Append mode (or 'w' to overwrite)
+        )
+        print(f"Logging output to file: {log_file}")
+    else:
+        # Log to console (stderr by default with basicConfig stream)
+        logging.basicConfig(
+            level=log_level,
+            format=log_format,
+            datefmt=date_format,
+            stream=sys.stdout,  # Explicitly set to stdout if preferred over stderr
+        )
+
+    logger = logging.getLogger("pyfracval")  # Get your application's logger
+    logger.info(f"Logging configured at level: {logging.getLevelName(log_level)}")
+    return logger
+
+
 # --- Click Command Group ---
 @click.group(
     invoke_without_command=True,
@@ -164,46 +209,7 @@ def cli(ctx, **kwargs) -> None:
         case _:
             log_level = logging.WARNING
 
-    log_format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
-    date_format = "%Y-%m-%d %H:%M:%S"
-    logging.basicConfig(
-        level=log_level,
-        format=log_format,
-        datefmt=date_format,
-    )
-
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Create console handler (defaults to stderr)
-    console_handler = logging.StreamHandler(sys.stdout)  # Log to stdout
-    console_handler.setLevel(log_level)  # Handler level also respects verbosity
-    console_handler.setFormatter(CustomLogFormatter())  # Use the custom color formatter
-    root_logger.addHandler(console_handler)
-
-    log_file = kwargs["log_file"]
-    # TODO: can be done easier with a dict
-    if log_file:
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            datefmt=date_format,
-            filename=log_file,
-            filemode="a",  # Append mode (or 'w' to overwrite)
-        )
-        print(f"Logging output to file: {log_file}")
-    else:
-        # Log to console (stderr by default with basicConfig stream)
-        logging.basicConfig(
-            level=log_level,
-            format=log_format,
-            datefmt=date_format,
-            stream=sys.stdout,  # Explicitly set to stdout if preferred over stderr
-        )
-
-    logger = logging.getLogger("pyfracval")  # Get your application's logger
-    logger.info(f"Logging configured at level: {logging.getLevelName(log_level)}")
+    logger = create_logger(log_level, kwargs["log_file"])
 
     # --- Validate Inputs ---
     if kwargs["rp_gstd"] < 1.0:
@@ -263,7 +269,7 @@ def cli(ctx, **kwargs) -> None:
             )
             success, final_coords, final_radii = run_simulation(
                 iteration=agg_num,
-                sim_config=sim_config,
+                sim_config_dict=sim_config,
                 output_base_dir=str(output_folder),
                 seed=current_seed,  # Use specific seed for this run
             )
@@ -364,6 +370,8 @@ def cli(ctx, **kwargs) -> None:
     help="Path where to look for data files to be displayed by Streamlit app.",
 )
 def explore(path: str):  # pragma: no cover
+    logger = create_logger(logging.INFO)
+
     try:
         from streamlit import runtime
         from streamlit.web import cli as stcli

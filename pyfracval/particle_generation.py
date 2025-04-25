@@ -2,7 +2,6 @@
 """Functions for generating primary particle radii."""
 
 import logging
-from typing import Optional
 
 import numpy as np
 
@@ -21,7 +20,7 @@ def random_normal_custom() -> float:
 
 
 def lognormal_pp_radii(
-    rp_gstd: float, rp_g: float, n: int, seed: Optional[int] = None
+    rp_gstd: float, rp_g: float, n: int, seed: int | None = None
 ) -> np.ndarray:
     """
     Generates N random radii from a lognormal distribution.

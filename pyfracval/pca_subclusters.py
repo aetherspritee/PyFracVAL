@@ -5,7 +5,6 @@ Divides initial particles into subclusters using Particle-Cluster Aggregation (P
 
 import logging
 import math
-from typing import Optional, Tuple
 
 import numpy as np
 
@@ -34,7 +33,7 @@ class Subclusterer:
 
         self.all_coords = np.zeros((self.N, 3), dtype=float)
         self.all_radii = np.zeros(self.N, dtype=float)
-        self.i_orden: Optional[np.ndarray] = None
+        self.i_orden: np.ndarray | None = None
         self.number_clusters: int = 0
         self.not_able_pca: bool = False
         self.number_clusters_processed = 0
@@ -168,9 +167,7 @@ class Subclusterer:
 
     def get_results(
         self,
-    ) -> Tuple[
-        int, bool, Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]
-    ]:
+    ) -> tuple[int, bool, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
         """Returns the results of the subclustering."""
         if self.not_able_pca:
             return 0, True, None, None, None

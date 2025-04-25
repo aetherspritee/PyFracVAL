@@ -5,24 +5,25 @@ Core function to run the FracVAL simulation.
 
 import logging
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
 # Import necessary modules from your library
-from . import particle_generation, save_results, utils
+from . import particle_generation, utils
 from .cca_agg import CCAggregator
 from .pca_subclusters import Subclusterer
+from .schemas import AggregateProperties, GenerationInfo, Metadata, SimulationParameters
 
 logger = logging.getLogger(__name__)
 
 
 def run_simulation(
     iteration: int,
-    sim_config: Dict[str, Any],
+    sim_config_dict: dict[str, Any],
     output_base_dir: str = "RESULTS",
-    seed: Optional[int] = None,
-) -> Tuple[bool, Optional[np.ndarray], Optional[np.ndarray]]:
+    seed: int | None = None,
+) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
     """
     Runs one full aggregate generation based on the provided configuration.
 
@@ -34,38 +35,48 @@ def run_simulation(
         seed: Optional random seed.
 
     Returns:
-        Tuple[bool, Optional[np.ndarray], Optional[np.ndarray]]:
+        tuple[bool, np.ndarray | None, np.ndarray | None]:
             (success_flag, final_coords, final_radii)
             Coords and radii are returned only on success.
     """
     logger.info(f"===== Starting Aggregate Generation {iteration} =====")
-    logger.info(
-        f"Config: N={sim_config['N']}, Df={sim_config['Df']}, kf={sim_config['kf']}, "
-        f"rp_g={sim_config['rp_g']}, rp_gstd={sim_config['rp_gstd']}"
-    )
+    # logger.info(
+    #     f"Config: N={sim_config['N']}, Df={sim_config['Df']}, kf={sim_config['kf']}, "
+    #     f"rp_g={sim_config['rp_g']}, rp_gstd={sim_config['rp_gstd']}"
+    # )
+
+    try:
+        # Add seed to the dict if provided separately
+        if seed is not None and "seed" not in sim_config_dict:
+            sim_config_dict["seed"] = seed
+        sim_params = SimulationParameters(**sim_config_dict)
+        logger.info(f"Validated Config: {sim_params.model_dump_json(indent=2)}")
+    except Exception as e:  # Catch Pydantic validation errors
+        logger.error(f"Invalid simulation parameters provided: {e}", exc_info=True)
+        return False, None, None
+
     start_time = time.time()
 
-    if seed is not None:
-        np.random.seed(seed)  # Use the provided seed directly for this run
-        logger.info(f"Using random seed: {seed}")
+    if sim_params.seed is not None:
+        np.random.seed(sim_params.seed)
+        logger.info(f"Using random seed: {sim_params.seed}")
 
     # --- Use parameters from sim_config ---
-    N = sim_config["N"]
-    Df = sim_config["Df"]
-    kf = sim_config["kf"]
-    rp_g = sim_config["rp_g"]
-    rp_gstd = sim_config["rp_gstd"]
-    tol_ov = sim_config["tol_ov"]
-    n_subcl_percentage = sim_config["n_subcl_percentage"]
-    ext_case = sim_config["ext_case"]
+    # Df = sim_config["Df"]
+    # kf = sim_config["kf"]
+    # rp_g = sim_config["rp_g"]
+    # rp_gstd = sim_config["rp_gstd"]
+    # tol_ov = sim_config["tol_ov"]
+    # n_subcl_percentage = sim_config["n_subcl_percentage"]
+    # ext_case = sim_config["ext_case"]
     # Add any other required parameters here
 
     # 1. Generate Initial Particle Radii
     try:
         initial_radii = particle_generation.lognormal_pp_radii(
-            rp_gstd,
-            rp_g,
-            N,  # Seed handled above
+            sim_params.rp_gstd,
+            sim_params.rp_g,
+            sim_params.N,
         )
         logger.info(
             f"Generated initial radii (Mean: {np.mean(initial_radii):.2f}, Std: {np.std(initial_radii):.2f})"
@@ -82,10 +93,10 @@ def run_simulation(
     pca_start_time = time.time()
     subcluster_runner = Subclusterer(
         initial_radii=shuffled_radii,
-        df=Df,  # Consider passing relaxed df/kf here if needed for PCA stability
-        kf=kf,
-        tol_ov=tol_ov,
-        n_subcl_percentage=n_subcl_percentage,
+        df=sim_params.Df,
+        kf=sim_params.kf,
+        tol_ov=sim_params.tol_ov,
+        n_subcl_percentage=sim_params.n_subcl_percentage,
     )
     pca_success = subcluster_runner.run_subclustering()
     pca_end_time = time.time()
@@ -121,11 +132,11 @@ def run_simulation(
         initial_coords=pca_coords_radii[:, :3],
         initial_radii=pca_coords_radii[:, 3],
         initial_i_orden=pca_i_orden,
-        n_total=N,
-        df=Df,  # Use target Df/kf for CCA
-        kf=kf,
-        tol_ov=tol_ov,
-        ext_case=ext_case,
+        n_total=sim_params.N,
+        df=sim_params.Df,
+        kf=sim_params.kf,
+        tol_ov=sim_params.tol_ov,
+        ext_case=sim_params.ext_case,
     )
     cca_result = cca_runner.run_cca()
     cca_end_time = time.time()
@@ -149,47 +160,46 @@ def run_simulation(
     n_actual = final_coords.shape[0]
 
     # Calculate final properties including Rg
+    final_coords, final_radii = cca_result
+    n_actual = final_coords.shape[0]
     final_rg = 0.0
-    final_cm = np.zeros(3)
+    final_cm = [0.0, 0.0, 0.0]  # Use list default
+    # ... (calculate final_rg, final_cm using utils.calculate_cluster_properties) ...
     if n_actual > 0:
         try:
-            # Use the target Df/kf for calculation as per FracVAL principle
-            final_mass, final_rg, final_cm, final_r_max = (
-                utils.calculate_cluster_properties(final_coords, final_radii, Df, kf)
+            final_mass, final_rg, final_cm_arr, final_r_max = (
+                utils.calculate_cluster_properties(
+                    final_coords,
+                    final_radii,
+                    sim_params.Df,
+                    sim_params.kf,
+                )
             )
             logger.info(f"Final Aggregate Calculated Rg: {final_rg:.4f}")
+            final_cm = final_cm_arr.tolist()  # Convert to list
         except Exception as e:
             logger.warning(f"Could not calculate final aggregate properties: {e}")
-            # Decide how to handle - save 0 for Rg or skip saving it? Let's save 0.
-            final_rg = 0.0
+            final_rg = None  # Use None if calculation failed
+            final_cm = None
 
-    # --- Create a dictionary specifically for metadata ---
-    # This is slightly cleaner than modifying sim_config directly
-    metadata_to_save = {
-        "generation_info": {
-            "script_name": "PyFracVAL",
-            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
-            "iteration": iteration,
-        },
-        "simulation_parameters": sim_config,  # Include original parameters
-        "aggregate_properties": {
-            "N_particles_actual": n_actual,
-            "radius_of_gyration": float(final_rg),  # Add the calculated Rg
-            "center_of_mass": final_cm.tolist(),  # Convert CM numpy array to list for YAML
-            # Add final_r_max if desired
-        },
-        # Column info removed as requested
-    }
+    gen_info = GenerationInfo(iteration=iteration)  # Timestamp defaults to now
+    agg_props = AggregateProperties(
+        N_particles_actual=n_actual,
+        radius_of_gyration=final_rg,
+        center_of_mass=final_cm,
+    )
+    metadata_instance = Metadata(
+        generation_info=gen_info,
+        simulation_parameters=sim_params,  # Pass the validated parameters model
+        aggregate_properties=agg_props,
+    )
 
     # 6. Save Results (Optional, can be done by caller)
     # Make sure save_results can handle output directory argument
-    save_results.save_aggregate_data(
-        final_coords,
-        final_radii,
-        iteration,
-        metadata_to_save,
-        sim_config,
-        output_dir=output_base_dir,
+    metadata_instance.save_to_file(
+        folderpath=output_base_dir,
+        coords=final_coords,
+        radii=final_radii,
     )
 
     end_time = time.time()
