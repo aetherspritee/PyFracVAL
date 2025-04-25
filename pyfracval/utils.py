@@ -188,7 +188,7 @@ def rodrigues_rotation(
     return v_rot
 
 
-def cca_two_sphere_intersection(
+def two_sphere_intersection(
     sphere_1: np.ndarray, sphere_2: np.ndarray
 ) -> Tuple[float, float, float, float, np.ndarray, np.ndarray, np.ndarray, bool]:
     """
