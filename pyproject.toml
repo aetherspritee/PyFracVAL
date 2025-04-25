@@ -9,6 +9,8 @@ authors = [
 ]
 requires-python = ">=3.10,<3.13"
 dependencies = [
+  "pyyaml>=6.0.2",
+  "pytest>=8.3.3",
   "click>=8.1.7",
   "numba>=0.60.0",
   "numpy>=1.26.4",
@@ -19,7 +21,6 @@ dependencies = [
   "pyvista>=0.44.1",
   "stpyvista>=0.1.4",
   "streamlit>=1.41.1",
-  "pytest>=8.3.3",
 ]
 
 [project.scripts]
