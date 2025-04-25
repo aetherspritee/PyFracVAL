@@ -3,17 +3,26 @@
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
+import yaml
+
+from . import config as default_config
 
 logger = logging.getLogger(__name__)
+
+# Define start and end markers for the YAML block
+YAML_START_MARKER = "### METADATA START (YAML) ###"
+YAML_END_MARKER = "### METADATA END (YAML) ###"
 
 
 def save_aggregate_data(
     coords: np.ndarray,
     radii: np.ndarray,
     iteration: int,
-    sim_config: dict,
+    metadata_to_save: dict[str, Any],
+    sim_config: dict[str, Any],
     output_dir: str = "RESULTS",
 ):
     """
@@ -49,13 +58,56 @@ def save_aggregate_data(
         / f"fracval_N{n_str}_Df{df_str}_kf{kf_str}_rpg{rpg_str}_rpgstd{rpgstd_str}_seed{seed_str}_agg{agg_str}_{timestamp}.dat"
     )
 
+    # --- Prepare Metadata Header ---
+    # metadata = {
+    #     "generation_info": {
+    #         "script_name": "PyFracVAL",  # Or get dynamically if needed
+    #         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    #         "iteration": iteration,
+    #     },
+    #     "simulation_parameters": sim_config,  # Store the whole config dict
+    #     "aggregate_properties": {
+    #         "N_particles_actual": n,
+    #         # Add calculated properties if available (e.g., final Rg, CM)
+    #         # "final_Rg": calculated_rg,
+    #     },
+    #     "data_columns": {
+    #         "column_1": {"name": "X", "unit": "arbitrary"},  # Example unit
+    #         "column_2": {"name": "Y", "unit": "arbitrary"},
+    #         "column_3": {"name": "Z", "unit": "arbitrary"},
+    #         "column_4": {"name": "Radius", "unit": "arbitrary"},
+    #     },
+    # }
+
+    # --- Convert metadata to YAML string ---
+    try:
+        # Use sort_keys=False to maintain insertion order (optional)
+        # Use default_flow_style=False for block style (more readable)
+        yaml_string = yaml.dump(
+            metadata_to_save, sort_keys=False, default_flow_style=False, indent=2
+        )
+    except Exception as e:
+        logger.error(f"Error converting metadata to YAML: {e}")
+        # Fallback to simpler header or raise error?
+        header_string = "# Error embedding YAML metadata\n"
+        yaml_string = None  # Flag that YAML failed
+
+    # --- Create Header String ---
+    if yaml_string:
+        header_string = "".join([f"# {line}\n" for line in yaml_string.splitlines()])
+    else:
+        # Fallback if YAML conversion failed
+        header_string = "# ERROR: Could not generate YAML metadata.\n"
+
     # Combine data: X, Y, Z, R
     data_to_save = np.hstack((coords, radii.reshape(-1, 1)))
 
     # Save to file
     try:
-        # Use a space delimiter, adjust format if needed
-        np.savetxt(filename, data_to_save, fmt="%18.10e", delimiter=" ")
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(header_string)
+            # Use a space delimiter, adjust format if needed
+            np.savetxt(f, data_to_save, fmt="%18.10e", delimiter=" ")
         logger.info(f"Successfully saved aggregate data to: {filename}")
     except Exception as e:
         logger.error(f"Error saving results to {filename}: {e}")

@@ -146,11 +146,50 @@ def run_simulation(
 
     # 5. Prepare Results
     final_coords, final_radii = cca_result
+    n_actual = final_coords.shape[0]
+
+    # Calculate final properties including Rg
+    final_rg = 0.0
+    final_cm = np.zeros(3)
+    if n_actual > 0:
+        try:
+            # Use the target Df/kf for calculation as per FracVAL principle
+            final_mass, final_rg, final_cm, final_r_max = (
+                utils.calculate_cluster_properties(final_coords, final_radii, Df, kf)
+            )
+            logger.info(f"Final Aggregate Calculated Rg: {final_rg:.4f}")
+        except Exception as e:
+            logger.warning(f"Could not calculate final aggregate properties: {e}")
+            # Decide how to handle - save 0 for Rg or skip saving it? Let's save 0.
+            final_rg = 0.0
+
+    # --- Create a dictionary specifically for metadata ---
+    # This is slightly cleaner than modifying sim_config directly
+    metadata_to_save = {
+        "generation_info": {
+            "script_name": "PyFracVAL",
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "iteration": iteration,
+        },
+        "simulation_parameters": sim_config,  # Include original parameters
+        "aggregate_properties": {
+            "N_particles_actual": n_actual,
+            "radius_of_gyration": float(final_rg),  # Add the calculated Rg
+            "center_of_mass": final_cm.tolist(),  # Convert CM numpy array to list for YAML
+            # Add final_r_max if desired
+        },
+        # Column info removed as requested
+    }
 
     # 6. Save Results (Optional, can be done by caller)
     # Make sure save_results can handle output directory argument
     save_results.save_aggregate_data(
-        final_coords, final_radii, iteration, sim_config, output_dir=output_base_dir
+        final_coords,
+        final_radii,
+        iteration,
+        metadata_to_save,
+        sim_config,
+        output_dir=output_base_dir,
     )
 
     end_time = time.time()
