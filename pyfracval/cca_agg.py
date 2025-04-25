@@ -519,11 +519,11 @@ class CCAggregator:
         )
 
         if not intersection_valid:
-            logger.warning(
+            logger.debug(
                 f"CCA Stick V1 - Failed sphere intersection A/B. cand1={cand1_idx}, cand2={cand2_idx}"
             )
             distAB = np.linalg.norm(center_A - center_B)
-            logger.warning(
+            logger.debug(
                 f"  Dist={distAB:.4f}, R_A={radius_A:.4f}, R_B={radius_B:.4f}, Sum={radius_A + radius_B:.4f}"
             )
             return (

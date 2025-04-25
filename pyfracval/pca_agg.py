@@ -4,7 +4,6 @@ Implements Particle-Cluster Aggregation (PCA) used for creating initial subclust
 """
 
 import logging
-from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -44,7 +43,7 @@ class PCAggregator:
 
         self.not_able_pca: bool = False
 
-    def _random_point_sphere(self) -> Tuple[float, float]:
+    def _random_point_sphere(self) -> tuple[float, float]:
         """Generates random angles (theta, phi) for a point on a sphere."""
         u, v = np.random.rand(2)
         theta = 2.0 * config.PI * u
@@ -82,7 +81,7 @@ class PCAggregator:
         else:
             self.cm = np.mean(self.coords[:2], axis=0)
 
-    def _gamma_calculation(self, m2: float, rg2: float) -> Tuple[bool, float]:
+    def _gamma_calculation(self, m2: float, rg2: float) -> tuple[bool, float]:
         """
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
         Note: Fortran version had slightly different logic using n1, n2, n3 directly
@@ -128,7 +127,7 @@ class PCAggregator:
 
     def _select_candidates(
         self, radius_k: int, gamma_pc: float, gamma_real: bool
-    ) -> Tuple[np.ndarray, float]:
+    ) -> tuple[np.ndarray, float]:
         """
         Generates the list of candidate particles within the current aggregate
         that monomer 'k' could stick to. Similar to Random_select_list in Fortran PCA.
@@ -174,8 +173,8 @@ class PCAggregator:
         return np.array(candidates, dtype=int), r_max_current
 
     def _search_and_select_candidate(
-        self, k: int, considered_indices: List[int]
-    ) -> Tuple[int, float, float, bool, float, np.ndarray]:
+        self, k: int, considered_indices: list[int]
+    ) -> tuple[int, float, float, bool, float, np.ndarray]:
         """
         Handles the complex logic of selecting a candidate, potentially swapping
         monomer 'k' with another if the initial attempt yields no candidates.
@@ -240,7 +239,7 @@ class PCAggregator:
 
                 if not eligible_for_swap:
                     # No more monomers to swap with
-                    logger.warning(
+                    logger.debug(
                         f"PCA k={k}: No candidates found and no more monomers to swap."
                     )
                     return (
@@ -277,14 +276,14 @@ class PCAggregator:
 
     def _sticking_process(
         self, k: int, selected_idx: int, gamma_pc: float
-    ) -> Tuple[np.ndarray | None, float, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray | None, float, np.ndarray, np.ndarray, np.ndarray]:
         """
         Places monomer k based on intersection of two spheres.
         Sphere 1: Center = selected particle, Radius = R_sel + R_k
         Sphere 2: Center = CM of aggregate, Radius = Gamma_pc
 
         Returns:
-            Tuple: (coord_k, theta_a, vec_0, i_vec, j_vec) or None if intersection fails.
+            tuple: (coord_k, theta_a, vec_0, i_vec, j_vec) or None if intersection fails.
         """
         coord_sel = self.coords[selected_idx]
         radius_sel = self.radii[selected_idx]
@@ -349,7 +348,7 @@ class PCAggregator:
 
     def _reintento(
         self, k: int, vec_0: np.ndarray, i_vec: np.ndarray, j_vec: np.ndarray
-    ) -> Tuple[np.ndarray, float]:
+    ) -> tuple[np.ndarray, float]:
         """Rotates monomer k to a new point on the intersection circle."""
         x0, y0, z0, r0 = vec_0
 
@@ -376,7 +375,7 @@ class PCAggregator:
 
         return coord_k_new, theta_a_new
 
-    def run(self) -> Optional[np.ndarray]:
+    def run(self) -> np.ndarray | None:
         """
         Runs the PCA process to aggregate all N particles.
 
