@@ -4,12 +4,15 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import pandas as pd
+import numpy as np
 import polars as pl
+import pyvista as pv
 import streamlit as st
 from stpyvista import stpyvista
 
-from .cli import plot_particles
+from pyfracval.visualization import plot_particles
+
+pv.start_xvfb()
 
 st.set_page_config(layout="wide")
 st.title("PyFracVAL")
@@ -33,8 +36,8 @@ for path in args.path:
     if not p.exists():
         st.warning(f"Path {p.resolve()} does not exist")
         continue
-    files.extend([item for item in p.rglob("*.csv") if item.is_file()])
     files.extend([item for item in p.rglob("*.dat") if item.is_file()])
+    # files.extend([item for item in p.rglob("*.csv") if item.is_file()])
 file = st.selectbox(
     "File",
     files,
@@ -44,14 +47,15 @@ file = st.selectbox(
 
 match Path(file).suffix:
     case ".csv":
-        data = pl.read_csv(file)
+        data = pl.read_csv(file).to_numpy()
     case ".dat":
         # data = pd.read_table(file, delim_whitespace=True, header=None)
-        data = pd.read_csv(file, sep=r"\s+", header=None, names=["x", "y", "z", "r"])
+        # data = pd.read_csv(file, sep=r"\s+", header=None, names=["x", "y", "z", "r"])
+        data = np.loadtxt(file)
     case _:
         st.error("File type not supported")
 
-pl = plot_particles(data[["x", "y", "z"]].to_numpy(), data["r"].to_numpy())
+pl = plot_particles(data[:, :3], data[:, 3])
 stpyvista(pl)
 
 with st.expander("Full file path"):
