@@ -558,7 +558,7 @@ class PCAggregator:
                         self.coords[k],
                         self.radii[k],
                     )
-                    logger.debug(
+                    logger.trace(  # pyright: ignore
                         f"  PCA k={k}, cand={current_selected_idx}, Rot {intento}: New overlap = {cov_max:.4e}"
                     )
 
