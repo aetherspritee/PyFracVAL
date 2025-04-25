@@ -581,31 +581,31 @@ class CCAggregator:
         # Return final state after initial sticking
         return coords1, coords2, cm2, theta_a, vec_0, i_vec, j_vec
 
-    def _cca_overlap_check(
-        self,
-        coords1: np.ndarray,
-        radii1: np.ndarray,
-        coords2: np.ndarray,
-        radii2: np.ndarray,
-    ) -> float:
-        """Checks for overlaps between particles of cluster 1 and cluster 2."""
-        n1 = coords1.shape[0]
-        n2 = coords2.shape[0]
-        max_overlap = 0.0
-        if n1 == 0 or n2 == 0:
-            return 0.0
+    # def _cca_overlap_check(
+    #     self,
+    #     coords1: np.ndarray,
+    #     radii1: np.ndarray,
+    #     coords2: np.ndarray,
+    #     radii2: np.ndarray,
+    # ) -> float:
+    #     """Checks for overlaps between particles of cluster 1 and cluster 2."""
+    #     n1 = coords1.shape[0]
+    #     n2 = coords2.shape[0]
+    #     max_overlap = 0.0
+    #     if n1 == 0 or n2 == 0:
+    #         return 0.0
 
-        # Use loops for simplicity, similar to Fortran. Vectorization is possible but complex.
-        for i in range(n1):
-            for j in range(n2):
-                dist_sq = np.sum((coords1[i] - coords2[j]) ** 2)
-                dist_ij = np.sqrt(dist_sq)
-                sum_r = radii1[i] + radii2[j]
+    #     # Use loops for simplicity, similar to Fortran. Vectorization is possible but complex.
+    #     for i in range(n1):
+    #         for j in range(n2):
+    #             dist_sq = np.sum((coords1[i] - coords2[j]) ** 2)
+    #             dist_ij = np.sqrt(dist_sq)
+    #             sum_r = radii1[i] + radii2[j]
 
-                if dist_ij < sum_r - 1e-9:  # Use tolerance
-                    overlap = (sum_r - dist_ij) / sum_r if sum_r > 1e-12 else 1.0
-                    max_overlap = max(max_overlap, overlap)
-        return max_overlap
+    #             if dist_ij < sum_r - 1e-9:  # Use tolerance
+    #                 overlap = (sum_r - dist_ij) / sum_r if sum_r > 1e-12 else 1.0
+    #                 max_overlap = max(max_overlap, overlap)
+    #     return max_overlap
 
     def _cca_reintento(
         self,
