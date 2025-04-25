@@ -164,18 +164,32 @@ class CCAggregator:
             if coords_i.shape[0] == 0:  # Skip empty clusters
                 cluster_props[i] = (0.0, 0.0, np.zeros(3), 0.0, np.array([]))
                 continue
+            # Properties calculated using the *target* Df/kf for the CCA stage
             m_i, rg_i, cm_i, r_max_i = utils.calculate_cluster_properties(
-                coords_i, radii_i, self.df, self.kf
+                coords_i,
+                radii_i,
+                self.df,
+                self.kf,  # Use target Df/kf here
             )
             cluster_props[i] = (m_i, rg_i, cm_i, r_max_i, radii_i)
+            # Log properties at DEBUG level
+            logger.debug(
+                f"Cluster {i}: N={len(radii_i)}, Rg={rg_i:.3f}, Rmax={r_max_i:.3f}, Mass={m_i:.2e}"
+            )
+
+        pair_attempt_logged = 0  # Limit logging output slightly
+        max_logs = 15  # Log more pairs initially
 
         for i in range(self.i_t):
             # Skip if already paired or empty
             if np.sum(id_agglomerated[i, :]) > 0 or cluster_props[i][0] == 0.0:
                 continue
 
-            m1, rg1, _, r_max1, _ = cluster_props[i]
+            m1, rg1, _, r_max1, radii1 = cluster_props[
+                i
+            ]  # Get radii1 needed for gamma calc
             partner_found = False
+            props1 = (m1, rg1, None, r_max1, radii1)  # Package for gamma calc
 
             # Check potential partners j > i
             for j in range(i + 1, self.i_t):
@@ -183,62 +197,83 @@ class CCAggregator:
                 if np.sum(id_agglomerated[:, j]) > 0 or cluster_props[j][0] == 0.0:
                     continue
 
-                m2, rg2, _, r_max2, _ = cluster_props[j]
+                m2, rg2, _, r_max2, radii2 = cluster_props[
+                    j
+                ]  # Get radii2 needed for gamma calc
+                props2 = (m2, rg2, None, r_max2, radii2)  # Package for gamma calc
 
-                # Calculate Gamma_pc for the pair (i, j)
-                gamma_real, gamma_pc = self._calculate_cca_gamma(
-                    cluster_props[i], cluster_props[j]
-                )
+                # Calculate Gamma_pc for the pair (i, j) using target Df/kf
+                gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
+
+                # Log the comparison details at DEBUG level
+                if (
+                    logger.isEnabledFor(logging.DEBUG)
+                    and pair_attempt_logged < max_logs
+                ):
+                    condition_met = gamma_real and gamma_pc < (r_max1 + r_max2)
+                    logger.trace(  # pyright: ignore
+                        f"Pair ({i},{j}): Gamma_real={gamma_real}, Gamma_pc={gamma_pc:.4f}, "
+                        f"Rmax1={r_max1:.4f}, Rmax2={r_max2:.4f}, "
+                        f"Sum_Rmax={r_max1 + r_max2:.4f}, "
+                        f"Condition (Gamma < SumRmax): {condition_met}"
+                    )
+                    pair_attempt_logged += 1
 
                 # Fortran condition: (Gamma_pc < (R_max1+R_max2)) AND Gamma_real
-                # Note R_max here is max distance from CM, not necessarily Rg. Check Fortran usage.
-                # CCA_AGG_properties2 calculates R_max as max distance from CM to any particle center.
-                # Let's assume this is the intended R_max.
                 if gamma_real and gamma_pc < (r_max1 + r_max2):
                     id_agglomerated[i, j] = 1
                     id_agglomerated[j, i] = 1
                     partner_found = True
+                    logger.debug(
+                        f"  Pair ({i},{j}): Success! Marked for aggregation."
+                    )  # Log success clearly
                     break  # Found a partner for i, move to next i
+                # else: Condition failed, continue checking other j
 
-            # Fortran's 'listo' loop logic seems to just find the *first* valid partner.
-            # If no partner is found after checking all j > i, this cluster might be the odd one out.
+            # If no partner found for i after checking all j > i
+            if not partner_found and logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    f"No suitable partner found for cluster {i} after checking all j > {i}."
+                )
 
-        # Handle the odd cluster out
+        # --- Handle the odd cluster out ---
+        # This logic identifies which cluster hasn't been paired yet if i_t is odd
         if self.i_t % 2 != 0:
+            # Sum rows and columns to find clusters with no connection (sum=0)
             paired_status = np.sum(id_agglomerated, axis=0) + np.sum(
                 id_agglomerated, axis=1
             )
             unpaired_indices = np.where(paired_status == 0)[0]
 
-            if len(unpaired_indices) == 1:
-                loc = unpaired_indices[0]
-                # Check if it's genuinely unpaired (not just empty)
-                if cluster_props[loc][0] > 0.0:
-                    id_agglomerated[loc, loc] = 1  # Mark for pass-through
-                # else: keep as 0 if it was an empty cluster
+            # Filter out potentially empty clusters among the unpaired
+            actual_unpaired = [
+                idx
+                for idx in unpaired_indices
+                if cluster_props[idx][0] > 0.0  # Check mass > 0
+            ]
 
-            elif len(unpaired_indices) > 1:
-                # More than one cluster seems unpaired. Check if others are just empty.
-                actual_unpaired = [
-                    idx for idx in unpaired_indices if cluster_props[idx][0] > 0.0
-                ]
-                if len(actual_unpaired) == 1:
-                    loc = actual_unpaired[0]
-                    id_agglomerated[loc, loc] = 1
-                elif len(actual_unpaired) > 1:
-                    logger.warning(
-                        f"Found {len(actual_unpaired)} non-empty unpaired clusters for odd i_t={self.i_t}. Pairing may fail."
-                    )
-                    # Should we force a pair or fail? Let's try failing later if needed.
-                # else: all unpaired were empty, which is fine.
+            if len(actual_unpaired) == 1:
+                loc = actual_unpaired[0]
+                id_agglomerated[loc, loc] = 1  # Mark for pass-through
+                logger.debug(f"Marked cluster {loc} as the odd one out (pass-through).")
+            elif len(actual_unpaired) > 1:
+                # This case should ideally not happen if pairing logic worked for pairs
+                logger.warning(
+                    f"Found {len(actual_unpaired)} non-empty unpaired clusters ({actual_unpaired}) for odd i_t={self.i_t}. Pairing logic might be flawed."
+                )
+                # Let the final check below handle this potential error state
+            # else: all unpaired were empty, which is fine.
 
-        # Final check: Ensure all non-empty clusters are accounted for
+        # --- Final check: Ensure all non-empty clusters are accounted for ---
         final_paired_status = np.sum(id_agglomerated, axis=0) + np.sum(
             id_agglomerated, axis=1
         )
+        # Create a mask for non-empty clusters based on pre-calculated properties
         should_be_paired_mask = np.array(
-            [cluster_props[i][0] > 0.0 for i in range(self.i_t)]
+            [cluster_props[idx][0] > 0.0 for idx in range(self.i_t)]
         )
+
+        # Check if any non-empty cluster has a status of 0 (neither paired nor marked as odd one out)
         if np.any(final_paired_status[should_be_paired_mask] == 0):
             failed_indices = np.where(
                 (final_paired_status == 0) & should_be_paired_mask
@@ -246,10 +281,10 @@ class CCAggregator:
             logger.error(
                 f"Could not find pairs for all non-empty clusters. Failed indices: {failed_indices}"
             )
-            # Fortran code has a path to set not_able_CCA = .true. here in the 'listo' loop failure.
             self.not_able_cca = True
             return None
 
+        logger.debug("Pair generation completed.")
         return id_agglomerated
 
     # --------------------------------------------------------------------------
@@ -779,10 +814,10 @@ class CCAggregator:
                     radii2_in,
                 )
                 intento += 1
-                current_coords2 = (
-                    coords2_rotated  # Update coords for next potential rotation
-                )
-                # logger.info(f"    Rotation {intento}: Overlap = {cov_max:.4e}")
+
+                # Update coords for next potential rotation
+                current_coords2 = coords2_rotated
+                logger.trace(f"    Rotation {intento}: Overlap = {cov_max:.4e}")  # pyright: ignore
 
                 # Fortran logic for picking new *candidate* after 359 rotations is complex.
                 # If max rotations fail here, we consider this candidate pair (cand1, cand2) failed.
