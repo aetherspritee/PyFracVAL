@@ -189,13 +189,14 @@ def calculate_cluster_properties(
     -------
     tuple[float, float | None, np.ndarray | None, float]
         A tuple containing:
-        - total_mass (float): Sum of individual particle masses.
-        - rg (float | None): Radius of gyration calculated via `calculate_rg`,
-          or None if calculation failed.
-        - cm (np.ndarray | None): 3D center of mass coordinates, or None if
-          calculation failed.
-        - r_max (float): Maximum distance from the center of mass to any
-          particle center in the aggregate.
+            - total_mass (float): Sum of individual particle masses.
+            - rg (float | None): Radius of gyration calculated via `calculate_rg`,
+              or None if calculation failed.
+            - cm (np.ndarray | None): 3D center of mass coordinates, or None if
+              calculation failed.
+            - r_max (float): Maximum distance from the center of mass to any
+              particle center in the aggregate.
+
         Returns (0.0, 0.0, np.zeros(3), 0.0) for empty inputs (N=0).
     """
     npp = coords.shape[0]
@@ -299,14 +300,14 @@ def two_sphere_intersection(
     -------
     tuple[float, float, float, float, np.ndarray, np.ndarray, np.ndarray, bool]
         A tuple containing:
-        - x, y, z (float): Coordinates of a random point on the intersection.
-        - theta (float): Random angle (radians) used to generate the point.
-        - vec_0 (np.ndarray): [x0, y0, z0, r0] - center and radius of the
-          intersection circle (r0=0 if spheres touch at a point).
-        - i_vec (np.ndarray): First basis vector of the intersection plane.
-        - j_vec (np.ndarray): Second basis vector of the intersection plane.
-        - valid (bool): True if a valid intersection (circle or point)
-          exists, False otherwise (e.g., separate, contained, coincident).
+            - x, y, z (float): Coordinates of a random point on the intersection.
+            - theta (float): Random angle (radians) used to generate the point.
+            - vec_0 (np.ndarray): [x0, y0, z0, r0] - center and radius of the
+              intersection circle (r0=0 if spheres touch at a point).
+            - i_vec (np.ndarray): First basis vector of the intersection plane.
+            - j_vec (np.ndarray): Second basis vector of the intersection plane.
+            - valid (bool): True if a valid intersection (circle or point)
+              exists, False otherwise (e.g., separate, contained, coincident).
     """
     x1, y1, z1, r1 = sphere_1
     x2, y2, z2, r2 = sphere_2

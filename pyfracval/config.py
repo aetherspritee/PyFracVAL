@@ -1,6 +1,3 @@
-# config.py
-"""Configuration parameters for the FracVAL CCA simulation."""
-
 import numpy as np
 
 # --- Simulation Parameters ---

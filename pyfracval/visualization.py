@@ -11,9 +11,9 @@ def plot_particles(positions: np.ndarray, radii: np.ndarray) -> pv.Plotter:
 
     Parameters
     ----------
-    positions : np.ndarray
+    positions:
         Nx3 array of particle center coordinates.
-    radii : np.ndarray
+    radii:
         N array of particle radii.
 
     Returns
