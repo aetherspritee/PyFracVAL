@@ -10,6 +10,7 @@ from typing import Set, Tuple
 import numpy as np
 
 from . import config, utils
+from .logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
 
@@ -153,136 +154,143 @@ class CCAggregator:
     def _generate_pairs(self) -> np.ndarray | None:
         """
         Generates the ID_agglomerated matrix indicating potential pairs.
+        Applies a relaxation factor if the strict condition fails.
         Returns the matrix or None on failure.
         """
-        id_agglomerated = np.zeros((self.i_t, self.i_t), dtype=int)
-        cluster_props = {}  # Cache properties: index -> (m, rg, cm, r_max, radii)
+        # --- RELAXATION FACTOR ---
+        # Allow gamma_pc to be slightly larger than sum_rmax if needed.
+        # Start with a higher value to test if it allows pairing.
+        # If this works, you might fine-tune it later (e.g., 1.10, 1.05).
+        CCA_PAIRING_FACTOR = 1.50  # TEST: Start with 50% relaxation
+        strict_pairing_used = True  # Flag to track if relaxation was needed
+        # -------------------------
 
-        # Pre-calculate properties for all clusters
+        id_agglomerated = np.zeros((self.i_t, self.i_t), dtype=int)
+        cluster_props = {}  # Cache properties
+
+        # Pre-calculate properties (as before)
         for i in range(self.i_t):
             coords_i, radii_i = self._get_cluster_data(i)
-            if coords_i.shape[0] == 0:  # Skip empty clusters
+            if coords_i.shape[0] == 0:
                 cluster_props[i] = (0.0, 0.0, np.zeros(3), 0.0, np.array([]))
                 continue
-            # Properties calculated using the *target* Df/kf for the CCA stage
             m_i, rg_i, cm_i, r_max_i = utils.calculate_cluster_properties(
                 coords_i,
                 radii_i,
                 self.df,
-                self.kf,  # Use target Df/kf here
+                self.kf,  # Use target Df/kf
             )
             cluster_props[i] = (m_i, rg_i, cm_i, r_max_i, radii_i)
-            # Log properties at DEBUG level
             logger.debug(
                 f"Cluster {i}: N={len(radii_i)}, Rg={rg_i:.3f}, Rmax={r_max_i:.3f}, Mass={m_i:.2e}"
             )
 
-        pair_attempt_logged = 0  # Limit logging output slightly
-        max_logs = 15  # Log more pairs initially
-
+        # Pairing loop
         for i in range(self.i_t):
-            # Skip if already paired or empty
             if np.sum(id_agglomerated[i, :]) > 0 or cluster_props[i][0] == 0.0:
                 continue
 
-            m1, rg1, _, r_max1, radii1 = cluster_props[
-                i
-            ]  # Get radii1 needed for gamma calc
+            m1, rg1, _, r_max1, radii1 = cluster_props[i]
+            props1 = (m1, rg1, None, r_max1, radii1)
             partner_found = False
-            props1 = (m1, rg1, None, r_max1, radii1)  # Package for gamma calc
 
-            # Check potential partners j > i
             for j in range(i + 1, self.i_t):
-                # Skip if j is already paired or empty
                 if np.sum(id_agglomerated[:, j]) > 0 or cluster_props[j][0] == 0.0:
                     continue
 
-                m2, rg2, _, r_max2, radii2 = cluster_props[
-                    j
-                ]  # Get radii2 needed for gamma calc
-                props2 = (m2, rg2, None, r_max2, radii2)  # Package for gamma calc
+                m2, rg2, _, r_max2, radii2 = cluster_props[j]
+                props2 = (m2, rg2, None, r_max2, radii2)
 
-                # Calculate Gamma_pc for the pair (i, j) using target Df/kf
                 gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
+                sum_rmax = r_max1 + r_max2
 
-                # Log the comparison details at DEBUG level
-                if (
-                    logger.isEnabledFor(logging.DEBUG)
-                    and pair_attempt_logged < max_logs
-                ):
-                    condition_met = gamma_real and gamma_pc < (r_max1 + r_max2)
-                    logger.trace(  # pyright: ignore
-                        f"Pair ({i},{j}): Gamma_real={gamma_real}, Gamma_pc={gamma_pc:.4f}, "
-                        f"Rmax1={r_max1:.4f}, Rmax2={r_max2:.4f}, "
-                        f"Sum_Rmax={r_max1 + r_max2:.4f}, "
-                        f"Condition (Gamma < SumRmax): {condition_met}"
+                # --- Check Strict and Relaxed Conditions ---
+                strict_condition = gamma_real and gamma_pc < sum_rmax
+                # Apply factor ONLY if gamma is real
+                relaxed_condition = (
+                    gamma_real and gamma_pc < sum_rmax * CCA_PAIRING_FACTOR
+                )
+
+                # Log trace information
+                if logger.isEnabledFor(TRACE_LEVEL_NUM):  # TRACE level
+                    logger.log(
+                        TRACE_LEVEL_NUM,
+                        f"Pair ({i},{j}): G={gamma_pc:.3f}, R1+R2={sum_rmax:.3f}, StrictOK={strict_condition}, RelaxOK={relaxed_condition} (Factor={CCA_PAIRING_FACTOR})",
                     )
-                    pair_attempt_logged += 1
 
-                # Fortran condition: (Gamma_pc < (R_max1+R_max2)) AND Gamma_real
-                if gamma_real and gamma_pc < (r_max1 + r_max2):
+                # --- Apply Pairing Logic ---
+                pair_marked = False
+                if strict_condition:
                     id_agglomerated[i, j] = 1
                     id_agglomerated[j, i] = 1
                     partner_found = True
+                    pair_marked = True
                     logger.debug(
-                        f"  Pair ({i},{j}): Success! Marked for aggregation."
-                    )  # Log success clearly
-                    break  # Found a partner for i, move to next i
-                # else: Condition failed, continue checking other j
+                        f"  Pair ({i},{j}): Success! Marked for aggregation (Strict)."
+                    )
 
-            # If no partner found for i after checking all j > i
+                elif relaxed_condition:  # Check relaxed only if strict failed
+                    id_agglomerated[i, j] = 1
+                    id_agglomerated[j, i] = 1
+                    partner_found = True
+                    pair_marked = True
+                    strict_pairing_used = False  # Set flag
+                    logger.warning(
+                        f"  Pair ({i},{j}): Marked using RELAXED condition "
+                        f"(Gamma={gamma_pc:.3f} vs SumRmax={sum_rmax:.3f}). "
+                        f"Final Df/kf may deviate slightly from target ({self.df:.2f}/{self.kf:.2f})."
+                    )
+                # --------------------------
+
+                if pair_marked:
+                    break  # Found partner for i
+
             if not partner_found and logger.isEnabledFor(logging.DEBUG):
                 logger.debug(
                     f"No suitable partner found for cluster {i} after checking all j > {i}."
                 )
 
-        # --- Handle the odd cluster out ---
-        # This logic identifies which cluster hasn't been paired yet if i_t is odd
+        # --- Handle the odd cluster out (Logic remains the same) ---
         if self.i_t % 2 != 0:
-            # Sum rows and columns to find clusters with no connection (sum=0)
             paired_status = np.sum(id_agglomerated, axis=0) + np.sum(
                 id_agglomerated, axis=1
             )
             unpaired_indices = np.where(paired_status == 0)[0]
-
-            # Filter out potentially empty clusters among the unpaired
             actual_unpaired = [
-                idx
-                for idx in unpaired_indices
-                if cluster_props[idx][0] > 0.0  # Check mass > 0
+                idx for idx in unpaired_indices if cluster_props[idx][0] > 0.0
             ]
-
             if len(actual_unpaired) == 1:
                 loc = actual_unpaired[0]
-                id_agglomerated[loc, loc] = 1  # Mark for pass-through
+                id_agglomerated[loc, loc] = 1
                 logger.debug(f"Marked cluster {loc} as the odd one out (pass-through).")
             elif len(actual_unpaired) > 1:
-                # This case should ideally not happen if pairing logic worked for pairs
                 logger.warning(
-                    f"Found {len(actual_unpaired)} non-empty unpaired clusters ({actual_unpaired}) for odd i_t={self.i_t}. Pairing logic might be flawed."
+                    f"Found {len(actual_unpaired)} non-empty unpaired clusters ({actual_unpaired}) "
+                    f"for odd i_t={self.i_t} even after checking pairs. Pairing may fail."
                 )
-                # Let the final check below handle this potential error state
-            # else: all unpaired were empty, which is fine.
 
         # --- Final check: Ensure all non-empty clusters are accounted for ---
         final_paired_status = np.sum(id_agglomerated, axis=0) + np.sum(
             id_agglomerated, axis=1
         )
-        # Create a mask for non-empty clusters based on pre-calculated properties
         should_be_paired_mask = np.array(
             [cluster_props[idx][0] > 0.0 for idx in range(self.i_t)]
         )
-
-        # Check if any non-empty cluster has a status of 0 (neither paired nor marked as odd one out)
         if np.any(final_paired_status[should_be_paired_mask] == 0):
             failed_indices = np.where(
                 (final_paired_status == 0) & should_be_paired_mask
             )[0]
             logger.error(
-                f"Could not find pairs for all non-empty clusters. Failed indices: {failed_indices}"
+                f"Could not find pairs for all non-empty clusters even with relaxation factor {CCA_PAIRING_FACTOR}. Failed indices: {failed_indices}"
             )
+            logger.error("Consider increasing the target Df or kf.")
             self.not_able_cca = True
             return None
+
+        if not strict_pairing_used:
+            logger.warning(
+                f"CCA pairing required relaxation (Factor={CCA_PAIRING_FACTOR}). Final aggregate properties may deviate slightly from target Df/kf."
+            )
 
         logger.debug("Pair generation completed.")
         return id_agglomerated
