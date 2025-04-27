@@ -40,7 +40,7 @@ def create_logger(log_level: int, log_file: str | None = None) -> logging.Logger
         The configured 'pyfracval' logger instance.
     """
 
-    log_format = "%(asctime)s - %(levelname)-7s - %(name)-30s - %(message)s"
+    log_format = "%(asctime)s - %(levelname)-8s - %(name)-30s - %(message)s"
     date_format = "%Y-%m-%d %H:%M:%S"
 
     # --- Configure the 'pyfracval' logger directly ---

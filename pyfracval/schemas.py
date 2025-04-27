@@ -235,10 +235,10 @@ class Metadata(BaseModel):
         -------
         tuple[Metadata | None, np.ndarray | None]
             A tuple containing:
-            - The loaded Metadata object, or None if the header is missing,
-              invalid, or fails validation.
-            - The loaded Nx4 NumPy data array [X, Y, Z, R], or None if
-              data loading fails or the data is invalid.
+                - The loaded Metadata object, or None if the header is missing,
+                  invalid, or fails validation.
+                - The loaded Nx4 NumPy data array [X, Y, Z, R], or None if
+                  data loading fails or the data is invalid.
 
         Raises
         ------

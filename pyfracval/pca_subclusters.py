@@ -267,14 +267,14 @@ class Subclusterer:
         -------
         tuple[int, bool, np.ndarray | None, np.ndarray | None, np.ndarray | None]
             A tuple containing:
-            - number_clusters (int): The intended number of clusters.
-            - not_able_pca (bool): Flag indicating if any PCA failed.
-            - combined_data (np.ndarray | None): Nx4 array [X, Y, Z, R] of all
-              particles, or None on failure.
-            - i_orden (np.ndarray | None): Mx3 array describing subcluster
-              indices, or None on failure.
-            - final_radii (np.ndarray | None): N array of radii corresponding
-              to `combined_data`, or None on failure.
+                - number_clusters (int): The intended number of clusters.
+                - not_able_pca (bool): Flag indicating if any PCA failed.
+                - combined_data (np.ndarray | None): Nx4 array [X, Y, Z, R] of all
+                  particles, or None on failure.
+                - i_orden (np.ndarray | None): Mx3 array describing subcluster
+                  indices, or None on failure.
+                - final_radii (np.ndarray | None): N array of radii corresponding
+                  to `combined_data`, or None on failure.
         """
         if self.not_able_pca or self.i_orden is None:  # Check i_orden initialization
             return 0, True, None, None, None

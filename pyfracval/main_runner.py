@@ -21,7 +21,8 @@ def run_simulation(
     output_base_dir: str = "RESULTS",
     seed: int | None = None,
 ) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
-    """Run one full FracVAL aggregate generation (PCA + CCA).
+    """
+    Run one full FracVAL aggregate generation (PCA + CCA).
 
     Orchestrates the simulation pipeline:
     1. Validates input parameters using `SimulationParameters`.
@@ -51,13 +52,15 @@ def run_simulation(
     -------
     tuple[bool, np.ndarray | None, np.ndarray | None]
         A tuple containing:
-        - success_flag (bool): True if the simulation completed successfully,
-          False otherwise.
-        - final_coords (np.ndarray | None): Nx3 array of coordinates if
-          successful, None otherwise.
-        - final_radii (np.ndarray | None): N array of radii if successful,
-          None otherwise.
+            - success_flag (bool): True if the simulation completed successfully,
+              False otherwise.
+            - final_coords (np.ndarray | None): Nx3 array of coordinates if
+              successful, None otherwise.
+            - final_radii (np.ndarray | None): N array of radii if successful,
+              None otherwise.
+
     """
+
     logger.info(f"===== Starting Aggregate Generation {iteration} =====")
 
     try:
