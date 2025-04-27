@@ -5,7 +5,6 @@ Pydantic models for simulation configuration and results data structure.
 import logging
 import time
 from datetime import datetime
-from io import StringIO
 from pathlib import Path
 from typing import Any, Self
 
@@ -17,7 +16,31 @@ logger = logging.getLogger(__name__)
 
 
 class SimulationParameters(BaseModel):
-    """Input parameters for a FracVAL simulation run."""
+    """Input parameters for a FracVAL simulation run.
+
+    Used for validation and type hinting of the simulation configuration.
+
+    Attributes
+    ----------
+    N : int
+        Target number of primary particles.
+    Df : float
+        Target fractal dimension.
+    kf : float
+        Target fractal prefactor.
+    rp_g : float
+        Geometric mean radius of primary particles.
+    rp_gstd : float
+        Geometric standard deviation of radii (must be >= 1.0).
+    tol_ov : float
+        Overlap tolerance (must be > 0.0).
+    n_subcl_percentage : float
+        Target fraction for PCA subcluster size (0.0 < perc <= 0.5).
+    ext_case : int
+        CCA sticking ext_case (0 or 1).
+    seed : int | None
+        Random seed used for generation (optional).
+    """
 
     N: int = Field(..., description="Target number of primary particles.")
     Df: float = Field(..., description="Target fractal dimension.")
@@ -66,10 +89,18 @@ class GenerationInfo(BaseModel):
 
 
 class Metadata(BaseModel):
-    """
-    Structure holding the complete output for a single aggregate,
-    including metadata and particle data.
+    """Complete output model including parameters, properties, and generation info.
+
     Designed for easy serialization (e.g., to YAML in header).
+
+    Attributes
+    ----------
+    generation_info : GenerationInfo
+        Information about the run environment and time.
+    simulation_parameters : SimulationParameters
+        The input parameters used for this simulation run.
+    aggregate_properties : AggregateProperties | None
+        Calculated properties of the final aggregate (None if calculation failed).
     """
 
     generation_info: GenerationInfo
@@ -88,12 +119,29 @@ class Metadata(BaseModel):
     )
 
     def to_dict(self) -> dict[str, Any]:
-        """Converts the metadata model to a dictionary suitable for YAML/JSON."""
+        """Convert the metadata model to a dictionary.
+
+        Suitable for YAML/JSON serialization. Uses Pydantic's `model_dump`.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary representation of the metadata.
+        """
         # mode='json' uses encoders like datetime -> isoformat str
         return self.model_dump(mode="json", exclude_none=True)
 
     def to_yaml_header(self) -> str:
-        """Generates the commented YAML header string for this metadata."""
+        """Generate a commented YAML header string for file output.
+
+        Serializes the metadata to a multi-line YAML string where each
+        line is prefixed with '# '.
+
+        Returns
+        -------
+        str
+            The formatted YAML header string.
+        """
         metadata_dict = self.to_dict()
         # Add comments dynamically if needed for clarity within YAML
         # metadata_dict['simulation_parameters']['N'] = f"{metadata_dict['simulation_parameters']['N']} # Target N" # Example
@@ -113,13 +161,25 @@ class Metadata(BaseModel):
     def save_to_file(
         self, folderpath: str | Path, coords: np.ndarray, radii: np.ndarray
     ):
-        """
-        Saves the metadata (as YAML header) and numerical data to a file.
+        """Save metadata (as YAML header) and numerical data to a file.
 
-        Args:
-            filepath: The full path (including filename) to save to.
-            coords: Nx3 NumPy array of coordinates.
-            radii: N NumPy array of radii.
+        Constructs a filename based on simulation parameters and timestamp.
+        Writes the YAML header followed by the coordinate and radius data
+        formatted as space-delimited columns.
+
+        Parameters
+        ----------
+        folderpath : str | Path
+            The directory where the output file will be saved.
+        coords : np.ndarray
+            Nx3 NumPy array of final particle coordinates.
+        radii : np.ndarray
+            N NumPy array of final particle radii.
+
+        Raises
+        ------
+        IOError
+            If writing to the file fails.
         """
         n_str = f"{self.simulation_parameters.N}"
         df_str = f"{self.simulation_parameters.Df:.2f}".replace(".", "p")
@@ -161,17 +221,31 @@ class Metadata(BaseModel):
 
     @classmethod
     def from_file(cls, filepath: str | Path) -> tuple[Self, np.ndarray]:
-        """
-        Loads metadata and data from a FracVAL output file.
+        """Load metadata and data from a FracVAL output file.
 
-        Args:
-            filepath: Path to the data file.
+        Parses the commented YAML header to reconstruct the Metadata object
+        and loads the subsequent numerical data into a NumPy array.
 
-        Returns:
-            Tuple (metadata_instance, data_array)
-            metadata_instance is None if header is missing/invalid/fails validation.
-            data_array is None if numerical data loading fails.
-            Returns (None, None) if the file cannot be read at all.
+        Parameters
+        ----------
+        filepath : str | Path
+            Path to the FracVAL `.dat` file.
+
+        Returns
+        -------
+        tuple[Metadata | None, np.ndarray | None]
+            A tuple containing:
+            - The loaded Metadata object, or None if the header is missing,
+              invalid, or fails validation.
+            - The loaded Nx4 NumPy data array [X, Y, Z, R], or None if
+              data loading fails or the data is invalid.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the specified `filepath` does not exist.
+        Exception
+            If YAML parsing fails or loaded data has unexpected dimensions.
         """
         filepath = Path(filepath)
         yaml_lines = []

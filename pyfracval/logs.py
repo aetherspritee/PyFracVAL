@@ -19,7 +19,26 @@ logging.Logger.trace = trace  # type: ignore
 
 
 def create_logger(log_level: int, log_file: str | None = None) -> logging.Logger:
-    """Setup logging configuration."""
+    """Set up the main logger for the pyfracval package.
+
+    Configures the 'pyfracval' logger with specified level and handlers.
+    Removes existing handlers to prevent duplication. Adds colored console
+    output and optional file output.
+
+    Parameters
+    ----------
+    log_level : int
+        The minimum logging level to capture (e.g., logging.INFO, logging.DEBUG,
+        TRACE_LEVEL_NUM).
+    log_file : str | None, optional
+        If provided, the path to a file where logs will also be written,
+        by default None (log only to console).
+
+    Returns
+    -------
+    logging.Logger
+        The configured 'pyfracval' logger instance.
+    """
 
     log_format = "%(asctime)s - %(levelname)-7s - %(name)-30s - %(message)s"
     date_format = "%Y-%m-%d %H:%M:%S"
@@ -68,7 +87,18 @@ def create_logger(log_level: int, log_file: str | None = None) -> logging.Logger
 
 
 class CustomLogFormatter(logging.Formatter):
-    """Custom formatter to add colors based on log level."""
+    """Custom logging formatter that adds ANSI color codes based on level.
+
+    Inherits from logging.Formatter and overrides the format method
+    to prepend level-specific color codes to the log message.
+
+    Attributes
+    ----------
+    LEVEL_COLORS : dict[int, str]
+        Mapping from logging level numbers to ANSI color escape codes.
+    reset : str
+        ANSI escape code to reset text formatting.
+    """
 
     # ANSI escape codes for colors
     magenta = "\x1b[35m"  # Magenta for TRACE
@@ -98,11 +128,38 @@ class CustomLogFormatter(logging.Formatter):
         datefmt=None,
         style: Literal["%", "{", "$"] = "%",
     ):
+        """Initialize the formatter.
+
+        Parameters
+        ----------
+        fmt : str, optional
+            The base log format string, by default "%(levelname)s: %(message)s".
+        datefmt : str | None, optional
+            The date format string, by default None.
+        style : Literal["%", "{", "$"], optional
+            The formatting style, by default "%".
+        """
         self._base_fmt = fmt
         super().__init__(fmt=fmt, datefmt=datefmt, style=style)
         self._base_fmt_orig = fmt
 
     def format(self, record):
+        """Format the specified record as text with added color.
+
+        Overrides the base class method to dynamically add color codes
+        before standard formatting.
+
+        Parameters
+        ----------
+        record : logging.LogRecord
+            The log record to format.
+
+        Returns
+        -------
+        str
+            The formatted log string with ANSI color codes.
+        """
+
         # Get the color for the record's level
         color = self.LEVEL_COLORS.get(record.levelno, "")
         reset = self.reset if color else ""

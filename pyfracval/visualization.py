@@ -1,21 +1,27 @@
-"""
-Plotting functions using PyVista.
-"""
+"""Plotting functions using PyVista."""
 
 import numpy as np
 import pyvista as pv
 
 
 def plot_particles(positions: np.ndarray, radii: np.ndarray) -> pv.Plotter:
-    """
-    Generates a PyVista plot of spheres representing particles.
+    """Generate a PyVista plot of spheres representing particles.
 
-    Args:
-        positions: Nx3 array of particle center coordinates.
-        radii: N array of particle radii.
+    Creates a 3D visualization using sphere glyphs scaled by particle radii.
 
-    Returns:
-        A PyVista Plotter object (call .show() on it to display).
+    Parameters
+    ----------
+    positions : np.ndarray
+        Nx3 array of particle center coordinates.
+    radii : np.ndarray
+        N array of particle radii.
+
+    Returns
+    -------
+    pyvista.Plotter
+        A PyVista Plotter object configured with the particle mesh.
+        Call `.show()` on the returned object to display interactively.
+        Returns an empty Plotter if input `positions` is empty.
     """
     if positions.shape[0] == 0:
         print("Warning: Cannot plot empty particle data.")

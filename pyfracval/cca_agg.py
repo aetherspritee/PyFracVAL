@@ -1,7 +1,4 @@
-# cca_agg.py
-"""
-Implements the Cluster-Cluster Aggregation (CCA) algorithm.
-"""
+"""Implements the Cluster-Cluster Aggregation (CCA) algorithm."""
 
 import logging
 import math
@@ -16,8 +13,51 @@ logger = logging.getLogger(__name__)
 
 
 class CCAggregator:
-    """
-    Performs Cluster-Cluster Aggregation based on input subclusters.
+    """Performs Cluster-Cluster Aggregation (CCA).
+
+    Takes pre-generated subclusters (defined by coordinates, radii, and
+    the `i_orden` index map) and iteratively aggregates them in pairs.
+    The pairing and sticking process attempts to preserve the target
+    fractal dimension (Df) and prefactor (kf) using the Gamma_pc method
+    derived from :cite:p:`Moran2019FracVAL`. Includes overlap checking
+    and rotation (`_cca_reintento`) during sticking.
+
+    Parameters
+    ----------
+    initial_coords : np.ndarray
+        Nx3 array containing coordinates of all particles from all subclusters.
+    initial_radii : np.ndarray
+        N array containing radii corresponding to `initial_coords`.
+    initial_i_orden : np.ndarray
+        Mx3 array [[start, end, count], ...] defining the subclusters within
+        the initial coordinates and radii arrays.
+    n_total : int
+        Total number of primary particles (N).
+    df : float
+        Target fractal dimension for the final aggregate.
+    kf : float
+        Target fractal prefactor for the final aggregate.
+    tol_ov : float
+        Maximum allowable overlap fraction between particles during sticking.
+    ext_case : int
+        Flag (0 or 1) controlling the geometric criteria used in CCA
+        candidate selection (`_cca_select_candidates`) and sticking
+        (`_cca_sticking_v1`). See :cite:p:`Moran2019FracVAL` Appendix C.
+
+    Attributes
+    ----------
+    N : int
+        Total number of primary particles.
+    df, kf, tol_ov, ext_case : float/int
+        Stored simulation parameters.
+    coords, radii : np.ndarray
+        Current coordinates and radii, updated after each iteration.
+    i_orden : np.ndarray
+        Current cluster index map, updated after each iteration.
+    i_t : int
+        Current number of clusters remaining.
+    not_able_cca : bool
+        Flag indicating if the CCA process failed.
     """
 
     def __init__(
@@ -1008,11 +1048,20 @@ class CCAggregator:
         return True  # Iteration successful
 
     def run_cca(self) -> Tuple[np.ndarray, np.ndarray] | None:
-        """
-        Runs the complete CCA process until only one cluster remains.
+        """Run the complete CCA process until only one cluster remains.
 
-        Returns:
-            Tuple(final_coords, final_radii) or None if CCA fails.
+        Repeatedly calls `_run_iteration` which performs pairing and sticking
+        for the current set of clusters. Updates the internal state
+        (`coords`, `radii`, `i_orden`, `i_t`) after each iteration.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray] | None
+            A tuple containing:
+            - final_coords (np.ndarray): Nx3 coordinates of the final aggregate.
+            - final_radii (np.ndarray): N radii of the final aggregate.
+            Returns None if the aggregation process fails at any stage
+            (sets `self.not_able_cca` to True).
         """
         cca_iteration = 1
         while self.i_t > 1:
