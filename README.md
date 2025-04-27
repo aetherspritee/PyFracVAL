@@ -313,9 +313,8 @@ Project Link: [https://github.com/aetherspritee/PyFracVAL](https://github.com/ae
 [stars-url]: https://github.com/aetherspritee/PyFracVAL/stargazers
 [issues-shield]: https://img.shields.io/github/issues/aetherspritee/PyFracVAL.svg?style=for-the-badge
 [issues-url]: https://github.com/aetherspritee/PyFracVAL/issues
-[license-shield]: https://img.shields.io/github/license/aetherspritee/PyFracVAL.svg?style=for-the-badge
-
-[license-url]: https://github.com/aetherspritee/PyFracVAL/blob/gemini/LICENSE <!-- Check path to license file -->
+[license-shield]: https://img.shields.io/github/license/aetherspritee/PyFracVAL?style=for-the-badge
+[license-url]: https://github.com/aetherspritee/PyFracVAL/blob/main/LICENSE
 
 <!-- [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555 -->
 <!-- [linkedin-url]: https://linkedin.com/in/[your_linkedin_username] -->
