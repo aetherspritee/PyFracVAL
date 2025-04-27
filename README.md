@@ -138,6 +138,7 @@ Follow these steps to set up `pyfracval` for use or development.
     ```
 
 2.  **From Source (for Development):**
+
     a. Clone the repository:
 
     ```bash
@@ -280,21 +281,11 @@ _(Optional: Add citation for this specific Python implementation if appropriate)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- CONTACT -->
-
-## Contact
-
-[Your Name/Username] - [@your_twitter_handle] - [your_email@example.com]
-
-Project Link: [https://github.com/aetherspritee/PyFracVAL](https://github.com/aetherspritee/PyFracVAL)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 <!-- ACKNOWLEDGMENTS -->
 
 ## Acknowledgments
 
-- Based on the original FracVAL algorithm and Fortran code by Morán et al. (2019) [1].
+- Based on the original FracVAL algorithm and Fortran code by [Morán et al. (2019)](https://doi.org/10.1016/j.cpc.2019.01.015).
 - Uses the algorithm concepts developed by Filippov et al. (2000).
 - README template adapted from [Best-README-Template](https://github.com/othneildrew/Best-README-Template).
 - Python scientific libraries (NumPy, Numba, etc.).
