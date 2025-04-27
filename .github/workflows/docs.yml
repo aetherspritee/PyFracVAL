@@ -1,0 +1,16 @@
+name: "Build docs"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "docs/**/*"
+      - ".github/workflows/docs.yml"
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/"
