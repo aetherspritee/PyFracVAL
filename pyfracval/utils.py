@@ -13,15 +13,19 @@ FLOATING_POINT_ERROR = 1e-9
 
 
 def shuffle_array(arr: np.ndarray) -> np.ndarray:
-    """
-    Randomly shuffles the elements of a 1D array in place (Fisher-Yates).
-    Matches the Fortran randsample logic more closely than permutation.
+    """Randomly shuffle elements of a 1D array in-place (Fisher-Yates).
 
-    Args:
-        arr: The 1D NumPy array to shuffle.
+    Modifies the input array directly. Mimics Fortran randsample behavior.
 
-    Returns:
-        The shuffled array (modified in place).
+    Parameters
+    ----------
+    arr : np.ndarray
+        The 1D NumPy array to shuffle.
+
+    Returns
+    -------
+    np.ndarray
+        The input `arr`, modified in-place.
     """
     n = len(arr)
     for i in range(n - 1):
@@ -33,14 +37,22 @@ def shuffle_array(arr: np.ndarray) -> np.ndarray:
 
 
 def sort_clusters(i_orden: np.ndarray) -> np.ndarray:
-    """
-    Sorts the cluster information array `i_orden` based on the cluster count (column 2).
+    """Sort cluster information array `i_orden` by cluster size (count).
 
-    Args:
-        i_orden: The `Mx3` NumPy array [start_idx, end_idx, count].
+    Parameters
+    ----------
+    i_orden : np.ndarray
+        The Mx3 NumPy array [start_idx, end_idx, count].
 
-    Returns:
-        A new `Mx3` array sorted by count.
+    Returns
+    -------
+    np.ndarray
+        A new Mx3 array sorted by the 'count' column (column index 2).
+
+    Raises
+    ------
+    ValueError
+        If `i_orden` is not an Mx3 array.
     """
     if i_orden.ndim != 2 or i_orden.shape[1] != 3:
         raise ValueError("i_orden must be an Mx3 array")
@@ -53,12 +65,42 @@ def sort_clusters(i_orden: np.ndarray) -> np.ndarray:
 
 
 def cross_product(a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    """Calculates the cross product of two 3D vectors."""
+    """Calculate the cross product of two 3D vectors.
+
+    Parameters
+    ----------
+    a : np.ndarray
+        The first 3D vector.
+    b : np.ndarray
+        The second 3D vector.
+
+    Returns
+    -------
+    np.ndarray
+        The 3D cross product vector.
+
+    See Also
+    --------
+    numpy.cross : NumPy's implementation.
+    """
     return np.cross(a, b)
 
 
 def normalize(v: np.ndarray) -> np.ndarray:
-    """Normalizes a vector, returning zero vector if input norm is zero."""
+    """Normalize a vector to unit length.
+
+    Returns a zero vector if the input vector's norm is close to zero.
+
+    Parameters
+    ----------
+    v : np.ndarray
+        The vector (1D array) to normalize.
+
+    Returns
+    -------
+    np.ndarray
+        The normalized vector, or a zero vector if the norm is negligible.
+    """
     norm = np.linalg.norm(v)
     if norm < 1e-12:  # Use tolerance instead of exact zero check
         return np.zeros_like(v)
@@ -66,22 +108,44 @@ def normalize(v: np.ndarray) -> np.ndarray:
 
 
 def calculate_mass(radii: np.ndarray) -> np.ndarray:
-    """Calculates mass from radii assuming constant density."""
+    """Calculate particle mass from radii assuming constant density (prop. to R^3).
+
+    Parameters
+    ----------
+    radii : np.ndarray
+        Array of particle radii.
+
+    Returns
+    -------
+    np.ndarray
+        Array of corresponding particle masses.
+    """
     return (4.0 / 3.0) * np.pi * (radii**3)
 
 
 def calculate_rg(radii: np.ndarray, npp: int, df: float, kf: float) -> float:
-    """
-    Calculates the radius of gyration for a cluster/aggregate.
+    """Calculate the radius of gyration using the fractal scaling law.
 
-    Args:
-        radii: Array of radii of particles in the cluster.
-        npp: Number of particles in the cluster.
-        df: Fractal dimension.
-        kf: Fractal prefactor.
+    Implements the formula Rg = a * (N / kf)^(1/Df), where 'a' is the
+    geometric mean radius calculated from the input `radii` array.
+    See :cite:p:`Moran2019FracVAL`.
 
-    Returns:
-        Radius of gyration, or 0.0 if calculation fails.
+    Parameters
+    ----------
+    radii : np.ndarray
+        Array of radii of particles in the cluster/aggregate.
+    npp : int
+        Number of primary particles (N) in the cluster.
+    df : float
+        Fractal dimension (Df).
+    kf : float
+        Fractal prefactor (kf).
+
+    Returns
+    -------
+    float
+        The calculated radius of gyration (Rg). Returns 0.0 if `npp` is 0,
+        `kf` or `df` is zero, or if calculation fails (e.g., log error).
     """
     rg = 0.0
     if npp == 0 or kf == 0 or df == 0:
@@ -108,18 +172,31 @@ def calculate_rg(radii: np.ndarray, npp: int, df: float, kf: float) -> float:
 def calculate_cluster_properties(
     coords: np.ndarray, radii: np.ndarray, df: float, kf: float
 ) -> Tuple[float, float, np.ndarray, float]:
-    """
-    Calculates properties for a cluster: mass, Rg, CM, Rmax.
+    """Calculate aggregate properties: total mass, Rg, center of mass, Rmax.
 
-    Args:
-        coords: Nx3 array of coordinates.
-        radii: N array of radii.
-        df: Fractal dimension.
-        kf: Fractal prefactor.
+    Parameters
+    ----------
+    coords : np.ndarray
+        Nx3 array of particle coordinates.
+    radii : np.ndarray
+        N array of particle radii.
+    df : float
+        Fractal dimension used for Rg calculation.
+    kf : float
+        Fractal prefactor used for Rg calculation.
 
-    Returns:
-        Tuple: (total_mass, rg, cm, r_max)
-               Returns (0.0, 0.0, [0,0,0], 0.0) for empty clusters.
+    Returns
+    -------
+    tuple[float, float | None, np.ndarray | None, float]
+        A tuple containing:
+        - total_mass (float): Sum of individual particle masses.
+        - rg (float | None): Radius of gyration calculated via `calculate_rg`,
+          or None if calculation failed.
+        - cm (np.ndarray | None): 3D center of mass coordinates, or None if
+          calculation failed.
+        - r_max (float): Maximum distance from the center of mass to any
+          particle center in the aggregate.
+        Returns (0.0, 0.0, np.zeros(3), 0.0) for empty inputs (N=0).
     """
     npp = coords.shape[0]
     if npp == 0:
@@ -148,16 +225,27 @@ def calculate_cluster_properties(
 def rodrigues_rotation(
     vectors: np.ndarray, axis: np.ndarray, angle: float
 ) -> np.ndarray:
-    """
-    Rotates one or more vectors around a given axis by a given angle using Rodrigues' formula.
+    """Rotate vector(s) around an axis using Rodrigues' rotation formula.
 
-    Args:
-        vectors: An Nx3 array of vectors to rotate, or a single 3D vector.
-        axis: The 3D rotation axis (will be normalized).
-        angle: The rotation angle in radians.
+    Parameters
+    ----------
+    vectors : np.ndarray
+        A single 3D vector or an Nx3 array of vectors to rotate.
+    axis : np.ndarray
+        The 3D rotation axis (does not need to be normalized).
+    angle : float
+        The rotation angle in radians.
 
-    Returns:
-        The rotated vectors (Nx3 or 3D).
+    Returns
+    -------
+    np.ndarray
+        The rotated vector or Nx3 array of rotated vectors. Returns the
+        original vectors if the axis norm is near zero.
+
+    Raises
+    ------
+    ValueError
+        If input `vectors` is not 1D (3,) or 2D (N, 3).
     """
     axis = normalize(axis)
     if np.linalg.norm(axis) < FLOATING_POINT_ERROR:  # No rotation if axis is zero
@@ -191,21 +279,34 @@ def rodrigues_rotation(
 def two_sphere_intersection(
     sphere_1: np.ndarray, sphere_2: np.ndarray
 ) -> Tuple[float, float, float, float, np.ndarray, np.ndarray, np.ndarray, bool]:
-    """
-    Finds the intersection circle of two spheres and picks a random point on it.
-    Corresponds to the Fortran CCA_Two_sphere_intersection.
+    """Find the intersection circle of two spheres and pick a random point.
 
-    Args:
-        sphere_1: [x1, y1, z1, r1]
-        sphere_2: [x2, y2, z2, r2]
+    Calculates the center (x0, y0, z0) and radius (r0) of the intersection
+    circle, defines basis vectors (i_vec, j_vec) for the circle's plane,
+    and returns a random point (x, y, z) on that circle based on a random
+    angle (theta).
 
-    Returns:
-        tuple: (x, y, z, theta, vec_0, i_vec, j_vec, valid)
-               x, y, z: Coordinates of a random point on the intersection circle.
-               theta: The random angle used.
-               vec_0: [x0, y0, z0, r0] center and radius of intersection circle.
-               i_vec, j_vec: Basis vectors for the intersection plane.
-               valid (bool): True if intersection is valid (circle or point), False otherwise.
+    Handles edge cases: spheres too far, one contained, coincidence, touching.
+
+    Parameters
+    ----------
+    sphere_1 : np.ndarray
+        Definition of the first sphere: [x1, y1, z1, r1].
+    sphere_2 : np.ndarray
+        Definition of the second sphere: [x2, y2, z2, r2].
+
+    Returns
+    -------
+    tuple[float, float, float, float, np.ndarray, np.ndarray, np.ndarray, bool]
+        A tuple containing:
+        - x, y, z (float): Coordinates of a random point on the intersection.
+        - theta (float): Random angle (radians) used to generate the point.
+        - vec_0 (np.ndarray): [x0, y0, z0, r0] - center and radius of the
+          intersection circle (r0=0 if spheres touch at a point).
+        - i_vec (np.ndarray): First basis vector of the intersection plane.
+        - j_vec (np.ndarray): Second basis vector of the intersection plane.
+        - valid (bool): True if a valid intersection (circle or point)
+          exists, False otherwise (e.g., separate, contained, coincident).
     """
     x1, y1, z1, r1 = sphere_1
     x2, y2, z2, r2 = sphere_2
@@ -332,18 +433,27 @@ def two_sphere_intersection(
 def calculate_max_overlap_cca(
     coords1: np.ndarray, radii1: np.ndarray, coords2: np.ndarray, radii2: np.ndarray
 ) -> float:
-    """
-    Calculates maximum overlap between two sets of particles (clusters).
-    Parallelized using Numba (array reduction workaround).
+    """Calculate max overlap between two particle clusters (Numba optimized).
 
-    Args:
-        coords1 (Nx3): Coordinates of cluster 1.
-        radii1 (N): Radii of cluster 1.
-        coords2 (Mx3): Coordinates of cluster 2.
-        radii2 (M): Radii of cluster 2.
+    Overlap is defined as `1 - distance / (radius1 + radius2)` for
+    overlapping pairs, max(0).
 
-    Returns:
-        Maximum overlap value (0 if no overlap).
+    Parameters
+    ----------
+    coords1 : np.ndarray
+        Nx3 coordinates of cluster 1.
+    radii1 : np.ndarray
+        N radii of cluster 1.
+    coords2 : np.ndarray
+        Mx3 coordinates of cluster 2.
+    radii2 : np.ndarray
+        M radii of cluster 2.
+
+    Returns
+    -------
+    float
+        Maximum overlap fraction found between any particle in cluster 1
+        and any particle in cluster 2. Returns 0.0 if no overlap.
     """
     n1 = coords1.shape[0]
     n2 = coords2.shape[0]
@@ -383,18 +493,27 @@ def calculate_max_overlap_pca(
     coord_new: np.ndarray,
     radius_new: float,
 ) -> float:
-    """
-    Calculates maximum overlap between a new particle and an existing aggregate.
-    Parallelized using Numba (array reduction workaround).
+    """Calculate max overlap between a new particle and an aggregate (Numba).
 
-    Args:
-        coords_agg (Nx3): Coordinates of the aggregate.
-        radii_agg (N): Radii of the aggregate particles.
-        coord_new (3): Coordinates of the new particle.
-        radius_new (float): Radius of the new particle.
+    Overlap is defined as `1 - distance / (radius_new + radius_agg)` for
+    overlapping pairs, max(0).
 
-    Returns:
-        Maximum overlap value (0 if no overlap).
+    Parameters
+    ----------
+    coords_agg : np.ndarray
+        Nx3 coordinates of the existing aggregate.
+    radii_agg : np.ndarray
+        N radii of the aggregate particles.
+    coord_new : np.ndarray
+        3D coordinates of the new particle.
+    radius_new : float
+        Radius of the new particle.
+
+    Returns
+    -------
+    float
+        Maximum overlap fraction found between the new particle and any
+        particle in the aggregate. Returns 0.0 if no overlap.
     """
     n_agg = coords_agg.shape[0]
 

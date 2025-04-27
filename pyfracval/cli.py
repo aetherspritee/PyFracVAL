@@ -139,7 +139,13 @@ DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
     help="Path to file for logging output instead of console.",
 )
 def cli(ctx, **kwargs) -> None:
-    """Main CLI entry point."""
+    """Generate fractal particle clusters using the FracVAL algorithm.
+
+    This tool implements the Particle-Cluster Aggregation (PCA) followed
+    by Cluster-Cluster Aggregation (CCA) approach described by
+    Moran et al. (2019) to generate aggregates with tunable fractal
+    dimension (Df) and prefactor (kf) from polydisperse primary particles.
+    """
     if ctx.invoked_subcommand:
         return
 
@@ -313,7 +319,12 @@ def cli(ctx, **kwargs) -> None:
     default=".",  # Look in current directory by default
     help="Path where to look for data files to be displayed by Streamlit app.",
 )
-def explore(path: str):  # pragma: no cover
+def explore(path: str):
+    """Launch the Streamlit dashboard to explore saved aggregate data.
+
+    Requires streamlit to be installed separately. Looks for `.dat` files
+    in the specified path.
+    """
     logger = create_logger(logging.INFO)
 
     try:

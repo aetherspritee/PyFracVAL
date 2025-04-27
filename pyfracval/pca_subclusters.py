@@ -1,7 +1,4 @@
-# pca_subclusters.py
-"""
-Divides initial particles into subclusters using Particle-Cluster Aggregation (PCA).
-"""
+"""Divides initial particles into subclusters using PCA."""
 
 import logging
 import math
@@ -17,7 +14,47 @@ logger = logging.getLogger(__name__)
 
 
 class Subclusterer:
-    """Handles the division of particles into subclusters using PCA."""
+    """Handles division of particles into subclusters using PCA.
+
+    Takes a full set of initial particle radii, determines appropriate
+    subcluster sizes, and runs the `PCAggregator` on each subset of radii
+    to generate initial cluster structures. These subclusters are intended
+    as input for subsequent Cluster-Cluster Aggregation (CCA).
+
+    Parameters
+    ----------
+    initial_radii : np.ndarray
+        1D array of all initial primary particle radii.
+    df : float
+        Target fractal dimension (passed to `PCAggregator`).
+    kf : float
+        Target fractal prefactor (passed to `PCAggregator`).
+    tol_ov : float
+        Overlap tolerance (passed to `PCAggregator`).
+    n_subcl_percentage : float
+        Target fraction of N used to determine the approximate
+        size of each subcluster. Actual sizes may vary.
+
+    Attributes
+    ----------
+    N : int
+        Total number of particles.
+    all_coords : np.ndarray
+        Nx3 array storing coordinates of all particles after PCA subclustering.
+    all_radii : np.ndarray
+        N array storing radii of all particles (should match initial radii order
+        if PCA doesn't reorder, but uses radii from PCA output).
+    i_orden : np.ndarray | None
+        Mx3 array defining the start index, end index (inclusive), and count
+        for each generated subcluster within the `all_coords`/`all_radii` arrays.
+        None until `run_subclustering` is successful.
+    number_clusters : int
+        The number of subclusters generated.
+    not_able_pca : bool
+        Flag indicating if any PCA run for a subcluster failed.
+    number_clusters_processed : int
+        Index of the last subcluster processed (useful for error reporting).
+    """
 
     def __init__(
         self,
@@ -103,11 +140,17 @@ class Subclusterer:
         return subcluster_sizes
 
     def run_subclustering(self) -> bool:
-        """
-        Performs the subclustering process.
+        """Perform the subclustering process.
 
-        Returns:
-            bool: True if successful, False otherwise. Updates instance attributes.
+        Determines subcluster sizes, then iterates through subsets of the
+        initial radii, running `PCAggregator` for each subset. Stores the
+        resulting coordinates and radii contiguously and updates `i_orden`.
+
+        Returns
+        -------
+        bool
+            True if all subclusters were generated successfully, False otherwise.
+            Sets `self.not_able_pca` to True on failure.
         """
         subcluster_sizes = self._determine_subcluster_sizes()
 
@@ -218,7 +261,21 @@ class Subclusterer:
     def get_results(
         self,
     ) -> tuple[int, bool, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
-        """Returns the results of the subclustering."""
+        """Return the results of the subclustering process.
+
+        Returns
+        -------
+        tuple[int, bool, np.ndarray | None, np.ndarray | None, np.ndarray | None]
+            A tuple containing:
+            - number_clusters (int): The intended number of clusters.
+            - not_able_pca (bool): Flag indicating if any PCA failed.
+            - combined_data (np.ndarray | None): Nx4 array [X, Y, Z, R] of all
+              particles, or None on failure.
+            - i_orden (np.ndarray | None): Mx3 array describing subcluster
+              indices, or None on failure.
+            - final_radii (np.ndarray | None): N array of radii corresponding
+              to `combined_data`, or None on failure.
+        """
         if self.not_able_pca or self.i_orden is None:  # Check i_orden initialization
             return 0, True, None, None, None
         else:

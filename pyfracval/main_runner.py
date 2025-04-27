@@ -1,6 +1,4 @@
-"""
-Core function to run the FracVAL simulation.
-"""
+"""Core function to run the FracVAL simulation."""
 
 import logging
 import time
@@ -23,9 +21,42 @@ def run_simulation(
     output_base_dir: str = "RESULTS",
     seed: int | None = None,
 ) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
-    """
-    Runs one full aggregate generation based on the provided configuration.
-    # ... (rest of docstring) ...
+    """Run one full FracVAL aggregate generation (PCA + CCA).
+
+    Orchestrates the simulation pipeline:
+    1. Validates input parameters using `SimulationParameters`.
+    2. Sets random seed.
+    3. Generates initial particle radii (lognormal distribution).
+    4. Shuffles radii.
+    5. Performs PCA subclustering using `Subclusterer`.
+    6. Performs CCA aggregation using `CCAggregator` on the PCA results.
+    7. Calculates final aggregate properties (Rg, CM).
+    8. Saves results (metadata + data) using `Metadata.save_to_file`.
+    9. Provides enhanced error messages and suggestions on failure.
+
+    Parameters
+    ----------
+    iteration : int
+        The iteration number (e.g., for generating multiple aggregates),
+        used mainly for output filenames and metadata.
+    sim_config_dict : dict[str, Any]
+        Dictionary containing simulation parameters conforming to
+        `SimulationParameters` schema (N, Df, kf, rp_g, rp_gstd, etc.).
+    output_base_dir : str, optional
+        Base directory to save the output `.dat` file, by default "RESULTS".
+    seed : int | None, optional
+        Random seed for reproducibility, by default None (time-based).
+
+    Returns
+    -------
+    tuple[bool, np.ndarray | None, np.ndarray | None]
+        A tuple containing:
+        - success_flag (bool): True if the simulation completed successfully,
+          False otherwise.
+        - final_coords (np.ndarray | None): Nx3 array of coordinates if
+          successful, None otherwise.
+        - final_radii (np.ndarray | None): N array of radii if successful,
+          None otherwise.
     """
     logger.info(f"===== Starting Aggregate Generation {iteration} =====")
 

@@ -22,17 +22,36 @@ def random_normal_custom() -> float:
 def lognormal_pp_radii(
     rp_gstd: float, rp_g: float, n: int, seed: int | None = None
 ) -> np.ndarray:
-    """
-    Generates N random radii from a lognormal distribution.
+    """Generate N random radii from a lognormal distribution.
 
-    Args:
-        rp_gstd: Geometric standard deviation of the distribution.
-        rp_g: Geometric mean radius of the distribution.
-        n: Number of radii to generate.
-        seed: Optional random seed for reproducibility.
+    Parameters
+    ----------
+    rp_gstd : float
+        Geometric standard deviation of the distribution (must be >= 1.0).
+        If 1.0, generates monodisperse particles.
+    rp_g : float
+        Geometric mean radius of the distribution (must be > 0).
+    n : int
+        Number of radii to generate.
+    seed : int | None, optional
+        Random seed for reproducibility, by default None.
 
-    Returns:
-        A NumPy array of N radii.
+    Returns
+    -------
+    np.ndarray
+        A 1D NumPy array of N generated radii.
+
+    Raises
+    ------
+    ValueError
+        If `rp_g` is not positive.
+
+    Notes
+    -----
+    Uses `numpy.random.lognormal`. The underlying normal distribution's
+    parameters are mu=log(rp_g) and sigma=log(rp_gstd).
+    The original Fortran code included optional truncation at approximately
+    +/- 2 geometric standard deviations; this is not enabled by default here.
     """
     if seed is not None:
         np.random.seed(seed)

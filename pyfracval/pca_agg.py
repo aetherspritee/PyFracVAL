@@ -1,6 +1,4 @@
-"""
-Implements Particle-Cluster Aggregation (PCA) used for creating initial subclusters.
-"""
+"""Implements Particle-Cluster Aggregation (PCA) for initial subclusters."""
 
 import logging
 
@@ -15,9 +13,48 @@ FLOATING_POINT_ERROR = 1e-9  # Defined in utils, but maybe locally needed? Use u
 
 
 class PCAggregator:
-    """
-    Performs Particle-Cluster Aggregation (PCA) to form a single cluster
-    from a given set of primary particles.
+    """Performs Particle-Cluster Aggregation (PCA).
+
+    Builds a single cluster by sequentially adding individual primary
+    particles (monomers) to a growing aggregate, attempting to match
+    the target Df and kf via the Gamma_pc calculation at each step.
+    Includes overlap checking and rotation to find valid placements.
+
+    Parameters
+    ----------
+    initial_radii : np.ndarray
+        1D array of radii for the primary particles to be aggregated.
+    df : float
+        Target fractal dimension for the aggregate.
+    kf : float
+        Target fractal prefactor for the aggregate.
+    tol_ov : float
+        Maximum allowable overlap fraction between particles.
+
+    Attributes
+    ----------
+    N : int
+        Total number of particles to aggregate.
+    initial_mass : np.ndarray
+        Calculated initial masses corresponding to `initial_radii`.
+    coords : np.ndarray
+        Nx3 array storing coordinates of particles as they are placed.
+    radii : np.ndarray
+        N array storing radii of particles as they are placed.
+    mass : np.ndarray
+        N array storing masses of particles as they are placed.
+    n1 : int
+        Number of particles currently in the aggregate.
+    m1 : float
+        Mass of the current aggregate.
+    rg1 : float
+        Radius of gyration of the current aggregate.
+    cm : np.ndarray
+        3D center of mass of the current aggregate.
+    r_max : float
+        Maximum distance from CM to any particle center in the aggregate.
+    not_able_pca : bool
+        Flag indicating if the aggregation process failed.
     """
 
     def __init__(self, initial_radii: np.ndarray, df: float, kf: float, tol_ov: float):
@@ -461,8 +498,29 @@ class PCAggregator:
         return coord_k_new, theta_a_new
 
     def run(self) -> np.ndarray | None:
-        """
-        Runs the PCA process to aggregate all N particles. (Revised Retry Logic)
+        """Run the complete PCA process for all N particles.
+
+        Sequentially adds particles from index 2 to N-1. For each particle k,
+        it calculates Gamma_pc, finds potential sticking partners (`candidates`)
+        in the existing aggregate (0..k-1), potentially swaps particle k with
+        an unused one if no candidates are found initially.
+
+        It then attempts to stick particle k to each candidate partner,
+        calculating an initial position based on sphere intersections defined
+        by Gamma_pc. If overlap occurs, it rotates particle k around the
+        intersection circle (`_reintento`) up to `max_rotations` times.
+
+        If a non-overlapping position is found for any candidate, the particle
+        is successfully added, and aggregate properties are updated. If all
+        candidates and all rotations fail for a particle k, or if the initial
+        search/swap fails, the aggregation stops, `not_able_pca` is set True,
+        and None is returned.
+
+        Returns
+        -------
+        np.ndarray | None
+            An Nx4 NumPy array [X, Y, Z, R] of the final aggregate if
+            successful, otherwise None.
         """
         if self.N < 2:
             return None
