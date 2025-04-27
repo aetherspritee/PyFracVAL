@@ -158,7 +158,8 @@
                   // {
                     pyfracval = [
                       # "explore"
-                      # "test"
+                      "test"
+                      "docs"
                     ];
                   }
                 );
