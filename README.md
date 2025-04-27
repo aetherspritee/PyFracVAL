@@ -243,12 +243,11 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- Optional: Top Contributors Image -->
-<!-- ### Top contributors:
+### Top contributors:
 
 <a href="https://github.com/aetherspritee/PyFracVAL/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=aetherspritee/PyFracVAL" alt="contrib.rocks image" />
-</a> -->
+</a>
 
 <!-- LICENSE -->
 
