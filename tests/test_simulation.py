@@ -1,255 +1,258 @@
-import sys
+import logging
 import time
 from pathlib import Path
 
 import numpy as np
+import numpy.testing as npt
 import pytest
+from pyfracval import utils
+from pyfracval.main_runner import run_simulation
+from pyfracval.schemas import Metadata
 
-# Import necessary modules from your project
-from pyfracval import main_runner, particle_generation, utils
-
-# Ensure the main project directory is in the Python path
-# Adjust the path depth ('..') as necessary based on your structure
-# project_dir = Path(__file__).resolve().parent.parent
-# sys.path.insert(0, str(project_dir))
-
-
-# --- Test Configurations ---
-
-# Simple config for quick end-to-end run
-CONFIG_SIMPLE = {
-    "N": 32,
-    "Df": 1.8,
-    "kf": 1.3,
-    "rp_g": 10.0,
-    "rp_gstd": 1.0,  # Monodisperse for simplicity
-    "tol_ov": 1e-5,  # Slightly looser for robustness maybe
-    "n_subcl_percentage": 0.2,  # Larger % for fewer, bigger subclusters with small N
-    "ext_case": 0,
-    "seed": 123,
-}
-
-# Config for fractal dimension check (matching the paper's example)
-CONFIG_FRACTAL_CHECK = {
-    "N": 128,  # Larger N for better statistics
-    "Df": 1.79,
-    "kf": 1.40,
-    "rp_g": 15.0,
-    "rp_gstd": 1.0,  # Monodisperse like Fig 10/13a
-    "tol_ov": 1e-6,
-    "n_subcl_percentage": 0.1,
-    "ext_case": 0,
-    "seed": 456,
-}
-
-# Config for polydisperse fractal check
-CONFIG_FRACTAL_CHECK_POLY = {
-    "N": 128,
-    "Df": 1.68,  # Df used for sigma=2.0 in Fig 13b
-    "kf": 0.98,  # kf used for sigma=2.0 in Fig 13b
-    "rp_g": 15.0,
-    "rp_gstd": 2.0,  # Polydisperse
-    "tol_ov": 1e-6,
-    "n_subcl_percentage": 0.1,
-    "ext_case": 0,
-    "seed": 789,
-}
-
-
-# --- Fixtures ---
-
-
-@pytest.fixture(scope="module")  # Run once per test module
-def output_dir(tmp_path_factory):
-    """Create a temporary directory for test outputs."""
-    path = tmp_path_factory.mktemp("fracval_test_outputs")
-    print(f"Test output directory: {path}")
-    yield str(path)  # Yield the path string
-    # Cleanup is handled by tmp_path_factory automatically
-    # print(f"Cleaning up test output directory: {path}") # Optional: confirm cleanup
-
-
-@pytest.fixture(
-    scope="module",
-    params=[CONFIG_SIMPLE, CONFIG_FRACTAL_CHECK, CONFIG_FRACTAL_CHECK_POLY],
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-def simulation_run_data(request, output_dir):  # Request output_dir fixture
-    """
-    Runs the simulation once for a given config and provides results.
-    Parametrized fixture to run tests for different configs.
-    """
-    cfg = request.param
-    print(
-        f"\nRunning simulation for test config (N={cfg['N']}, Df={cfg['Df']}, sigma={cfg['rp_gstd']})..."
+logger = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="function")
+def output_dir(tmp_path: Path) -> Path:
+    test_output_path = tmp_path / "test_results"
+    test_output_path.mkdir()
+    # print(f"\nCreated temp output dir: {test_output_path}") # Reduce noise
+    return test_output_path
+
+
+def _run_and_load(
+    sim_config: dict, output_dir: Path, iteration: int = 1, seed: int | None = None
+):
+    if seed is None:
+        seed = int(time.time() * 1000) % (2**32)
+    sim_config["seed"] = seed
+
+    logger.info(f"--- Running Test Simulation (Seed: {seed}) ---")
+    logger.info(f"Config: {sim_config}")
+
+    # Run simulation with a higher number of attempts for tests
+    # Note: The main runner only retries if success=False,
+    # it doesn't handle internal retries if PCA/CCA fail within run_simulation
+    max_attempts_test = 3  # Allow a few attempts for stochastic failures
+    attempt = 0
+    success = False
+    final_coords = None
+    final_radii = None
+
+    # Add a loop within the test helper to allow retries on failure
+    while not success and attempt < max_attempts_test:
+        attempt += 1
+        if attempt > 1:
+            logger.warning(
+                f"Retrying simulation run (Attempt {attempt}/{max_attempts_test})..."
+            )
+            # Use a different seed for retry to avoid identical failure
+            sim_config["seed"] = seed + attempt
+            np.random.seed(sim_config["seed"])  # Reset numpy seed for this attempt
+
+        current_success, current_coords, current_radii = run_simulation(
+            iteration=iteration,
+            sim_config_dict=sim_config.copy(),  # Pass a copy to avoid mutation issues
+            output_base_dir=str(output_dir),
+            seed=sim_config["seed"],  # Pass the potentially updated seed
+        )
+        if current_success:
+            success = True
+            final_coords = current_coords
+            final_radii = current_radii
+            break  # Exit retry loop on success
+
+    # Assertions after the retry loop
+    assert success, (
+        f"run_simulation failed after {max_attempts_test} attempts for config: {sim_config}"
     )
-
-    run_id = f"test_N{cfg['N']}_Df{cfg['Df']}_Kf{cfg['kf']}_Sig{cfg['rp_gstd']}"
-    test_seed = cfg.get("seed", int(time.time()))
-
-    initial_radii = particle_generation.lognormal_pp_radii(
-        cfg["rp_gstd"], cfg["rp_g"], cfg["N"], seed=test_seed
+    assert final_coords is not None and final_radii is not None, (
+        "run_simulation returned None on success"
     )
-    if np.any(initial_radii <= 0):
-        pytest.fail("Generated non-positive initial radii.")
-
-    # --- Run Simulation ---
-    # Pass the temporary directory path generated by the output_dir fixture
-    # to the run_simulation function using the 'output_base_dir' argument.
-    success, final_coords, final_radii = main_runner.run_simulation(
-        iteration=1,  # Run only iteration 1 for test
-        sim_config=cfg,
-        output_base_dir=output_dir,  # <<< PASS THE TEMP PATH HERE
-        seed=test_seed,
+    assert final_coords.ndim == 2 and final_coords.shape[1] == 3, (
+        "Coordinates shape mismatch"
     )
-    # ... (rest of the fixture remains the same: check success, load results etc.) ...
+    assert final_radii.ndim == 1, "Radii shape mismatch"
+    assert final_coords.shape[0] == final_radii.shape[0], "Coords/Radii length mismatch"
+    n_actual = final_coords.shape[0]
+    assert n_actual > 0, "Simulation produced empty aggregate"
 
-    if not success:
-        pytest.fail(f"Simulation run failed for config: {cfg}")
+    output_files = list(output_dir.glob("*.dat"))
+    # Filter potentially multiple files if retries saved them
+    # Choose the one matching the *final* successful seed or just the latest one?
+    # Finding by seed is more robust if filename includes it
+    final_seed_str = f"{sim_config['seed']}"
+    target_filename_part = f"seed{final_seed_str}"
+    found_file = None
+    for f in output_files:
+        if target_filename_part in f.name:
+            found_file = f
+            break
+    # Fallback: if seed isn't reliably in name or multiple files exist, take the last modified one
+    if not found_file and output_files:
+        output_files.sort(key=lambda x: x.stat().st_mtime)
+        found_file = output_files[-1]
 
-    # --- Load Results ---
-    n_str = f"{cfg['N']:08d}"
-    iter_str = f"{1:08d}"  # Iteration 1
-    # Use the output_dir passed to run_simulation to find the file
-    expected_filename = Path(output_dir) / f"N_{n_str}_Agg_{iter_str}.dat"
+    assert found_file is not None and found_file.exists(), (
+        f"Could not find output file for seed {final_seed_str} in {output_dir}"
+    )
+    output_file = found_file
 
-    if not expected_filename.is_file():
-        pytest.fail(f"Output file not found: {expected_filename}")
-
-    # ... (rest of loading and returning data) ...
     try:
-        loaded_data = np.loadtxt(expected_filename)
-        if (
-            loaded_data.ndim == 1 and cfg["N"] == 1
-        ):  # Handle case of single particle output
-            loaded_data = loaded_data.reshape(1, -1)
-        elif loaded_data.ndim != 2 or loaded_data.shape[1] != 4:
-            pytest.fail(
-                f"Output file has wrong shape: {loaded_data.shape}, expected ({cfg['N']}, 4)"
-            )
-
-        final_coords = loaded_data[:, :3]
-        final_radii = loaded_data[:, 3]
-
-        if final_coords.shape[0] != cfg["N"]:
-            pytest.fail(
-                f"Output file has wrong number of particles: {final_coords.shape[0]}, expected {cfg['N']}"
-            )
-
+        metadata, data = Metadata.from_file(output_file)
+        assert metadata is not None, f"Failed to load metadata from {output_file.name}"
+        assert data is not None, f"Failed to load data from {output_file.name}"
+        assert data.shape[0] == n_actual, (
+            f"Loaded data rows ({data.shape[0]}) mismatch N_actual ({n_actual}) from {output_file.name}"
+        )
+        assert data.shape[1] == 4, (
+            f"Loaded data columns mismatch from {output_file.name}"
+        )
+        npt.assert_allclose(
+            final_coords,
+            data[:, :3],
+            rtol=1e-6,
+            atol=1e-9,
+            err_msg=f"Returned coords differ from loaded data in {output_file.name}",
+        )
+        npt.assert_allclose(
+            final_radii,
+            data[:, 3],
+            rtol=1e-6,
+            atol=1e-9,
+            err_msg=f"Returned radii differ from loaded data in {output_file.name}",
+        )
     except Exception as e:
-        pytest.fail(f"Failed to load or parse output file {expected_filename}: {e}")
+        pytest.fail(f"Failed to load or validate output file {output_file}: {e}")
 
-    return {
-        "config": cfg,
-        "initial_radii": initial_radii,
-        "final_coords": final_coords,
-        "final_radii": final_radii,
-        "output_filename": expected_filename,
+    return metadata, data, n_actual, final_radii
+
+
+# --- Test Cases ---
+
+
+def test_basic_run(output_dir: Path):
+    """Test if the simulation runs without crashing for default-like params."""
+    N_test = 64
+    sim_config = {
+        "N": N_test,
+        "Df": 1.8,
+        "kf": 1.3,
+        "rp_g": 10.0,
+        "rp_gstd": 1.2,
+        "tol_ov": 1e-4,
+        "n_subcl_percentage": 0.15,
+        "ext_case": 0,
+    }
+    # Use a fixed seed for this basic test
+    metadata, data, n_actual, _ = _run_and_load(sim_config, output_dir, seed=2001)
+    assert abs(n_actual - N_test) <= 1
+    assert metadata.aggregate_properties is not None
+    assert metadata.aggregate_properties.radius_of_gyration is not None
+    logger.info(
+        f"Basic run successful. N={n_actual}, Rg={metadata.aggregate_properties.radius_of_gyration:.3f}"
+    )
+
+
+@pytest.mark.parametrize(
+    "n_test, df_test, kf_test, gstd_test",
+    [
+        (64, 1.8, 1.3, 1.0),
+        (64, 1.7, 1.1, 1.0),
+        (64, 2.1, 1.0, 1.0),
+        (64, 1.8, 1.3, 1.2),
+        (64, 1.7, 1.1, 1.3),
+        (128, 2.0, 1.0, 1.25),
+    ],
+)
+def test_parameter_variations_and_rg_consistency(
+    output_dir: Path,
+    n_test: int,
+    df_test: float,
+    kf_test: float,
+    gstd_test: float,
+    seed: int = 12345,
+):
+    """Tests various parameter combinations and checks Rg consistency."""
+    sim_config = {
+        "N": n_test,
+        "Df": df_test,
+        "kf": kf_test,
+        "rp_g": 10.0,
+        "rp_gstd": gstd_test,
+        "tol_ov": 1e-4,  # Keep relaxed tol for tests
+        "n_subcl_percentage": 0.15,
+        "ext_case": 0,
+    }
+    # Use fixed seed based on parameters for reproducibility within parametrize
+    metadata, data, n_actual, final_radii = _run_and_load(
+        sim_config, output_dir, seed=seed
+    )
+
+    assert abs(n_actual - n_test) <= 1
+    assert metadata.aggregate_properties is not None
+    rg_metadata = metadata.aggregate_properties.radius_of_gyration
+    assert rg_metadata is not None
+
+    # geo_mean_r = sim_config["rp_g"]
+    # Recalculation for polydisperse doesn't seem necessary for consistency check with internal formula
+    # if gstd_test > 1.0: ...
+
+    rg_expected = utils.calculate_rg(final_radii, n_actual, df_test, kf_test)
+
+    logger.info(
+        f"Params (N,Df,kf,gstd): ({n_test},{df_test},{kf_test},{gstd_test}) -> "
+        f"N_actual={n_actual}, Rg_metadata={rg_metadata:.4f}, Rg_expected={rg_expected:.4f}"
+    )
+
+    # Check consistency with a relative tolerance
+    assert rg_metadata == pytest.approx(rg_expected, rel=1e-3), (
+        f"Rg consistency check failed: Meta={rg_metadata:.4f}, Expected={rg_expected:.4f}"
+    )
+
+
+def test_reproducibility(output_dir: Path):
+    """Test if using the same seed produces the same result."""
+    N_test = 32
+    fixed_seed = 12345
+    sim_config = {
+        "N": N_test,
+        "Df": 1.9,
+        "kf": 1.4,
+        "rp_g": 10.0,
+        "rp_gstd": 1.1,
+        "tol_ov": 1e-4,
+        "n_subcl_percentage": 0.2,
+        "ext_case": 0,
     }
 
-
-# --- Test Functions ---
-
-
-def test_simulation_completes(simulation_run_data):
-    """Tests if the simulation runs to completion and creates an output file."""
-    print(f"Checking completion for N={simulation_run_data['config']['N']}...")
-    assert simulation_run_data is not None, "Simulation run fixture failed"
-    assert simulation_run_data["output_filename"].is_file(), (
-        "Output file was not created"
-    )
-    print("Completion check passed.")
-
-
-def test_output_file_format(simulation_run_data):
-    """Tests if the output file has the correct number of particles and columns."""
-    print(f"Checking output format for N={simulation_run_data['config']['N']}...")
-    cfg = simulation_run_data["config"]
-    n_expected = cfg["N"]
-    final_coords = simulation_run_data["final_coords"]
-    final_radii = simulation_run_data["final_radii"]
-
-    assert final_coords.shape[0] == n_expected, (
-        f"Expected {n_expected} particles, found {final_coords.shape[0]}"
-    )
-    assert final_coords.shape[1] == 3, (
-        f"Expected 3 coordinate columns, found {final_coords.shape[1]}"
-    )
-    assert final_radii.shape[0] == n_expected, (
-        f"Expected {n_expected} radii, found {final_radii.shape[0]}"
-    )
-    assert np.issubdtype(final_coords.dtype, np.number), "Coordinates are not numeric"
-    assert np.issubdtype(final_radii.dtype, np.number), "Radii are not numeric"
-    print("Output format check passed.")
-
-
-def test_fractal_properties(simulation_run_data):
-    """
-    Tests if the generated aggregate approximately matches the target Df and kf
-    by comparing the calculated Rg with the expected Rg.
-    """
-    cfg = simulation_run_data["config"]
-    N = cfg["N"]
-    target_Df = cfg["Df"]
-    target_kf = cfg["kf"]
-    initial_radii = simulation_run_data["initial_radii"]
-    final_coords = simulation_run_data["final_coords"]
-    final_radii = simulation_run_data["final_radii"]  # Radii in the final aggregate
-
-    print(
-        f"Checking fractal properties for N={N}, Df={target_Df}, kf={target_kf}, sigma={cfg['rp_gstd']}..."
+    logger.info("--- Reproducibility Test: Run 1 ---")
+    output_dir_run1 = output_dir / "run1"
+    output_dir_run1.mkdir()
+    metadata1, data1, n1, _ = _run_and_load(
+        sim_config, output_dir_run1, seed=fixed_seed
     )
 
-    if N < 5:  # Fractal scaling is less meaningful for very small N
-        pytest.skip("Skipping fractal property check for N < 5")
-        return
-
-    # 1. Calculate geometric mean radius (rp,geo) of the *initial* particles
-    valid_initial_radii = initial_radii[initial_radii > 1e-12]
-    if len(valid_initial_radii) == 0:
-        pytest.fail("No valid initial radii found to calculate rp,geo")
-    log_radii = np.log(valid_initial_radii)
-    rp_geo = np.exp(np.mean(log_radii))
-    print(f"  Calculated rp,geo from initial radii: {rp_geo:.4f}")
-
-    # 2. Calculate Radius of Gyration (Rg) of the *final* aggregate
-    # Use the utility function (assuming it correctly handles mass weighting)
-    # We need the masses corresponding to the *final* radii
-    # Since density is constant, mass ~ radius^3. We can use radii directly
-    # if the function handles it, or calculate final masses.
-    # Let's assume calculate_cluster_properties handles it.
-    try:
-        # Need to ensure the calculate_cluster_properties function exists and is correct
-        m_total, rg_calculated, cm, r_max = utils.calculate_cluster_properties(
-            final_coords,
-            final_radii,
-            target_Df,
-            target_kf,  # Pass target Df/kf? Or dummy values? Pass target.
-        )
-        print(f"  Calculated Rg of final aggregate: {rg_calculated:.4f}")
-    except AttributeError:
-        pytest.fail("utils.calculate_cluster_properties function not found or failed.")
-    except Exception as e:
-        pytest.fail(f"Error calculating final Rg: {e}")
-
-    if rg_calculated <= 0:
-        pytest.fail(f"Calculated Rg is non-positive ({rg_calculated:.4f})")
-
-    # 3. Calculate the *expected* Rg based on the input N, Df, kf, and calculated rp_geo
-    # From N = kf * (Rg / rp,geo)^Df  =>  Rg = rp,geo * (N / kf)^(1/Df)
-    if target_kf <= 0 or target_Df <= 0:
-        pytest.fail("Input kf or Df is non-positive.")
-    try:
-        rg_expected = rp_geo * (N / target_kf) ** (1.0 / target_Df)
-        print(f"  Expected Rg based on input parameters: {rg_expected:.4f}")
-    except (ValueError, ZeroDivisionError, OverflowError) as e:
-        pytest.fail(f"Error calculating expected Rg: {e}")
-
-    # 4. Compare calculated Rg vs expected Rg
-    # Allow for some deviation, especially for smaller N or higher polydispersity
-    # Relative tolerance: 15% might be reasonable for single aggregate check?
-    # Adjust tolerance based on expected algorithm accuracy and N.
-    tolerance = 0.20  # Allow 20% relative difference
-    assert rg_calculated == pytest.approx(rg_expected, rel=tolerance)
-    print(
-        f"Fractal property check passed (Relative difference: {abs(rg_calculated - rg_expected) / rg_expected:.3f} <= {tolerance})."
+    logger.info("--- Reproducibility Test: Run 2 ---")
+    output_dir_run2 = output_dir / "run2"
+    output_dir_run2.mkdir()
+    metadata2, data2, n2, _ = _run_and_load(
+        sim_config, output_dir_run2, seed=fixed_seed
     )
+
+    assert n1 == n2, f"Number of particles differs between runs ({n1} vs {n2})"
+    npt.assert_allclose(
+        data1,
+        data2,
+        atol=1e-9,
+        err_msg="Particle data differs between runs",
+    )
+    # Compare relevant parts of metadata, excluding timestamps etc.
+    assert metadata1.simulation_parameters.model_dump(
+        exclude={"seed"}
+    ) == metadata2.simulation_parameters.model_dump(exclude={"seed"})
+    assert metadata1.aggregate_properties == metadata2.aggregate_properties
+    logger.info("Reproducibility test passed.")

@@ -1,4 +1,3 @@
-# pyfracval/main_runner.py
 """
 Core function to run the FracVAL simulation.
 """
@@ -26,32 +25,16 @@ def run_simulation(
 ) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
     """
     Runs one full aggregate generation based on the provided configuration.
-
-    Args:
-        iteration: The aggregate/iteration number (for filename).
-        sim_config: Dictionary containing simulation parameters
-                    (N, Df, kf, rp_g, rp_gstd, tol_ov, n_subcl_percentage, ext_case etc.).
-        output_base_dir: Base directory to save results.
-        seed: Optional random seed.
-
-    Returns:
-        tuple[bool, np.ndarray | None, np.ndarray | None]:
-            (success_flag, final_coords, final_radii)
-            Coords and radii are returned only on success.
+    # ... (rest of docstring) ...
     """
     logger.info(f"===== Starting Aggregate Generation {iteration} =====")
-    # logger.info(
-    #     f"Config: N={sim_config['N']}, Df={sim_config['Df']}, kf={sim_config['kf']}, "
-    #     f"rp_g={sim_config['rp_g']}, rp_gstd={sim_config['rp_gstd']}"
-    # )
 
     try:
-        # Add seed to the dict if provided separately
         if seed is not None and "seed" not in sim_config_dict:
             sim_config_dict["seed"] = seed
         sim_params = SimulationParameters(**sim_config_dict)
         logger.info(f"Validated Config: {sim_params.model_dump_json(indent=2)}")
-    except Exception as e:  # Catch Pydantic validation errors
+    except Exception as e:
         logger.error(f"Invalid simulation parameters provided: {e}", exc_info=True)
         return False, None, None
 
@@ -60,16 +43,6 @@ def run_simulation(
     if sim_params.seed is not None:
         np.random.seed(sim_params.seed)
         logger.info(f"Using random seed: {sim_params.seed}")
-
-    # --- Use parameters from sim_config ---
-    # Df = sim_config["Df"]
-    # kf = sim_config["kf"]
-    # rp_g = sim_config["rp_g"]
-    # rp_gstd = sim_config["rp_gstd"]
-    # tol_ov = sim_config["tol_ov"]
-    # n_subcl_percentage = sim_config["n_subcl_percentage"]
-    # ext_case = sim_config["ext_case"]
-    # Add any other required parameters here
 
     # 1. Generate Initial Particle Radii
     try:
@@ -102,27 +75,52 @@ def run_simulation(
     pca_end_time = time.time()
     logger.info(f"PCA Subclustering Time: {pca_end_time - pca_start_time:.2f} seconds")
 
-    if not pca_success:
-        logger.error(
-            f"PCA Subclustering failed (Subcluster {subcluster_runner.number_clusters_processed + 1 if hasattr(subcluster_runner, 'number_clusters_processed') else 'N/A'})."
+    # --- Enhanced PCA Failure Handling ---
+    if not pca_success or subcluster_runner.not_able_pca:
+        failed_subcluster_num = getattr(
+            subcluster_runner, "number_clusters_processed", "N/A"
         )
-        logger.error("Potential Causes/Fixes for PCA Failure:")
-        logger.error(
-            "  - Try reducing subcluster size with '--n-subcl-perc' (e.g., --n-subcl-perc 0.05)."
-        )
-        logger.error("  - Increase max attempts with '--max-attempts'.")
-        logger.error(
-            "  - Check simulation parameters (Df, kf, rp_gstd) - may be geometrically constrained."
-        )
-        logger.error("  - Try a different '--seed' for a new particle configuration.")
-        return False, None, None
+        if failed_subcluster_num != "N/A":
+            failed_subcluster_num += 1  # Adjust to 1-based index
 
-    num_clusters, not_able_pca, pca_coords_radii, pca_i_orden, _ = (
+        logger.error(
+            f"PCA Subclustering failed (Failed on Subcluster {failed_subcluster_num})."
+        )
+        logger.error("PCA Failure Diagnosis & Suggestions:")
+        logger.error(
+            f"  - The current target parameters (Df={sim_params.Df}, kf={sim_params.kf}) might be geometrically challenging during PCA."
+        )
+        logger.error("  - Common Fixes for PCA Failure (Try in order):")
+        logger.error(
+            f"    1. Increase target kf: Try `--kf {sim_params.kf + 0.1:.1f}` or `--kf {sim_params.kf + 0.2:.1f}`. (Often helps if Gamma or Sticking fails)."
+            # Decreasing kf is less common for PCA failures seen so far, but possible if Gamma calc itself fails
+            # logger.error(f"    Alt. Decrease target kf: Try `--kf {max(0.1, sim_params.kf - 0.1):.1f}` (May help if Gamma calculation fails).")
+        )
+        logger.error(
+            f"    2. Increase target Df: Try `--df {sim_params.Df + 0.05:.2f}` or `--df {sim_params.Df + 0.1:.1f}`."
+        )
+        logger.error(
+            f"    3. Increase overlap tolerance: Try `--tol-ov 1e-5` or `--tol-ov 1e-4` (If failure is during sticking/rotation)."
+        )
+        logger.error(
+            f"    4. Reduce subcluster size: Try `--n-subcl-perc {max(0.02, sim_params.n_subcl_percentage * 0.8):.2f}` (e.g., 0.08 if currently 0.1)."
+        )
+        logger.error(
+            "    5. Try a different random seed: Add `--seed <number>` or change the existing seed."
+        )
+        logger.error(
+            "    6. Increase max attempts: Use `--max-attempts <number>` (e.g., 10)."
+        )
+        return False, None, None
+    # --- End Enhanced PCA Handling ---
+
+    # Retrieve results only if PCA succeeded
+    num_clusters, not_able_pca_flag, pca_coords_radii, pca_i_orden, _ = (
         subcluster_runner.get_results()
     )
-
-    if not_able_pca or pca_coords_radii is None or pca_i_orden is None:
-        logger.error("PCA returned invalid results.")
+    # Double check, though should be caught above
+    if not_able_pca_flag or pca_coords_radii is None or pca_i_orden is None:
+        logger.error("PCA returned invalid results despite reporting success.")
         return False, None, None
 
     # 4. Cluster-Cluster Aggregation
@@ -142,32 +140,46 @@ def run_simulation(
     cca_end_time = time.time()
     logger.info(f"CCA Aggregation Time: {cca_end_time - cca_start_time:.2f} seconds")
 
+    # --- Enhanced CCA Failure Handling ---
     if cca_result is None or cca_runner.not_able_cca:
+        logger.error("CCA Aggregation failed.")
+        logger.error("CCA Failure Diagnosis & Suggestions:")
         logger.error(
-            "CCA Aggregation failed."
-        )  # CCA errors are often harder to diagnose simply
-        logger.error("Potential Causes/Fixes for CCA Failure:")
-        logger.error("  - Increase max attempts with '--max-attempts'.")
-        logger.error(
-            "  - Check simulation parameters (Df, kf) - may be geometrically constrained."
+            "  - Failure often occurs during cluster pairing or sticking due to geometric constraints from target Df/kf."
         )
-        logger.error("  - Ensure PCA stage produced valid subclusters.")
-        logger.error("  - Try a different '--seed'.")
+        logger.error(
+            f"  - Check logs for WARNings about 'RELAXED condition' during pairing or 'No initial candidates found' / 'Sticking failed' during sticking."
+        )
+        logger.error("  - Common Fixes for CCA Failure (Try in order):")
+        logger.error(
+            f"    1. Increase target kf: Try `--kf {sim_params.kf + 0.1:.1f}` or `--kf {sim_params.kf + 0.2:.1f}`. (Often helps relax pairing/sticking)."
+        )
+        logger.error(
+            f"    2. Increase target Df: Try `--df {sim_params.Df + 0.05:.2f}` or `--df {sim_params.Df + 0.1:.1f}`."
+        )
+        logger.error(
+            f"    3. Check CCA Pairing Factor: If warnings about RELAXED condition were frequent, the factor in `cca_agg.py` might need adjustment (currently hardcoded)."
+        )
+        logger.error(
+            "    4. Try a different random seed: Add `--seed <number>` or change the existing seed (affects PCA structure)."
+        )
+        logger.error(
+            "    5. Increase max attempts: Use `--max-attempts <number>` (e.g., 10)."
+        )
         return False, None, None
+    # --- End Enhanced CCA Handling ---
 
-    # 5. Prepare Results
+    # 5. Prepare Results (Only if CCA succeeded)
     final_coords, final_radii = cca_result
     n_actual = final_coords.shape[0]
 
     # Calculate final properties including Rg
-    final_coords, final_radii = cca_result
-    n_actual = final_coords.shape[0]
     final_rg = 0.0
     final_cm = [0.0, 0.0, 0.0]  # Use list default
-    # ... (calculate final_rg, final_cm using utils.calculate_cluster_properties) ...
     if n_actual > 0:
         try:
-            final_mass, final_rg, final_cm_arr, final_r_max = (
+            # Pass target Df/kf for final property calculation consistency
+            final_mass, final_rg_val, final_cm_arr, final_r_max = (
                 utils.calculate_cluster_properties(
                     final_coords,
                     final_radii,
@@ -175,14 +187,19 @@ def run_simulation(
                     sim_params.kf,
                 )
             )
+            # Handle potential None return from calculate_rg inside calculate_cluster_properties
+            final_rg = final_rg_val if final_rg_val is not None else 0.0
+            final_cm = (
+                final_cm_arr.tolist() if final_cm_arr is not None else [0.0, 0.0, 0.0]
+            )
             logger.info(f"Final Aggregate Calculated Rg: {final_rg:.4f}")
-            final_cm = final_cm_arr.tolist()  # Convert to list
         except Exception as e:
             logger.warning(f"Could not calculate final aggregate properties: {e}")
             final_rg = None  # Use None if calculation failed
             final_cm = None
 
-    gen_info = GenerationInfo(iteration=iteration)  # Timestamp defaults to now
+    # Create Metadata
+    gen_info = GenerationInfo(iteration=iteration)
     agg_props = AggregateProperties(
         N_particles_actual=n_actual,
         radius_of_gyration=final_rg,
@@ -190,12 +207,11 @@ def run_simulation(
     )
     metadata_instance = Metadata(
         generation_info=gen_info,
-        simulation_parameters=sim_params,  # Pass the validated parameters model
+        simulation_parameters=sim_params,
         aggregate_properties=agg_props,
     )
 
-    # 6. Save Results (Optional, can be done by caller)
-    # Make sure save_results can handle output directory argument
+    # 6. Save Results
     metadata_instance.save_to_file(
         folderpath=output_base_dir,
         coords=final_coords,

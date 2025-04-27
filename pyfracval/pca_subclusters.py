@@ -32,8 +32,8 @@ class Subclusterer:
     ):
         self.N = len(initial_radii)
         self.initial_radii = initial_radii.copy()  # Use a copy
-        self.target_df = df  # Store target Df
-        self.target_kf = kf  # Store target kf
+        self.df = df  # Store target Df
+        self.kf = kf  # Store target kf
         self.tol_ov = tol_ov
         self.n_subcl_percentage = n_subcl_percentage
         # self.pca_df_override = pca_df_override # Store overrides if used
@@ -123,10 +123,12 @@ class Subclusterer:
         current_n_start_idx = 0  # Index in the initial_radii array
         current_fill_idx = 0  # Index in the final all_coords/all_radii
 
+        pca_df = self.df
+        pca_kf = self.kf
         # --- Define Df/kf to use *specifically* for PCA ---
         # Use fixed, stable values, e.g., typical DLCA or Filippov mono values
-        pca_df = 1.79
-        pca_kf = 1.40
+        # pca_df = 1.79
+        # pca_kf = 1.40
         # Alternatively, use overrides if they were passed during init:
         # pca_df = self.pca_df_override if self.pca_df_override is not None else 1.79
         # pca_kf = self.pca_kf_override if self.pca_kf_override is not None else 1.40

@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 
 from pyfracval import config as default_config
-from pyfracval.logs import create_logger
+from pyfracval.logs import TRACE_LEVEL_NUM, create_logger
 from pyfracval.main_runner import run_simulation
 
 # --- Default values from config (or override here) ---
@@ -151,7 +151,7 @@ def cli(ctx, **kwargs) -> None:
         case 2:
             log_level = logging.DEBUG
         case _:
-            log_level = logging.TRACE  # pyright: ignore
+            log_level = TRACE_LEVEL_NUM
 
     logger = create_logger(log_level, kwargs["log_file"])
 

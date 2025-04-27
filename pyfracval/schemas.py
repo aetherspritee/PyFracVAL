@@ -11,7 +11,7 @@ from typing import Any, Self
 
 import numpy as np
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +36,7 @@ class SimulationParameters(BaseModel):
     seed: int | None = Field(None, description="Random seed used for generation.")
     # Add other tunable parameters from config if needed
 
-    class Config:
-        extra = "allow"  # Allow extra fields if passed from a broader config dict
+    model_config = ConfigDict(extra="allow")
 
 
 class AggregateProperties(BaseModel):
@@ -79,13 +78,14 @@ class Metadata(BaseModel):
         None  # Calculated after generation
     )
 
-    class Config:
-        json_encoders = {
+    model_config = ConfigDict(
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             # Add other encoders if needed (e.g., for NumPy types if stored directly)
         }
         # Consider adding validate_assignment = True if you want validation on attribute changes
         # validate_assignment = True
+    )
 
     def to_dict(self) -> dict[str, Any]:
         """Converts the metadata model to a dictionary suitable for YAML/JSON."""
@@ -132,7 +132,22 @@ class Metadata(BaseModel):
 
         filepath = Path(folderpath)
         filepath.mkdir(parents=True, exist_ok=True)
-        filepath /= f"fracval_N{n_str}_Df{df_str}_kf{kf_str}_rpg{rpg_str}_rpgstd{rpgstd_str}_seed{seed_str}_agg{agg_str}_{timestamp}.dat"
+        filepath /= (
+            "fracval_"
+            + "_".join(
+                [
+                    f"N{n_str}",
+                    f"Df{df_str}",
+                    f"kf{kf_str}",
+                    f"rpg{rpg_str}",
+                    f"rpgstd{rpgstd_str}",
+                    # f"seed{seed_str}",
+                    f"agg{agg_str}",
+                    f"{timestamp}",
+                ]
+            )
+            + ".dat"
+        )
 
         header_string = self.to_yaml_header()
         data_to_save = np.hstack((coords, radii.reshape(-1, 1)))
@@ -140,7 +155,9 @@ class Metadata(BaseModel):
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(header_string)
             np.savetxt(f, data_to_save, fmt="%18.10e", delimiter=" ")
-        logger.info(f"Successfully saved aggregate data and metadata to: {filepath}")
+        logger.info("Successfully saved aggregate data and metadata to")
+        logger.info(f"    Folder:   {filepath.parent}")
+        logger.info(f"    Filename: {filepath.name}")
 
     @classmethod
     def from_file(cls, filepath: str | Path) -> tuple[Self, np.ndarray]:
