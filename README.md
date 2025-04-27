@@ -329,14 +329,13 @@ Project Link: [https://github.com/aetherspritee/PyFracVAL](https://github.com/ae
 [Numba-url]: https://numba.pydata.org/
 [Pytest-shield]: https://img.shields.io/badge/Pytest-0A9B70?style=for-the-badge&logo=pytest&logoColor=white
 [Pytest-url]: https://pytest.org/
-
-[Click-shield]: https://img.shields.io/badge/Click-4D4D4D?style=for-the-badge&logo=python&logoColor=white <!-- Using Python logo for Click -->
+[Click-shield]: https://img.shields.io/badge/Click-4D4D4D?style=for-the-badge&logo=python&logoColor=white
 [Click-url]: https://click.palletsprojects.com/
 [Pydantic-shield]: https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white
 [Pydantic-url]: https://docs.pydantic.dev/
 [PyYAML-shield]: https://img.shields.io/badge/PyYAML-4B5259?style=for-the-badge&logo=yaml&logoColor=white
 [PyYAML-url]: https://pyyaml.org/
-[PyVista-shield]: https://img.shields.io/badge/PyVista-6495ED?style=for-the-badge&logo=python&logoColor=white <!-- Generic Python logo -->
+[PyVista-shield]: https://img.shields.io/badge/PyVista-6495ED?style=for-the-badge&logo=python&logoColor=white
 [PyVista-url]: https://docs.pyvista.org/
 [Streamlit-shield]: https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white
 [Streamlit-url]: https://streamlit.io/
