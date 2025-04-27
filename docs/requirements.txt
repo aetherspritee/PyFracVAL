@@ -1,0 +1,8 @@
+furo
+myst-parser
+sphinx-autoapi
+sphinx-autodoc-typehints
+sphinx-copybutton
+sphinx
+sphinxcontrib-bibtex
+sphinxcontrib-napoleon
