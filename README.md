@@ -244,6 +244,16 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+### Profiling
+
+Use [py-spy](https://github.com/benfred/py-spy) to profile the code:
+
+```sh
+uv run py-spy record --format speedscope -o profile.speedscope.json -- pyfracval -n 512 --df 1.6 --kf 1.1 --rp-gstd 1.2
+```
+
+Upload the resulting `profile.speedscope.json` file to [speedscope](https://www.speedscope.app/) and inspect the runtimes.
+
 ### Top contributors:
 
 <a href="https://github.com/aetherspritee/PyFracVAL/graphs/contributors">
