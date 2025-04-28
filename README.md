@@ -20,7 +20,7 @@
   <!-- Make sure the href points to your repo -->
   <a href="https://github.com/aetherspritee/PyFracVAL">
     <!-- Use the raw image link from your current README -->
-    <img src="https://github.com/aetherspritee/PyFracVAL/blob/main/.github/logo.png?raw=true" alt="PyFracVAL Logo" width="80" height="80">
+    <img src="https://github.com/aetherspritee/PyFracVAL/blob/main/.github/logo.png?raw=true" alt="PyFracVAL Logo" width="25%" height="25%">
   </a>
 
 <h3 align="center">PyFracVAL</h3>
