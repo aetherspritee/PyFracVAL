@@ -1,6 +1,8 @@
 import os
 import sys
 
+from pyfracval import __version__, _authors
+
 # Adjust the path to go up two levels from docs/source/ to the project root
 sys.path.insert(0, os.path.abspath("../../"))
 
@@ -12,9 +14,11 @@ sys.path.insert(0, os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "pyfracval"
-copyright = "2025, aetherspritee, arunoruto"
-author = "aetherspritee, arunoruto"
+
+project = name = "PyFracVAL"
+author = _authors
+copyright = f"2025, {_authors}"
+version, release = __version__, __version__.split("+")[0]
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -51,26 +55,38 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 # html_theme = "alabaster"
-html_theme = "furo"
+# html_theme = "furo"
+html_theme = "pydata_sphinx_theme"
 # html_logo = "_static/logo.png" # Optional: Add a logo file to _static/
 # html_favicon = "_static/favicon.ico" # Optional: Add a favicon
 html_static_path = ["_static"]
 
 # Napoleon config
-napoleon_google_docstring = True
-napoleon_numpy_docstring = True  # Can set one to False if you only use one style
-napoleon_include_init_with_doc = True  # Include __init__ docstrings
+# napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False  # Include __init__ docstrings
 napoleon_include_private_with_doc = False  # Usually False
 napoleon_include_special_with_doc = True
 napoleon_use_admonition_for_examples = False
 napoleon_use_admonition_for_notes = False
 napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
-napoleon_use_param = True
-napoleon_use_rtype = True
+# napoleon_use_ivar = False
+# napoleon_use_param = True
+# napoleon_use_rtype = True
 napoleon_preprocess_types = False  # Let sphinx-autodoc-typehints handle types
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
+
+# autodoc
+autoclass_content = "class"
+autodoc_typehints = "none"
+autodoc_default_options = {
+    "members": True,
+    "member-order": "bysource",
+    "undoc-members": True,
+    "show-inheritance": True,
+}
+inheritance_alias = {}
 
 # autoapi
 autoapi_dirs = ["../../pyfracval"]
@@ -94,11 +110,12 @@ typehints_fully_qualified = False
 # Process return type hints
 typehints_document_rtype = True
 # Don't use napoleon rtype processing, let extension handle it
-typehints_use_rtype = False
+# typehints_use_rtype = False
 # Show default values after comma, 'braces' is other option
-typehints_defaults = "comma"
+# typehints_defaults = "comma"
 # Optional: Simplify representation of complex types like Union[str, Path]
 # typehints_formatter = lambda annotation, config: repr(annotation)
+always_use_bars_union = True
 
 ## BibTeX Configuration: Tell the extension where your .bib file is:
 bibtex_bibfiles = ["references.bib"]  # Assumes references.bib is in docs/source/
