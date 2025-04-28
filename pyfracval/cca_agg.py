@@ -84,7 +84,7 @@ class CCAggregator:
             )
             # This could indicate an issue from PCA subclustering stage.
 
-        self.N = n_total
+        self.N: int = n_total
         self.df = df
         self.kf = kf
         self.tol_ov = tol_ov
@@ -1058,8 +1058,9 @@ class CCAggregator:
         -------
         tuple[np.ndarray, np.ndarray] | None
             A tuple containing:
-            - final_coords (np.ndarray): Nx3 coordinates of the final aggregate.
-            - final_radii (np.ndarray): N radii of the final aggregate.
+                - final_coords (np.ndarray): Nx3 coordinates of the final aggregate.
+                - final_radii (np.ndarray): N radii of the final aggregate.
+
             Returns None if the aggregation process fails at any stage
             (sets `self.not_able_cca` to True).
         """

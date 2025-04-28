@@ -1,6 +1,6 @@
 # Welcome to pyfracval's documentation!
 
-![PyFracVAL Logo](_static/logo.png)
+<img src="_static/logo.png" alt="PyFracVAL Logo" width="50%">
 
 PyFracVAL generates fractal-like aggregates... (add a brief description)
 

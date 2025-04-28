@@ -19,12 +19,11 @@ def shuffle_array(arr: np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    arr : np.ndarray
+    arr :
         The 1D NumPy array to shuffle.
 
     Returns
     -------
-    np.ndarray
         The input `arr`, modified in-place.
     """
     n = len(arr)
