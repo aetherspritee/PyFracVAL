@@ -1,6 +1,7 @@
 .envrc
 .direnv
 RESULTS/
+*.speedscope.json
 
 *.csv
 

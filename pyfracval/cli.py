@@ -4,6 +4,7 @@ import time  # For seeding if needed
 from pathlib import Path
 
 import click
+import numpy as np
 
 from pyfracval import config as default_config
 from pyfracval.logs import TRACE_LEVEL_NUM, create_logger
@@ -65,9 +66,19 @@ DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
 @click.option(
     "--rp-gstd",
     type=float,
-    default=DEFAULT_SIGMA,
-    show_default=True,
-    help="Geometric standard deviation of primary particle radii (>= 1.0).",
+    default=None,
+    show_default=f"Calculated from --rp-std or defaults to {DEFAULT_SIGMA}",  # Show calculated default
+    help="Geometric standard deviation of primary particle radii (>= 1.0). "
+    "If provided, this value takes precedence over --rp-std.",  # Added precedence info
+)
+@click.option(
+    "--rp-std",
+    type=float,
+    default=None,
+    help="Approximate arithmetic standard deviation of primary particle radii. "
+    "If --rp-gstd is NOT provided, this value will be used to estimate "
+    "a geometric standard deviation using the heuristic exp(std/mean). "
+    "A warning will be shown with the calculated geometric value.",
 )
 @click.option(
     "--ext-case",
@@ -145,6 +156,9 @@ def cli(ctx, **kwargs) -> None:
     by Cluster-Cluster Aggregation (CCA) approach described by
     Moran et al. (2019) to generate aggregates with tunable fractal
     dimension (Df) and prefactor (kf) from polydisperse primary particles.
+
+    Allows specifying target Df, kf, and particle size distribution
+    (via geometric mean/std dev or estimated from arithmetic std dev).
     """
     if ctx.invoked_subcommand:
         return
@@ -162,11 +176,6 @@ def cli(ctx, **kwargs) -> None:
     logger = create_logger(log_level, kwargs["log_file"])
 
     # --- Validate Inputs ---
-    if kwargs["rp_gstd"] < 1.0:
-        raise click.BadParameter(
-            "Geometric standard deviation (rp_gstd) must be >= 1.0.",
-            param_hint="--rp-gstd",
-        )
     if kwargs["rp_g"] <= 0:
         raise click.BadParameter(
             "Geometric mean radius (rp_g) must be > 0.", param_hint="--rp-g"
@@ -175,6 +184,37 @@ def cli(ctx, **kwargs) -> None:
         raise click.BadParameter(
             "Number of particles (n) must be at least 2.", param_hint="-n"
         )
+    if kwargs["rp_gstd"] is not None:
+        # Geometric STD provided, use it directly (takes precedence)
+        if kwargs["rp_gstd"] < 1.0:
+            raise click.BadParameter(
+                "Geometric standard deviation (--rp-gstd) must be >= 1.0.",
+                param_hint="--rp-gstd",
+            )
+        final_rp_gstd = kwargs["rp_gstd"]
+        if kwargs["rp_std"] is not None:
+            logger.warning("Both --rp-gstd and --rp-std provided. Using --rp-gstd.")
+    elif kwargs["rp_std"] is not None:
+        # Arithmetic STD provided, Geometric STD not provided
+        if kwargs["rp_std"] < 0:
+            raise click.BadParameter(
+                "Arithmetic standard deviation (--rp-std) cannot be negative.",
+                param_hint="--rp-std",
+            )
+        # Apply heuristic: sigma_g = exp(sigma_a / mu_g)
+
+        final_rp_gstd = np.exp(kwargs["rp_std"] / kwargs["rp_g"])
+        logger.warning(
+            f"Using heuristic to calculate geometric standard deviation from arithmetic std: "
+            f"exp(rp_std / rp_g) = exp({kwargs['rp_std']:.2f} / {kwargs['rp_g']:.2f}) = {final_rp_gstd:.3f}. "
+            f"Targeting rp_gstd = {final_rp_gstd:.3f} for generation."
+        )
+    else:
+        # Neither provided, use the default geometric STD
+        final_rp_gstd = DEFAULT_SIGMA
+        logger.info(
+            f"No geometric or arithmetic standard deviation provided. Using default rp_gstd = {final_rp_gstd:.3f}"
+        )
 
     # --- Prepare Configuration for Runner ---
     sim_config = {
@@ -182,7 +222,7 @@ def cli(ctx, **kwargs) -> None:
         "Df": kwargs["df"],
         "kf": kwargs["kf"],
         "rp_g": kwargs["rp_g"],
-        "rp_gstd": kwargs["rp_gstd"],
+        "rp_gstd": final_rp_gstd,
         "tol_ov": kwargs["tol_ov"],
         "n_subcl_percentage": kwargs["n_subcl_perc"],
         "ext_case": kwargs["ext_case"],

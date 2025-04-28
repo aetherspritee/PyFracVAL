@@ -35,7 +35,10 @@ docs = [
   "sphinxcontrib-bibtex>=2.6.3",
   "sphinxcontrib-napoleon>=0.7",
 ]
-test = ["pytest>=8.3.3"]
+test = [
+    "py-spy>=0.4.0",
+    "pytest>=8.3.3",
+]
 
 [project.scripts]
 pyfracval = "pyfracval.cli:cli"

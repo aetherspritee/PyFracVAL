@@ -30,7 +30,8 @@ pyfracval -n 512 --df 1.9 --kf 1.4 --rp-g 50 --rp-gstd 1.25
 - `--df`: Target fractal dimension.
 - `--kf`: Target fractal prefactor.
 - `--rp-g`: Geometric mean radius of primary particles.
-- `--rp-gstd`: Geometric standard deviation of radii (`1.0` for monodisperse).
+- `--rp-gstd`: **Geometric** standard deviation of radii (`>= 1.0`). If provided, **takes precedence** over `--rp-std`. If neither is provided, defaults to [Default Value, e.g., 1.5].
+- `--rp-std`: Approximate **arithmetic** standard deviation of radii. Used to _estimate_ `--rp-gstd` via `exp(std/mean)` **only if `--rp-gstd` is not given**. A warning will show the estimated geometric value being used.
 - `--tol-ov`: Overlap tolerance (e.g., `1e-5`).
 - `--n-subcl-perc`: Target fraction for PCA subcluster size (e.g., `0.1`).
 - `--num-aggregates`: Generate multiple aggregates sequentially.
@@ -40,6 +41,25 @@ pyfracval -n 512 --df 1.9 --kf 1.4 --rp-g 50 --rp-gstd 1.25
 - `-v`, `-vv`, `-vvv`: Increase logging verbosity (INFO, DEBUG, TRACE).
 - `--log-file`: Redirect log output to a file.
 - `-h`, `--help`: Show all available options and their defaults.
+
+**Example: Using Arithmetic Standard Deviation**
+
+Generate an aggregate with N=200, Df=1.9, kf=1.2, geometric mean radius 20, and an approximate _arithmetic_ standard deviation of 5. `pyfracval` will estimate the geometric standard deviation and use that.
+
+```bash
+pyfracval -n 200 --df 1.9 --kf 1.2 --rp-g 20 --rp-std 5 -vv
+```
+
+_(Check the log output for a WARNING indicating the calculated `rp_gstd` value being used)._
+
+**Example: Geometric Standard Deviation Takes Precedence**
+
+If you provide both, `--rp-gstd` will be used:
+
+```bash
+# rp_gstd=1.3 will be used, rp-std=5 will be ignored (with a warning)
+pyfracval -n 100 --df 1.8 --rp-gstd 1.3 --rp-std 5
+```
 
 **Example: Generating Multiple Aggregates with Plotting**
 

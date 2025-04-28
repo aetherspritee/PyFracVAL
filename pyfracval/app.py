@@ -5,7 +5,9 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-import polars as pl
+
+# import polars as pl
+import pandas as pd
 import pyvista as pv
 import streamlit as st
 from stpyvista import stpyvista
@@ -49,7 +51,7 @@ file = st.selectbox(
 
 match Path(file).suffix:
     case ".csv":
-        data = pl.read_csv(file).to_numpy()
+        data = pd.read_csv(file).to_numpy()
         information = re.search(
             r"N(\d+)-D(\d+_\d+)-K(\d+_\d+)-(\d+)_(\d+)_(\d+)",
             str(file),
@@ -76,8 +78,28 @@ match Path(file).suffix:
     case _:
         st.error("File type not supported")
 
-pl = plot_particles(data[:, :3], data[:, 3])
-stpyvista(pl)
+plotter = plot_particles(data[:, :3], data[:, 3])
+stpyvista(plotter)
+
+gmean = np.exp(np.mean(np.log(data[:, 3])))
+gstd = np.exp(np.std(np.log(data[:, 3])))
+
+col1, col2 = st.columns([1, 4])
+with col1:
+    st.table(
+        pd.DataFrame(
+            dict(
+                Arithemtic=[np.mean(data[:, 3]), np.std(data[:, 3])],
+                Geometric=[gmean, gstd],
+            ),
+            index=["Mean", "STD"],  # pyright: ignore
+        )
+    )
+with col2:
+    st.write(
+        "Approximate Geometric STD: ",
+        np.exp(np.std(data[:, 3]) / np.mean(data[:, 3])),
+    )
 
 st.write(metadata)
 with st.expander("Full file path"):
