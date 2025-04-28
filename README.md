@@ -9,7 +9,7 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url] <!-- Assuming MIT License, change if different -->
+[![GPL License][license-shield]][license-url]
 
 <!-- Optional: [![PyPI version](https://img.shields.io/pypi/v/pyfracval.svg?style=for-the-badge)](https://pypi.org/project/pyfracval/) -->
 <!-- Optional: [![DOI](https://zenodo.org/badge/DOI/your_doi_here.svg)](https://doi.org/your_doi_here) -->
@@ -254,8 +254,7 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` file for more information.
-_(If you adopted the original's license, change to: GNU General Public License v3. See `LICENSE` file)_
+Distributed under the GPL v3 License. See `LICENSE` file for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
