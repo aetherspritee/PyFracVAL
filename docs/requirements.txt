@@ -1,5 +1,6 @@
 furo
 myst-parser
+pydata-sphinx-theme
 sphinx-autoapi
 sphinx-autodoc-typehints
 sphinx-copybutton

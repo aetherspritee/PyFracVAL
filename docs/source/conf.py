@@ -60,6 +60,9 @@ html_theme = "pydata_sphinx_theme"
 # html_logo = "_static/logo.png" # Optional: Add a logo file to _static/
 # html_favicon = "_static/favicon.ico" # Optional: Add a favicon
 html_static_path = ["_static"]
+html_css_files = [
+    "css/darkmode-image.css",
+]
 
 # Napoleon config
 # napoleon_google_docstring = True
