@@ -35,10 +35,7 @@ docs = [
   "sphinxcontrib-bibtex>=2.6.3",
   "sphinxcontrib-napoleon>=0.7",
 ]
-test = [
-    "py-spy>=0.4.0",
-    "pytest>=8.3.3",
-]
+test = ["py-spy>=0.4.0", "pytest>=8.3.3"]
 
 [project.scripts]
 pyfracval = "pyfracval.cli:cli"
@@ -46,3 +43,10 @@ pyfracval = "pyfracval.cli:cli"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[semantic_release]
+version_variable = ["pyfracval/__init__.py:__version__"]
+version_toml = ["pyproject.toml:project.version:nf"]
+major_on_zero = false
+branch = "main"
+build_command = "curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env && uv build"
