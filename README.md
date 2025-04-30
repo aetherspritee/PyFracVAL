@@ -339,9 +339,9 @@ _(Optional: Add citation for this specific Python implementation if appropriate)
 [PyVista-url]: https://docs.pyvista.org/
 [Streamlit-shield]: https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white
 [Streamlit-url]: https://streamlit.io/
-[UV-shield]: https://img.shields.io/badge/uv-black?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyBmaWxsPSJjdXJyZW50Q29sb3IiIHZpZXdCb3g9IjAgMCAxNiAxNiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik04IC4yYTEuMiAxLjIgMCAwIDAtMS4yIDEuMnYxMS4yYTEuMiAxLjIgMCAxIDAgMi40IDBWMS40QTEuMiAxLjIgMCAwIDAgOCAuMm0wIDMuNmExLjIgMS4yIDAgMCAwLTEuMiAxLjJ2NC44YTEuMiAxLjIgMCAxIDAgMi40IDBWNS44YTEuMiAxLjIgMCAwIDAtMS4yLTEuMlptLTYgMy42YTEuMiAxLjIgMCAwIDEgMS4yIDEuMlYxNGEyLjQgMi40IDAgMSAxLTIuNCAwVjkuOGExLjIgMS4yIDAgMCAxIDEuMi0xLjJsMCAwWk0xNCA4LjZhMS4yIDEuMiAwIDAgMC0xLjIgMS4ydjQuMmMwIC43LS41IDEuMi0xLjIgMS4yaC4yYzAtMi4xLTEuMy0zLjgtMy00LjZBNi45IDYuOSAwIDAgMSA4IDEwLjZhNi45IDYuOSAwIDAgMS0yLS40IDQuOCA0LjggMCAwIDEtMy00LjZWNS44YzAtLjcgLjYtMS4yIDEuMi0xLjJoMi40Yy43IDAgMS4yLjUgMS4yIDEuMnYuNmwtMS4zIDNBMy42IDMuNiAwIDAgMSA4IDguNmMyLjEgMCA0LjItLjggNS42LTIuMWRhLjc1LjggMCAwIDEgLjgtLjdjLjQgMCAuOC4zLjggLjdWOS44bDAgMGgxLjJWMTRjMC0uNy0uNS0xLjItMS4yLTEuMlY5LjhjMC0uNy41LTEuMiAxLjItMS4yWiIvPjwvc3ZnPg==
+[UV-shield]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json&style=for-the-badge
 [UV-url]: https://github.com/astral-sh/uv
-[Ruff-shield]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+[Ruff-shield]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=for-the-badge
 [Ruff-url]: https://github.com/astral-sh/ruff
 [Sphinx-shield]: https://img.shields.io/badge/Sphinx-181717?style=for-the-badge&logo=sphinx&logoColor=white
 [Sphinx-url]: https://www.sphinx-doc.org/en/master/
