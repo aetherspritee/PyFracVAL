@@ -1,6 +1,6 @@
 [project]
 name = "PyFracVAL"
-version = "0.0.1"
+version = "0.1.0"
 description = "Python implementation of FracVAL for generting fractal particle clusters"
 readme = "README.md"
 authors = [
