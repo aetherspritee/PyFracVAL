@@ -3,7 +3,8 @@
 <a id="readme-top"></a>
 
 <!-- PROJECT SHIELDS -->
-<!-- Update links with your username and repo name -->
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15351993.svg)](https://doi.org/10.5281/zenodo.15351993)
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
