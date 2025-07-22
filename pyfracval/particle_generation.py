@@ -20,7 +20,11 @@ def random_normal_custom() -> float:
 
 
 def lognormal_pp_radii(
-    rp_gstd: float, rp_g: float, n: int, seed: int | None = None
+    rp_gstd: float,
+    rp_g: float,
+    n: int,
+    seed: int | None = None,
+    truncate: bool = True,
 ) -> np.ndarray:
     """Generate N random radii from a lognormal distribution.
 
@@ -35,6 +39,8 @@ def lognormal_pp_radii(
         Number of radii to generate.
     seed : int | None, optional
         Random seed for reproducibility, by default None.
+    truncate : bool, optional
+        Use the FracVAL 2*sigma truncate version
 
     Returns
     -------
@@ -75,32 +81,34 @@ def lognormal_pp_radii(
         mu = np.log(rp_g)
         sigma = np.log(rp_gstd)
 
-        radii = np.random.lognormal(mean=mu, sigma=sigma, size=n)
+        if not truncate:
+            radii = np.random.lognormal(mean=mu, sigma=sigma, size=n)
 
-        # --- Optional: Implement Fortran's Truncation/Rejection ---
-        # The Fortran code truncates at rp_g / (rp_gstd**2) and rp_g * (rp_gstd**2)
-        # This corresponds to approximately +/- 2 sigma in the underlying normal distribution.
-        # np.random.lognormal directly generates from the distribution.
-        # If strict truncation matching the Fortran code is needed:
-        # min_val = rp_g / (rp_gstd**2)
-        # max_val = rp_g * (rp_gstd**2)
-        # radii_out = np.zeros(n, dtype=float)
-        # generated_count = 0
-        # while generated_count < n:
-        #     # Generate candidates (can generate more than needed for efficiency)
-        #     num_needed = n - generated_count
-        #     candidates = np.random.lognormal(mean=mu, sigma=sigma, size=num_needed * 2) # Generate extras
-        #     valid = candidates[(candidates >= min_val) & (candidates <= max_val)]
-        #     num_valid = len(valid)
-        #     take = min(num_valid, num_needed)
-        #     if take > 0:
-        #         radii_out[generated_count : generated_count + take] = valid[:take]
-        #         generated_count += take
-        # print(f"Generated polydisperse particles (truncated between {min_val:.2f} and {max_val:.2f}).")
-        # return radii_out
-        # --- End Optional Truncation ---
-
-        logger.info(
-            f"Generated polydisperse particles (mean={np.mean(radii):.2f}, std={np.std(radii):.2f})."
-        )
+            logger.info(
+                f"Generated polydisperse particles (mean={np.mean(radii):.2f}, std={np.std(radii):.2f})."
+            )
+        else:
+            # The Fortran code truncates at rp_g / (rp_gstd**2) and rp_g * (rp_gstd**2)
+            # This corresponds to approximately +/- 2 sigma in the underlying normal distribution.
+            # np.random.lognormal directly generates from the distribution.
+            # If strict truncation matching the Fortran code is needed:
+            min_val = rp_g / (rp_gstd**2)
+            max_val = rp_g * (rp_gstd**2)
+            radii = np.zeros(n, dtype=float)
+            generated_count = 0
+            while generated_count < n:
+                # Generate candidates (can generate more than needed for efficiency)
+                num_needed = n - generated_count
+                candidates = np.random.lognormal(
+                    mean=mu, sigma=sigma, size=num_needed * 2
+                )  # Generate extras
+                valid = candidates[(candidates >= min_val) & (candidates <= max_val)]
+                num_valid = len(valid)
+                take = min(num_valid, num_needed)
+                if take > 0:
+                    radii[generated_count : generated_count + take] = valid[:take]
+                    generated_count += take
+            logger.info(
+                f"Generated polydisperse particles (truncated between {min_val:.2f} and {max_val:.2f})."
+            )
         return radii
