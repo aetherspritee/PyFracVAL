@@ -68,6 +68,7 @@
             numba = prev.numba.overrideAttrs (old: {
               buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.tbb_2021_11 ];
             });
+            pyqt5 = pkgs.python3Packages.pyqt5;
             # scipy = prev.scipy.overrideAttrs (old: {
             #   build-system =
             #     (old.build-system or [ ])
