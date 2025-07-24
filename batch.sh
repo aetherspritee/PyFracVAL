@@ -21,8 +21,8 @@ for gstd in "${gstds[@]}"; do
 	for n in "${ns[@]}"; do
 		for df in "${dfs[@]}"; do
 			# echo "Generating $n $df $gstd"
-			echo "pyfracval -n \"$n\" --df \"$df\" --kf \"$kf\" --rp-g \"$rg\" --rp-gstd \"$gstd\""
-			pyfracval -n "$n" --df "$df" --kf "$kf" --rp-g "$rg" --rp-gstd "$gstd"
+			echo "uv run pyfracval -n \"$n\" --df \"$df\" --kf \"$kf\" --rp-g \"$rg\" --rp-gstd \"$gstd\""
+			uv run pyfracval -n "$n" --df "$df" --kf "$kf" --rp-g "$rg" --rp-gstd "$gstd"
 		done
 	done
 done
