@@ -490,12 +490,23 @@ class PCAggregator:
     # def _overlap_check(self, k: int) -> float: ...
 
     def _reintento(
-        self, k: int, vec_0: np.ndarray, i_vec: np.ndarray, j_vec: np.ndarray
+        self, k: int, vec_0: np.ndarray, i_vec: np.ndarray, j_vec: np.ndarray, attempt: int = 0
     ) -> tuple[np.ndarray, float]:
         """
-        Calculates a *new* random point on the intersection circle defined by
+        Calculates a *new* point on the intersection circle defined by
         vec_0 (center, radius) and basis vectors i_vec, j_vec.
         This is used to rotate monomer k to try and resolve overlaps.
+
+        Uses Fibonacci spiral sampling for optimal angular coverage, which avoids
+        redundant angle sampling and provides better geometric exploration than
+        pure random sampling.
+
+        Args:
+            k: Particle index
+            vec_0: [x0, y0, z0, r0] - center and radius of intersection circle
+            i_vec: First basis vector for the circle plane
+            j_vec: Second basis vector for the circle plane
+            attempt: Rotation attempt number (0-indexed) for Fibonacci spiral
 
         Returns:
              tuple: (coord_k_new, theta_a_new) - the new coordinates and the angle used.
@@ -510,8 +521,10 @@ class PCAggregator:
             # Return the center of the 'circle' (the touch point)
             return np.array([x0, y0, z0]), 0.0
 
-        # Generate new random angle
-        theta_a_new = 2.0 * config.PI * np.random.rand()
+        # Generate angle using Fibonacci spiral for optimal coverage
+        # Golden ratio provides quasi-uniform distribution without repetition
+        golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
+        theta_a_new = 2.0 * config.PI * attempt / golden_ratio
 
         # Calculate new position using the circle equation
         coord_k_new = np.zeros(3)
@@ -660,7 +673,7 @@ class PCAggregator:
                     while cov_max > self.tol_ov and intento < max_rotations:
                         intento += 1
                         coord_k_new, theta_a_new = self._reintento(
-                            k, vec_0, i_vec, j_vec
+                            k, vec_0, i_vec, j_vec, attempt=intento
                         )
                         self.coords[k] = coord_k_new
                         cov_max = utils.calculate_max_overlap_pca(

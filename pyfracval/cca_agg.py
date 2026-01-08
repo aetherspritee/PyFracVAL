@@ -683,17 +683,33 @@ class CCAggregator:
         vec_0: np.ndarray,
         i_vec: np.ndarray,
         j_vec: np.ndarray,
+        attempt: int = 0,
     ) -> Tuple[np.ndarray, float]:
         """
-        Rotates cluster 2 to a new random point on the intersection circle.
+        Rotates cluster 2 to a new point on the intersection circle.
         Corresponds to CCA_Sticking_process_v1_reintento.
+
+        Uses Fibonacci spiral sampling for optimal angular coverage.
+
+        Args:
+            coords2_in: Coordinates of cluster 2
+            cm2: Center of mass of cluster 2
+            cand2_idx: Index of candidate particle in cluster 2
+            vec_0: [x0, y0, z0, r0] - center and radius of intersection circle
+            i_vec: First basis vector for the circle plane
+            j_vec: Second basis vector for the circle plane
+            attempt: Rotation attempt number (0-indexed) for Fibonacci spiral
+
+        Returns:
+            tuple: (coords2_rotated, theta_a_new)
         """
         coords2 = coords2_in.copy()  # Work with copy
         n2 = coords2.shape[0]
         x0, y0, z0, r0 = vec_0
 
-        # New random angle and target point on circle
-        theta_a_new = 2.0 * config.PI * np.random.rand()
+        # New angle using Fibonacci spiral for optimal coverage
+        golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
+        theta_a_new = 2.0 * config.PI * attempt / golden_ratio
         target_p2 = np.zeros(3)
         target_p2[0] = (
             x0
@@ -854,6 +870,7 @@ class CCAggregator:
             current_coords2 = coords2_stick.copy()  # Keep track of rotated coords2
 
             while cov_max > self.tol_ov and intento < max_rotations:
+                intento += 1
                 coords2_rotated, theta_a_new = self._cca_reintento(
                     current_coords2,
                     cm2_stick,
@@ -861,6 +878,7 @@ class CCAggregator:
                     vec_0,
                     i_vec,
                     j_vec,
+                    attempt=intento,
                 )
                 # Check overlap with the rotated coords2
                 # cov_max = self._cca_overlap_check(
@@ -872,7 +890,6 @@ class CCAggregator:
                     coords2_rotated,
                     radii2_in,
                 )
-                intento += 1
 
                 # Update coords for next potential rotation
                 current_coords2 = coords2_rotated
