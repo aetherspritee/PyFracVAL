@@ -490,7 +490,12 @@ class PCAggregator:
     # def _overlap_check(self, k: int) -> float: ...
 
     def _reintento(
-        self, k: int, vec_0: np.ndarray, i_vec: np.ndarray, j_vec: np.ndarray, attempt: int = 0
+        self,
+        k: int,
+        vec_0: np.ndarray,
+        i_vec: np.ndarray,
+        j_vec: np.ndarray,
+        attempt: int = 0,
     ) -> tuple[np.ndarray, float]:
         """
         Calculates a *new* point on the intersection circle defined by
@@ -595,7 +600,7 @@ class PCAggregator:
 
                 # --- Perform Search/Swap ---
                 # Force particle swap on retry attempts (when previous candidates failed)
-                force_swap = (search_attempt > 1)
+                force_swap = search_attempt > 1
                 search_result = self._search_and_select_candidate(
                     k, considered_indices, force_swap=force_swap
                 )
@@ -670,6 +675,12 @@ class PCAggregator:
 
                     intento = 0
                     max_rotations = 360
+                    adaptive_tol_threshold = (
+                        180  # Relax tolerance after this many attempts
+                    )
+                    relaxed_tol = 1.0e-5  # Relaxed tolerance (10x more lenient)
+                    used_adaptive_tol = False
+
                     while cov_max > self.tol_ov and intento < max_rotations:
                         intento += 1
                         coord_k_new, theta_a_new = self._reintento(
@@ -700,7 +711,16 @@ class PCAggregator:
                                 f"    PCA k={k}, cand={current_selected_idx}, Rot {intento}: Overlap = {cov_max:.4e} ({', '.join(ov_details)})",
                             )
 
-                    if cov_max <= self.tol_ov:
+                        # Adaptive tolerance: relax constraint after many attempts
+                        if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
+                            logger.info(
+                                f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
+                                f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                            )
+                            used_adaptive_tol = True
+                            break
+
+                    if cov_max <= self.tol_ov or used_adaptive_tol:
                         logger.debug(
                             f"PCA k={k}: Sticking successful with cand {current_selected_idx} after {intento} rotations."
                         )
