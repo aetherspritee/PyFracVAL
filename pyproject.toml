@@ -51,3 +51,8 @@ version_toml = ["pyproject.toml:project.version:nf"]
 major_on_zero = false
 branch = "main"
 build_command = "curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env && uv build"
+
+[tool.pyright]
+exclude = [".venv"]
+venvPath = "."
+venv = ".venv"
