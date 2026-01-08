@@ -868,6 +868,9 @@ class CCAggregator:
             intento = 0
             max_rotations = 360  # From Fortran
             current_coords2 = coords2_stick.copy()  # Keep track of rotated coords2
+            adaptive_tol_threshold = 180  # Relax tolerance after this many attempts
+            relaxed_tol = 1.0e-5  # Relaxed tolerance (10x more lenient)
+            used_adaptive_tol = False
 
             while cov_max > self.tol_ov and intento < max_rotations:
                 intento += 1
@@ -895,6 +898,15 @@ class CCAggregator:
                 current_coords2 = coords2_rotated
                 logger.trace(f"    Rotation {intento}: Overlap = {cov_max:.4e}")  # pyright: ignore
 
+                # Adaptive tolerance: relax constraint after many attempts
+                if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
+                    logger.info(
+                        f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting relaxed tolerance "
+                        f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                    )
+                    used_adaptive_tol = True
+                    break
+
                 # Fortran logic for picking new *candidate* after 359 rotations is complex.
                 # If max rotations fail here, we consider this candidate pair (cand1, cand2) failed.
                 if intento >= max_rotations and cov_max > self.tol_ov:
@@ -902,7 +914,7 @@ class CCAggregator:
                     break  # Exit rotation loop for this pair
 
             # Check if overlap is acceptable
-            if cov_max <= self.tol_ov:
+            if cov_max <= self.tol_ov or used_adaptive_tol:
                 # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Success! Overlap = {cov_max:.4e} after {intento} rotations.")
                 sticking_successful = True
                 final_coords1 = coords1_stick  # Cluster 1 might have rotated
