@@ -133,35 +133,45 @@ class CCAggregator:
 
     def _calculate_cca_gamma(self, props1: Tuple, props2: Tuple) -> Tuple[bool, float]:
         """Calculates Gamma_pc between two clusters based on their properties."""
-        m1, rg1, cm1, r_max1, radii1 = props1
-        m2, rg2, cm2, r_max2, radii2 = props2
-        n1 = len(radii1)
-        n2 = len(radii2)
+        m1, rg1, _, _, radii1 = props1
+        m2, rg2, _, _, radii2 = props2
+        return utils.gamma_calculation(
+            m1,
+            rg1,
+            radii1,
+            m2,
+            rg2,
+            radii2,
+            self.df,
+            self.kf,
+        )
+        # n1 = len(radii1)
+        # n2 = len(radii2)
 
-        if n1 == 0 or n2 == 0:
-            return False, 0.0
+        # if n1 == 0 or n2 == 0:
+        #     return False, 0.0
 
-        m3 = m1 + m2
-        n3 = n1 + n2
+        # m3 = m1 + m2
+        # n3 = n1 + n2
 
-        combined_radii = np.concatenate((radii1, radii2))
-        rg3 = utils.calculate_rg(combined_radii, n3, self.df, self.kf)
+        # combined_radii = np.concatenate((radii1, radii2))
+        # rg3 = utils.calculate_rg(combined_radii, n3, self.df, self.kf)
 
-        gamma_pc = 0.0
-        gamma_real = False
-        try:
-            term1 = (m3**2) * (rg3**2)
-            term2 = m3 * (m1 * rg1**2 + m2 * rg2**2)
-            denominator = m1 * m2
+        # gamma_pc = 0.0
+        # gamma_real = False
+        # try:
+        #     term1 = (m3**2) * (rg3**2)
+        #     term2 = m3 * (m1 * rg1**2 + m2 * rg2**2)
+        #     denominator = m1 * m2
 
-            if term1 > term2 and denominator > 1e-12:
-                gamma_pc = np.sqrt((term1 - term2) / denominator)
-                gamma_real = True
-        except (ValueError, ZeroDivisionError, OverflowError) as e:
-            logger.warning(f"CCA Gamma calculation failed: {e}")
-            gamma_real = False
+        #     if term1 > term2 and denominator > 1e-12:
+        #         gamma_pc = np.sqrt((term1 - term2) / denominator)
+        #         gamma_real = True
+        # except (ValueError, ZeroDivisionError, OverflowError) as e:
+        #     logger.warning(f"CCA Gamma calculation failed: {e}")
+        #     gamma_real = False
 
-        return gamma_real, gamma_pc
+        # return gamma_real, gamma_pc
 
     def _identify_monomers(self) -> np.ndarray | None:
         """Creates an array mapping each monomer index (0..N-1) to its cluster index (0..i_t-1)."""
@@ -451,7 +461,7 @@ class CCAggregator:
 
         # --- Step 1: Translate Cluster 2 ---
         vec_cm1_p1 = coords1[cand1_idx] - cm1
-        vec_cm1_p1 = utils.normalize(vec_cm1_p1)
+        vec_cm1_p1 /= np.linalg.norm(vec_cm1_p1)
         if np.linalg.norm(vec_cm1_p1) < 1e-9:
             logger.warning("CCA Stick V1 - Selected particle coincides with CM1.")
             vec_cm1_p1 = np.array([1.0, 0.0, 0.0])  # Arbitrary direction
@@ -532,13 +542,14 @@ class CCAggregator:
         # Refine contact point to be on surface of particle cand1_idx
         # Vector from particle center towards the calculated contact_point
         vec_p1_contact = contact_point - coords1[cand1_idx]
-        vec_p1_contact = utils.normalize(vec_p1_contact)
+        vec_p1_contact /= np.linalg.norm(vec_p1_contact)
         if np.linalg.norm(vec_p1_contact) < 1e-9:
             # logger.warning("CCA Stick V1 - Contact point direction undefined.")
             # If direction is undefined, maybe stick along original cm1-p1 vector?
+            temp = coords1[cand1_idx] - cm1
             final_contact_point_p1 = coords1[cand1_idx] + radii1[
                 cand1_idx
-            ] * utils.normalize(coords1[cand1_idx] - cm1)
+            ] * temp / np.linalg.norm(temp)
         else:
             final_contact_point_p1 = (
                 coords1[cand1_idx] + radii1[cand1_idx] * vec_p1_contact
@@ -575,7 +586,7 @@ class CCAggregator:
                     perform_rot1 = False  # No rotation needed
             else:  # Standard rotation
                 rot_angle1 = np.arccos(np.clip(dot_prod, -1.0, 1.0))
-                rot_axis1 = utils.cross_product(v1_u, v2_u)
+                rot_axis1 = np.cross(v1_u, v2_u)
         else:  # One vector is zero length
             perform_rot1 = False
 
@@ -649,7 +660,7 @@ class CCAggregator:
                     perform_rot2 = False
             else:
                 rot_angle2 = np.arccos(np.clip(dot_prod, -1.0, 1.0))
-                rot_axis2 = utils.cross_product(v1_u, v2_u)
+                rot_axis2 = np.cross(v1_u, v2_u)
         else:
             perform_rot2 = False
 
@@ -729,7 +740,7 @@ class CCAggregator:
                 # Clamp dot_prod before acos due to potential precision issues
                 dot_prod_clamped = np.clip(dot_prod, -1.0, 1.0)
                 rot_angle = np.arccos(dot_prod_clamped)
-                rot_axis = utils.cross_product(v1_u, v2_u)
+                rot_axis = np.cross(v1_u, v2_u)
         else:
             perform_rot = False
 

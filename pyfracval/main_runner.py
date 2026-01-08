@@ -120,31 +120,31 @@ def run_simulation(
         logger.error(
             f"PCA Subclustering failed (Failed on Subcluster {failed_subcluster_num})."
         )
-        logger.error("PCA Failure Diagnosis & Suggestions:")
-        logger.error(
-            f"  - The current target parameters (Df={sim_params.Df}, kf={sim_params.kf}) might be geometrically challenging during PCA."
-        )
-        logger.error("  - Common Fixes for PCA Failure (Try in order):")
-        logger.error(
-            f"    1. Increase target kf: Try `--kf {sim_params.kf + 0.1:.1f}` or `--kf {sim_params.kf + 0.2:.1f}`. (Often helps if Gamma or Sticking fails)."
-            # Decreasing kf is less common for PCA failures seen so far, but possible if Gamma calc itself fails
-            # logger.error(f"    Alt. Decrease target kf: Try `--kf {max(0.1, sim_params.kf - 0.1):.1f}` (May help if Gamma calculation fails).")
-        )
-        logger.error(
-            f"    2. Increase target Df: Try `--df {sim_params.Df + 0.05:.2f}` or `--df {sim_params.Df + 0.1:.1f}`."
-        )
-        logger.error(
-            f"    3. Increase overlap tolerance: Try `--tol-ov 1e-5` or `--tol-ov 1e-4` (If failure is during sticking/rotation)."
-        )
-        logger.error(
-            f"    4. Reduce subcluster size: Try `--n-subcl-perc {max(0.02, sim_params.n_subcl_percentage * 0.8):.2f}` (e.g., 0.08 if currently 0.1)."
-        )
-        logger.error(
-            "    5. Try a different random seed: Add `--seed <number>` or change the existing seed."
-        )
-        logger.error(
-            "    6. Increase max attempts: Use `--max-attempts <number>` (e.g., 10)."
-        )
+        # logger.error("PCA Failure Diagnosis & Suggestions:")
+        # logger.error(
+        #     f"  - The current target parameters (Df={sim_params.Df}, kf={sim_params.kf}) might be geometrically challenging during PCA."
+        # )
+        # logger.error("  - Common Fixes for PCA Failure (Try in order):")
+        # logger.error(
+        #     f"    1. Increase target kf: Try `--kf {sim_params.kf + 0.1:.1f}` or `--kf {sim_params.kf + 0.2:.1f}`. (Often helps if Gamma or Sticking fails)."
+        #     # Decreasing kf is less common for PCA failures seen so far, but possible if Gamma calc itself fails
+        #     # logger.error(f"    Alt. Decrease target kf: Try `--kf {max(0.1, sim_params.kf - 0.1):.1f}` (May help if Gamma calculation fails).")
+        # )
+        # logger.error(
+        #     f"    2. Increase target Df: Try `--df {sim_params.Df + 0.05:.2f}` or `--df {sim_params.Df + 0.1:.1f}`."
+        # )
+        # logger.error(
+        #     f"    3. Increase overlap tolerance: Try `--tol-ov 1e-5` or `--tol-ov 1e-4` (If failure is during sticking/rotation)."
+        # )
+        # logger.error(
+        #     f"    4. Reduce subcluster size: Try `--n-subcl-perc {max(0.02, sim_params.n_subcl_percentage * 0.8):.2f}` (e.g., 0.08 if currently 0.1)."
+        # )
+        # logger.error(
+        #     "    5. Try a different random seed: Add `--seed <number>` or change the existing seed."
+        # )
+        # logger.error(
+        #     "    6. Increase max attempts: Use `--max-attempts <number>` (e.g., 10)."
+        # )
         return False, None, None
     # --- End Enhanced PCA Handling ---
 
@@ -177,29 +177,29 @@ def run_simulation(
     # --- Enhanced CCA Failure Handling ---
     if cca_result is None or cca_runner.not_able_cca:
         logger.error("CCA Aggregation failed.")
-        logger.error("CCA Failure Diagnosis & Suggestions:")
-        logger.error(
-            "  - Failure often occurs during cluster pairing or sticking due to geometric constraints from target Df/kf."
-        )
-        logger.error(
-            f"  - Check logs for WARNings about 'RELAXED condition' during pairing or 'No initial candidates found' / 'Sticking failed' during sticking."
-        )
-        logger.error("  - Common Fixes for CCA Failure (Try in order):")
-        logger.error(
-            f"    1. Increase target kf: Try `--kf {sim_params.kf + 0.1:.1f}` or `--kf {sim_params.kf + 0.2:.1f}`. (Often helps relax pairing/sticking)."
-        )
-        logger.error(
-            f"    2. Increase target Df: Try `--df {sim_params.Df + 0.05:.2f}` or `--df {sim_params.Df + 0.1:.1f}`."
-        )
-        logger.error(
-            f"    3. Check CCA Pairing Factor: If warnings about RELAXED condition were frequent, the factor in `cca_agg.py` might need adjustment (currently hardcoded)."
-        )
-        logger.error(
-            "    4. Try a different random seed: Add `--seed <number>` or change the existing seed (affects PCA structure)."
-        )
-        logger.error(
-            "    5. Increase max attempts: Use `--max-attempts <number>` (e.g., 10)."
-        )
+        # logger.error("CCA Failure Diagnosis & Suggestions:")
+        # logger.error(
+        #     "  - Failure often occurs during cluster pairing or sticking due to geometric constraints from target Df/kf."
+        # )
+        # logger.error(
+        #     f"  - Check logs for WARNings about 'RELAXED condition' during pairing or 'No initial candidates found' / 'Sticking failed' during sticking."
+        # )
+        # logger.error("  - Common Fixes for CCA Failure (Try in order):")
+        # logger.error(
+        #     f"    1. Increase target kf: Try `--kf {sim_params.kf + 0.1:.1f}` or `--kf {sim_params.kf + 0.2:.1f}`. (Often helps relax pairing/sticking)."
+        # )
+        # logger.error(
+        #     f"    2. Increase target Df: Try `--df {sim_params.Df + 0.05:.2f}` or `--df {sim_params.Df + 0.1:.1f}`."
+        # )
+        # logger.error(
+        #     f"    3. Check CCA Pairing Factor: If warnings about RELAXED condition were frequent, the factor in `cca_agg.py` might need adjustment (currently hardcoded)."
+        # )
+        # logger.error(
+        #     "    4. Try a different random seed: Add `--seed <number>` or change the existing seed (affects PCA structure)."
+        # )
+        # logger.error(
+        #     "    5. Increase max attempts: Use `--max-attempts <number>` (e.g., 10)."
+        # )
         return False, None, None
     # --- End Enhanced CCA Handling ---
 

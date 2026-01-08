@@ -5,6 +5,7 @@ import logging
 from typing import Tuple
 
 import numpy as np
+import numpy.typing as npt
 from numba import jit, prange
 
 logger = logging.getLogger(__name__)
@@ -63,47 +64,47 @@ def sort_clusters(i_orden: np.ndarray) -> np.ndarray:
     return i_orden[sort_indices]
 
 
-def cross_product(a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    """Calculate the cross product of two 3D vectors.
+# def cross_product(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+#     """Calculate the cross product of two 3D vectors.
 
-    Parameters
-    ----------
-    a : np.ndarray
-        The first 3D vector.
-    b : np.ndarray
-        The second 3D vector.
+#     Parameters
+#     ----------
+#     a : np.ndarray
+#         The first 3D vector.
+#     b : np.ndarray
+#         The second 3D vector.
 
-    Returns
-    -------
-    np.ndarray
-        The 3D cross product vector.
+#     Returns
+#     -------
+#     np.ndarray
+#         The 3D cross product vector.
 
-    See Also
-    --------
-    numpy.cross : NumPy's implementation.
-    """
-    return np.cross(a, b)
+#     See Also
+#     --------
+#     numpy.cross : NumPy's implementation.
+#     """
+#     return np.cross(a, b)
 
 
-def normalize(v: np.ndarray) -> np.ndarray:
-    """Normalize a vector to unit length.
+# def normalize(v: np.ndarray) -> np.ndarray:
+#     """Normalize a vector to unit length.
 
-    Returns a zero vector if the input vector's norm is close to zero.
+#     Returns a zero vector if the input vector's norm is close to zero.
 
-    Parameters
-    ----------
-    v : np.ndarray
-        The vector (1D array) to normalize.
+#     Parameters
+#     ----------
+#     v : np.ndarray
+#         The vector (1D array) to normalize.
 
-    Returns
-    -------
-    np.ndarray
-        The normalized vector, or a zero vector if the norm is negligible.
-    """
-    norm = np.linalg.norm(v)
-    if norm < 1e-12:  # Use tolerance instead of exact zero check
-        return np.zeros_like(v)
-    return v / norm
+#     Returns
+#     -------
+#     np.ndarray
+#         The normalized vector, or a zero vector if the norm is negligible.
+#     """
+#     norm = np.linalg.norm(v)
+#     if norm < 1e-12:  # Use tolerance instead of exact zero check
+#         return np.zeros_like(v)
+#     return v / norm
 
 
 def calculate_mass(radii: np.ndarray) -> np.ndarray:
@@ -147,25 +148,84 @@ def calculate_rg(radii: np.ndarray, npp: int, df: float, kf: float) -> float:
         `kf` or `df` is zero, or if calculation fails (e.g., log error).
     """
     rg = 0.0
+    # TODO: throw an error just in case
     if npp == 0 or kf == 0 or df == 0:
         return 0.0
 
+    # TODO: check radii beforehand
+    valid_r = radii[radii > 1e-12]  # Filter near-zero radii
     try:
-        valid_r = radii[radii > 1e-12]  # Filter near-zero radii
         if len(valid_r) > 0:
             # Geometric mean radius
             log_r_mean = np.sum(np.log(valid_r)) / len(valid_r)
             geo_mean_r = np.exp(log_r_mean)
             rg = geo_mean_r * (npp / kf) ** (1.0 / df)
-        # else: rg remains 0.0
     except (ValueError, ZeroDivisionError, OverflowError, RuntimeWarning) as e:
         # Catch potential warnings from log(<=0) as well
         logger.warning(
             f"Could not calculate rg ({e}). npp={npp}, len(valid_r)={len(valid_r)}"
         )
-        rg = 0.0  # Assign a default value
 
-    return rg
+    return max(rg, 0.0)
+
+
+def gamma_calculation(
+    m1: float,
+    rg1: float,
+    radii1: npt.NDArray,
+    m2: float,
+    rg2: float,
+    radii2: npt.NDArray,
+    df: float,
+    kf: float,
+    heuristic: bool = True,
+) -> tuple[bool, float]:
+    """
+    Calculates Gamma_pc for adding the next monomer (aggregate 2).
+    """
+    n1 = radii1.size
+    n2 = radii2.size
+
+    n3 = n1 + n2
+    m3 = m1 + m2
+
+    if heuristic:
+        m1 = n1
+        m2 = n2
+        m3 = n3
+
+    # Radii of particles already in cluster + the next one to be added
+    combined_radii = np.concatenate((radii1, radii2))
+    rg3 = calculate_rg(combined_radii, n3, df, kf)
+
+    # Heuristic from Fortran: ensure rg3 is not smaller than rg1
+    # (avoids issues if rg calculation is noisy for small N)
+    if n2 == 1 and rg3 < rg1:
+        logger.info(f"Gamma calc: Adjusted rg3 from {rg3:.2e} to match rg1 {rg1:.2e}")
+        rg3 = rg1
+
+    gamma_pc = 0.0
+    gamma_real = False
+
+    term1 = (m3**2) * (rg3**2)
+    term2 = m3 * (m1 * rg1**2 + m2 * rg2**2)  # rg2 is for monomer
+    denominator = m1 * m2
+    radicand = term1 - term2
+    try:
+        gamma_pc = np.sqrt(radicand / denominator)
+        gamma_real = True
+    except (ValueError, ZeroDivisionError, OverflowError) as e:
+        logger.warning(f"Gamma calculation internal failed: {e}")
+        logger.warning(
+            f"Gamma_pc calculation non-real or denominator zero: "
+            f"n1={n1}, m1={m1:.2e}, rg1={rg1:.2e}, "
+            f"n2={n2}, m2={m2:.2e}, rg2={rg2:.2e}, "
+            f"n3={n3}, m3={m3:.2e}, rg3={rg3:.2e} -> "
+            f"radicand={radicand:.2e}, denominator={denominator:.2e}"
+        )
+        gamma_real = False
+
+    return gamma_real, gamma_pc
 
 
 def calculate_cluster_properties(
@@ -247,31 +307,28 @@ def rodrigues_rotation(
     ValueError
         If input `vectors` is not 1D (3,) or 2D (N, 3).
     """
-    axis = normalize(axis)
-    if np.linalg.norm(axis) < FLOATING_POINT_ERROR:  # No rotation if axis is zero
+    # No rotation if axis is zero
+    if np.linalg.norm(axis) < FLOATING_POINT_ERROR:
         return vectors
+    axis /= np.linalg.norm(axis)
 
-    k = axis
-    v = vectors
     cos_a = np.cos(angle)
     sin_a = np.sin(angle)
 
     # Apply formula: v_rot = v*cos(a) + (k x v)*sin(a) + k*(k.v)*(1-cos(a))
     # Handle both single vector and multiple vectors (Nx3)
-    if v.ndim == 1:
-        cross_kv = np.cross(k, v)
-        dot_kv = np.dot(k, v)
-        v_rot = v * cos_a + cross_kv * sin_a + k * dot_kv * (1.0 - cos_a)
-    elif v.ndim == 2:
-        cross_kv = np.cross(k[np.newaxis, :], v, axis=1)
-        dot_kv = np.dot(v, k)  # Result is N element array
-        v_rot = (
-            v * cos_a
-            + cross_kv * sin_a
-            + k[np.newaxis, :] * dot_kv[:, np.newaxis] * (1.0 - cos_a)
-        )
+    if vectors.ndim == 1:
+        dot_kv = np.dot(axis, vectors)
+        cross_kv = np.cross(axis, vectors)
+    elif vectors.ndim == 2:
+        axis = axis[np.newaxis, :]
+        dot_kv = np.sum(axis * vectors, axis=1)[:, np.newaxis]
+        cross_kv = np.cross(axis, vectors, axis=1)
+
+    # elif vectors.ndim > 2:
     else:
         raise ValueError("Input vectors must be 3D or Nx3")
+    v_rot = vectors * cos_a + cross_kv * sin_a + axis * dot_kv * (1.0 - cos_a)
 
     return v_rot
 
@@ -307,126 +364,186 @@ def two_sphere_intersection(
             - j_vec (np.ndarray): Second basis vector of the intersection plane.
             - valid (bool): True if a valid intersection (circle or point)
               exists, False otherwise (e.g., separate, contained, coincident).
-    """
-    x1, y1, z1, r1 = sphere_1
-    x2, y2, z2, r2 = sphere_2
-    center1 = sphere_1[:3]
-    center2 = sphere_2[:3]
-    v12 = center2 - center1
-    distance = np.linalg.norm(v12)
 
-    # Default invalid return values
+    Note
+    ----
+    https://mathworld.wolfram.com/Sphere-SphereIntersection.html
+    """
     invalid_ret = (0.0, 0.0, 0.0, 0.0, np.zeros(4), np.zeros(3), np.zeros(3), False)
 
-    # --- Check for edge cases ---
-    # 1. Spheres are too far apart
-    if distance > r1 + r2 + FLOATING_POINT_ERROR:
+    point1 = sphere_1[:3]
+    point2 = sphere_2[:3]
+    r1 = sphere_1[3]
+    r2 = sphere_2[3]
+
+    dp = point2 - point1
+    distance = np.linalg.norm(dp)
+
+    if distance > r1 + r2:
         logger.debug(
             f"TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1 + r2:.4f})"
         )
         return invalid_ret
-    # 2. One sphere is contained within the other without touching
-    if distance < abs(r1 - r2) - FLOATING_POINT_ERROR:
+    if distance < abs(r1 - r2):
         logger.debug(
             f"TSI: Sphere contained within other (d={distance:.4f}, |r1-r2|={abs(r1 - r2):.4f})"
         )
         return invalid_ret
-    # 3. Spheres coincide
-    if distance < FLOATING_POINT_ERROR and abs(r1 - r2) < FLOATING_POINT_ERROR:
-        logger.debug("TSI: Spheres coincide")
-        # Intersection is the whole sphere surface - requires different handling if needed
-        return invalid_ret  # Cannot define a unique circle
 
-    # --- Handle Touching Point Case ---
-    is_touching = False
-    touch_point = np.zeros(3)
-    if abs(distance - (r1 + r2)) < FLOATING_POINT_ERROR:  # Touching externally
-        is_touching = True
-        # Point is on the line segment between centers
-        if distance > FLOATING_POINT_ERROR:
-            touch_point = center1 + v12 * (r1 / distance)
-        else:  # Should be caught by coincident case, but fallback
-            touch_point = center1
-    elif abs(distance - abs(r1 - r2)) < FLOATING_POINT_ERROR:  # Touching internally
-        is_touching = True
-        # Point is on the line extending from centers
-        if distance > FLOATING_POINT_ERROR:
-            if r1 > r2:
-                touch_point = center1 + v12 * (r1 / distance)
-            else:  # r2 > r1
-                touch_point = center2 + (-v12) * (
-                    r2 / distance
-                )  # Point on sphere 2 surface
-        else:  # Should be caught by coincident case
-            touch_point = center1
+    k_vec = dp / distance
+    plane_distance = (distance**2 + r1**2 - r2**2) / (2 * distance)
+    center0 = point1 + plane_distance * k_vec
+    r0 = np.sqrt(r1**2 - plane_distance**2)
 
-    if is_touching:
-        logger.debug(f"TSI: Spheres touching at point {touch_point}")
-        # Return the single point, theta=0, r0=0
-        vec_0_touch = np.concatenate((touch_point, [0.0]))
-        # i_vec, j_vec are ill-defined, return zeros
-        return (
-            touch_point[0],
-            touch_point[1],
-            touch_point[2],
-            0.0,
-            vec_0_touch,
-            np.zeros(3),
-            np.zeros(3),
-            True,
-        )
+    if abs(np.dot(k_vec, np.array([1.0, 0.0, 0.0]))) < 1 / np.sqrt(3):
+        cross_ref = np.array([1.0, 0.0, 0.0])
+    elif abs(np.dot(k_vec, np.array([0.0, 1.0, 0.0]))) < 1 / np.sqrt(3):
+        cross_ref = np.array([0.0, 1.0, 0.0])
+    else:
+        cross_ref = np.array([0.0, 0.0, 1.0])
+    i_vec = np.cross(k_vec, cross_ref)
+    i_vec /= np.linalg.norm(i_vec)
+    j_vec = np.cross(i_vec, k_vec)
+    j_vec /= np.linalg.norm(j_vec)
 
-    # --- Standard Intersection Case (Circle) ---
-    try:
-        # distance 'd' is already computed
-        # distance from center1 to intersection plane:
-        dist1_plane = (distance**2 - r2**2 + r1**2) / (2 * distance)
+    theta = 2.0 * np.pi * np.random.rand()
 
-        # Radius of the intersection circle squared
-        r0_sq = r1**2 - dist1_plane**2
-        if r0_sq < -FLOATING_POINT_ERROR:  # Tolerance check for numerical issues
-            logger.warning(
-                f"TSI: Negative r0^2 ({r0_sq}) in sphere intersection. d={distance}, r1={r1}, r2={r2}"
-            )
-            return invalid_ret
-        r0 = np.sqrt(max(0.0, r0_sq))  # Ensure non-negative before sqrt
-
-        # Center of the intersection circle
-        unit_v12 = v12 / distance
-        center0 = center1 + unit_v12 * dist1_plane
-        x0, y0, z0 = center0
-
-        # Define basis vectors for the intersection plane (perpendicular to v12)
-        # k_vec is the normal to the plane (unit_v12)
-        k_vec = unit_v12
-
-        # Find a vector i_vec perpendicular to k_vec robustly
-        # If k_vec is close to x-axis, use y-axis for cross product, otherwise use x-axis
-        if abs(np.dot(k_vec, np.array([1.0, 0.0, 0.0]))) < 0.9:
-            cross_ref = np.array([1.0, 0.0, 0.0])
-        else:
-            cross_ref = np.array([0.0, 1.0, 0.0])
-
-        j_vec = normalize(cross_product(k_vec, cross_ref))
-        i_vec = normalize(
-            cross_product(j_vec, k_vec)
-        )  # Ensure i,j,k form right-handed system
-
-        # Generate random angle theta
-        theta = 2.0 * np.pi * np.random.rand()
-
-        # Calculate random point on the circle
-        point_on_circle = (
-            center0 + r0 * np.cos(theta) * i_vec + r0 * np.sin(theta) * j_vec
-        )
-        x, y, z = point_on_circle
-
-        vec_0 = np.array([x0, y0, z0, r0])
-        return x, y, z, theta, vec_0, i_vec, j_vec, True
-
-    except (ZeroDivisionError, ValueError) as e:
-        logger.error(f"Error during sphere intersection calculation: {e}")
+    center_k = center0 + r0 * (np.cos(theta) * i_vec + np.sin(theta) * j_vec)
+    if np.any(np.isnan(center_k)):
+        print("""
+              Seems like these two spheres do no intersect!
+              Open up an issue and inform us about it :)
+              """)
         return invalid_ret
+
+    return (
+        center_k[0],
+        center_k[1],
+        center_k[2],
+        theta,
+        np.array([center0[0], center0[1], center0[2], r0]),
+        i_vec,
+        j_vec,
+        True,
+    )
+
+    # x1, y1, z1, r1 = sphere_1
+    # x2, y2, z2, r2 = sphere_2
+    # center1 = sphere_1[:3]
+    # center2 = sphere_2[:3]
+    # v12 = center2 - center1
+    # distance = np.linalg.norm(v12)
+
+    # # Default invalid return values
+    # invalid_ret = (0.0, 0.0, 0.0, 0.0, np.zeros(4), np.zeros(3), np.zeros(3), False)
+
+    # # --- Check for edge cases ---
+    # # 1. Spheres are too far apart
+    # if distance > r1 + r2 + FLOATING_POINT_ERROR:
+    #     logger.debug(
+    #         f"TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1 + r2:.4f})"
+    #     )
+    #     return invalid_ret
+    # # 2. One sphere is contained within the other without touching
+    # if distance < abs(r1 - r2) - FLOATING_POINT_ERROR:
+    #     logger.debug(
+    #         f"TSI: Sphere contained within other (d={distance:.4f}, |r1-r2|={abs(r1 - r2):.4f})"
+    #     )
+    #     return invalid_ret
+    # # TODO: check 2 and 3 should be the same?
+    # # 3. Spheres coincide
+    # if distance < FLOATING_POINT_ERROR and abs(r1 - r2) < FLOATING_POINT_ERROR:
+    #     logger.debug("TSI: Spheres coincide")
+    #     # Intersection is the whole sphere surface - requires different handling if needed
+    #     return invalid_ret  # Cannot define a unique circle
+
+    # # --- Handle Touching Point Case ---
+    # is_touching = False
+    # touch_point = np.zeros(3)
+    # if abs(distance - (r1 + r2)) < FLOATING_POINT_ERROR:  # Touching externally
+    #     is_touching = True
+    #     # Point is on the line segment between centers
+    #     if distance > FLOATING_POINT_ERROR:
+    #         touch_point = center1 + v12 * (r1 / distance)
+    #     else:  # Should be caught by coincident case, but fallback
+    #         touch_point = center1
+    # elif abs(distance - abs(r1 - r2)) < FLOATING_POINT_ERROR:  # Touching internally
+    #     is_touching = True
+    #     # Point is on the line extending from centers
+    #     if distance > FLOATING_POINT_ERROR:
+    #         if r1 > r2:
+    #             touch_point = center1 + v12 * (r1 / distance)
+    #         else:  # r2 > r1
+    #             touch_point = center2 + (-v12) * (
+    #                 r2 / distance
+    #             )  # Point on sphere 2 surface
+    #     else:  # Should be caught by coincident case
+    #         touch_point = center1
+
+    # if is_touching:
+    #     logger.debug(f"TSI: Spheres touching at point {touch_point}")
+    #     # Return the single point, theta=0, r0=0
+    #     vec_0_touch = np.concatenate((touch_point, [0.0]))
+    #     # i_vec, j_vec are ill-defined, return zeros
+    #     return (
+    #         touch_point[0],
+    #         touch_point[1],
+    #         touch_point[2],
+    #         0.0,
+    #         vec_0_touch,
+    #         np.zeros(3),
+    #         np.zeros(3),
+    #         True,
+    #     )
+
+    # # --- Standard Intersection Case (Circle) ---
+    # try:
+    #     # distance 'd' is already computed
+    #     # distance from center1 to intersection plane:
+    #     dist1_plane = (distance**2 - r2**2 + r1**2) / (2 * distance)
+
+    #     # Radius of the intersection circle squared
+    #     r0_sq = r1**2 - dist1_plane**2
+    #     if r0_sq < -FLOATING_POINT_ERROR:  # Tolerance check for numerical issues
+    #         logger.warning(
+    #             f"TSI: Negative r0^2 ({r0_sq}) in sphere intersection. d={distance}, r1={r1}, r2={r2}"
+    #         )
+    #         return invalid_ret
+    #     r0 = np.sqrt(max(0.0, r0_sq))  # Ensure non-negative before sqrt
+
+    #     # Center of the intersection circle
+    #     unit_v12 = v12 / distance
+    #     center0 = center1 + unit_v12 * dist1_plane
+    #     x0, y0, z0 = center0
+
+    #     # Define basis vectors for the intersection plane (perpendicular to v12)
+    #     # k_vec is the normal to the plane (unit_v12)
+    #     k_vec = unit_v12
+
+    #     # Find a vector i_vec perpendicular to k_vec robustly
+    #     # If k_vec is close to x-axis, use y-axis for cross product, otherwise use x-axis
+    #     if abs(np.dot(k_vec, np.array([1.0, 0.0, 0.0]))) < 0.9:
+    #         cross_ref = np.array([1.0, 0.0, 0.0])
+    #     else:
+    #         cross_ref = np.array([0.0, 1.0, 0.0])
+
+    #     j_vec = normalize(cross_product(k_vec, cross_ref))
+    #     i_vec = normalize(cross_product(j_vec, k_vec))
+    #     # Generate random angle theta
+    #     theta = 2.0 * np.pi * np.random.rand()
+
+    #     # Calculate random point on the circle
+    #     point_on_circle = (
+    #         center0 + r0 * np.cos(theta) * i_vec + r0 * np.sin(theta) * j_vec
+    #     )
+    #     x, y, z = point_on_circle
+
+    #     vec_0 = np.array([x0, y0, z0, r0])
+    #     return x, y, z, theta, vec_0, i_vec, j_vec, True
+
+    # except (ZeroDivisionError, ValueError) as e:
+    #     logger.error(f"Error during sphere intersection calculation: {e}")
+    #     return invalid_ret
 
 
 @jit(parallel=True, fastmath=True, cache=True)

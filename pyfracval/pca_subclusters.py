@@ -4,6 +4,7 @@ import logging
 import math
 
 import numpy as np
+from pydantic import BaseModel, ConfigDict, Field
 
 from .pca_agg import PCAggregator
 
@@ -13,7 +14,7 @@ from .pca_agg import PCAggregator
 logger = logging.getLogger(__name__)
 
 
-class Subclusterer:
+class Subclusterer(BaseModel):
     """Handles division of particles into subclusters using PCA.
 
     Takes a full set of initial particle radii, determines appropriate
@@ -56,82 +57,94 @@ class Subclusterer:
         Index of the last subcluster processed (useful for error reporting).
     """
 
-    def __init__(
-        self,
-        initial_radii: np.ndarray,
-        df: float,  # Target Df for final aggregate
-        kf: float,  # Target kf for final aggregate
-        tol_ov: float,
-        n_subcl_percentage: float,
-        # Optional overrides for PCA stage Df/kf could be added here
-        # pca_df_override: float | None = None,
-        # pca_kf_override: float | None = None,
-    ):
-        self.N = len(initial_radii)
-        self.initial_radii = initial_radii.copy()  # Use a copy
-        self.df = df  # Store target Df
-        self.kf = kf  # Store target kf
-        self.tol_ov = tol_ov
-        self.n_subcl_percentage = n_subcl_percentage
-        # self.pca_df_override = pca_df_override # Store overrides if used
-        # self.pca_kf_override = pca_kf_override
+    initial_radii: np.ndarray
+    df: float = Field(..., gt=1.0, lt=3.0)
+    kf: float = Field(..., gt=0.0)
+    tol_ov: float
+    n_subcl_percentage: float = Field(default=0.1, lt=1.0)
+
+    N: int = Field(default=0)
+    all_coords: np.ndarray = Field(default=np.zeros(0))
+    all_radii: np.ndarray = Field(default=np.zeros(0))
+    i_orden: np.ndarray | None = Field(default=None)
+    number_clusters: int = Field(default=0)
+    not_able_pca: bool = Field(default=False)
+    number_clusters_processed: int = Field(default=0)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def model_post_init(self, __context):
+        self.N = len(self.initial_radii)
+        self.initial_radii = self.initial_radii.copy()  # Use a copy
 
         self.all_coords = np.zeros((self.N, 3), dtype=float)
         self.all_radii = np.zeros(self.N, dtype=float)
-        self.i_orden: np.ndarray | None = None
-        self.number_clusters: int = 0
-        self.not_able_pca: bool = False
-        self.number_clusters_processed = 0  # Track for error reporting
+
+    # def __init__(
+    #     self,
+    #     initial_radii: np.ndarray,
+    #     df: float,  # Target Df for final aggregate
+    #     kf: float,  # Target kf for final aggregate
+    #     tol_ov: float,
+    #     n_subcl_percentage: float,
+    #     # Optional overrides for PCA stage Df/kf could be added here
+    #     # pca_df_override: float | None = None,
+    #     # pca_kf_override: float | None = None,
+    # ):
+    #     self.N = len(initial_radii)
+    #     self.initial_radii = initial_radii.copy()  # Use a copy
+    #     self.df = df  # Store target Df
+    #     self.kf = kf  # Store target kf
+    #     self.tol_ov = tol_ov
+    #     self.n_subcl_percentage = n_subcl_percentage
+    #     # self.pca_df_override = pca_df_override # Store overrides if used
+    #     # self.pca_kf_override = pca_kf_override
+
+    #     self.all_coords = np.zeros((self.N, 3), dtype=float)
+    #     self.all_radii = np.zeros(self.N, dtype=float)
+    #     self.i_orden: np.ndarray | None = None
+    #     self.number_clusters: int = 0
+    #     self.not_able_pca: bool = False
+    #     self.number_clusters_processed = 0  # Track for error reporting
 
     def _determine_subcluster_sizes(self) -> np.ndarray:
         """Calculates the size of each subcluster."""
         # --- Heuristic for N_subcl based on N (from Fortran comments/logic) ---
         if self.N < 50:
-            # Fortran uses Nsub=5, leading to many small clusters
-            # Let's use the percentage but ensure min size (e.g., 5?)
-            n_subcl_target = max(5, int(self.n_subcl_percentage * self.N))
-            # Ensure n_subcl is at least 2
-            n_subcl = max(2, n_subcl_target)
+            # # Fortran uses Nsub=5, leading to many small clusters
+            # # Let's use the percentage but ensure min size (e.g., 5?)
+            # n_subcl_target = max(5, int(self.n_subcl_percentage * self.N))
+            # # Ensure n_subcl is at least 2
+            # n_subcl = max(2, n_subcl_target)
+            n_subcl = 5
         elif self.N > 500:
-            # Fortran uses Nsub=50
-            n_subcl_target = max(50, int(self.n_subcl_percentage * self.N))
-            n_subcl = n_subcl_target  # Allow larger for large N if percentage dictates
+            # # Fortran uses Nsub=50
+            # n_subcl_target = max(50, int(self.n_subcl_percentage * self.N))
+            # n_subcl = n_subcl_target  # Allow larger for large N if percentage dictates
+            n_subcl = 50
         else:  # 50 <= N <= 500
-            # Use percentage, but ensure min size (e.g., 5 or 10?)
-            n_subcl_target = max(10, int(self.n_subcl_percentage * self.N))
-            n_subcl = n_subcl_target
+            # # Use percentage, but ensure min size (e.g., 5 or 10?)
+            # n_subcl_target = max(10, int(self.n_subcl_percentage * self.N))
+            # n_subcl = n_subcl_target
+            n_subcl = int(self.n_subcl_percentage * self.N)
 
-        # Ensure n_subcl is not larger than N
-        n_subcl = min(n_subcl, self.N)
+        # # Ensure n_subcl is not larger than N
+        # n_subcl = min(n_subcl, self.N)
 
         # Calculate number of clusters needed
-        # Handle case where N < n_subcl (results in 1 cluster)
-        if self.N < n_subcl:
-            self.number_clusters = 1
-            subcluster_sizes = np.array([self.N], dtype=int)
-        else:
-            self.number_clusters = math.ceil(self.N / n_subcl)
-            subcluster_sizes = np.full(self.number_clusters, n_subcl, dtype=int)
-            # Adjust the last cluster size if N is not perfectly divisible
-            remainder = self.N % n_subcl
-            if remainder != 0:
-                actual_size_last = self.N - n_subcl * (self.number_clusters - 1)
-                subcluster_sizes[-1] = actual_size_last
-            # elif self.N % n_subcl == 0: # No adjustment needed
-            #     pass
+        self.number_clusters = math.ceil(self.N / n_subcl)
+        subcluster_sizes = np.full(self.number_clusters, n_subcl, dtype=int)
+        # Adjust the last cluster size if N is not perfectly divisible
+        remainder = self.N % n_subcl
+        if remainder != 0:
+            # remainder = self.N - n_subcl * (self.number_clusters - 1)
+            subcluster_sizes[-1] = remainder
 
         # Sanity check
         if np.sum(subcluster_sizes) != self.N:
-            logger.error(  # Changed to error as this indicates a logic flaw
+            raise ValueError(
                 f"Subcluster size calculation error: Sum={np.sum(subcluster_sizes)} != N={self.N}. Sizes={subcluster_sizes}"
             )
-            # Attempt recovery, though it might mask the root cause
-            subcluster_sizes[-1] = self.N - np.sum(subcluster_sizes[:-1])
-            if subcluster_sizes[-1] <= 0:  # Check if last size became invalid
-                raise ValueError(
-                    "Subcluster size calculation resulted in non-positive size."
-                )
-            logger.warning(f"Corrected last size to: {subcluster_sizes[-1]}")
 
         logger.info(
             f"Subclustering N={self.N} into {self.number_clusters} clusters with target size ~{n_subcl}."
@@ -180,6 +193,7 @@ class Subclusterer:
             f"--- Using fixed parameters for PCA stage: Df={pca_df:.2f}, kf={pca_kf:.2f} ---"
         )
 
+        # TODO: replace with enumerate, its cleaner
         for i in range(self.number_clusters):
             self.number_clusters_processed = i  # Track for error reporting
             num_particles_in_subcluster = subcluster_sizes[i]
@@ -187,6 +201,7 @@ class Subclusterer:
                 f"--- Processing Subcluster {i + 1}/{self.number_clusters} (Size: {num_particles_in_subcluster}) ---"
             )
 
+            # TODO: why creash if only one subcluster is 1 (last one?)
             if num_particles_in_subcluster < 2:
                 logger.error(
                     f"Subcluster {i + 1} has size {num_particles_in_subcluster}, needs >= 2 for PCA."
@@ -201,12 +216,7 @@ class Subclusterer:
             subcluster_radii = self.initial_radii[idx_start:idx_end]
 
             # Run PCA for this subcluster using the *fixed* pca_df, pca_kf
-            pca_runner = PCAggregator(
-                subcluster_radii,
-                pca_df,  # Use fixed PCA Df
-                pca_kf,  # Use fixed PCA kf
-                self.tol_ov,
-            )
+            pca_runner = PCAggregator(subcluster_radii, pca_df, pca_kf, self.tol_ov)
             subcluster_data = pca_runner.run()  # Returns Nx4 [X,Y,Z,R] or None
 
             if subcluster_data is None or pca_runner.not_able_pca:
@@ -242,9 +252,8 @@ class Subclusterer:
             self.i_orden[i, :] = [start_cluster_idx, end_cluster_idx, num_added]
 
             # Update indices for next iteration
-            current_n_start_idx += (
-                num_particles_in_subcluster  # Advance by expected size
-            )
+            # Advance by expected size
+            current_n_start_idx += num_particles_in_subcluster
             current_fill_idx += num_added  # Advance by actual added size
 
         # Final check after loop

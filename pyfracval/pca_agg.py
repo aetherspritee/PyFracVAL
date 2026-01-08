@@ -124,73 +124,96 @@ class PCAggregator:
                 self.coords[0] * self.mass[0] + self.coords[1] * self.mass[1]
             ) / self.m1
         else:
-            self.cm = np.mean(self.coords[: self.n1], axis=0)  # Use n1 slice
+            self.cm = np.mean(self.coords[: self.n1], axis=0)
 
         # Initial r_max (max distance from CM)
         dist_0_cm = np.linalg.norm(self.coords[0] - self.cm)
         dist_1_cm = np.linalg.norm(self.coords[1] - self.cm)
-        self.r_max = max(dist_0_cm, dist_1_cm)
+        self.r_max = float(max(dist_0_cm, dist_1_cm))
 
-    def _gamma_calculation(self, m2: float, rg2: float) -> tuple[bool, float]:
+    def _gamma_calculation(
+        self,
+        m2: float,
+        rg2: float,
+        heuristic: bool = True,
+    ) -> tuple[bool, float]:
         """
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
         """
-        n2 = 1
-        n3 = self.n1 + n2
-        m3 = self.m1 + m2
-
-        # Ensure index is valid before accessing initial_radii
-        if self.n1 >= self.N:
-            logger.error(
-                f"Gamma calculation requested for particle index {self.n1} >= N ({self.N})"
+        if heuristic:
+            return utils.gamma_calculation(
+                self.n1,
+                self.rg1,
+                self.radii[: self.n1],
+                1,
+                rg2,
+                np.array([self.initial_radii[self.n1]]),
+                self.df,
+                self.kf,
             )
-            return False, 0.0
-
-        # Radii of particles already in cluster + the next one to be added
-        combined_radii = np.concatenate(
-            (self.radii[: self.n1], [self.initial_radii[self.n1]])
-        )
-        rg3 = utils.calculate_rg(combined_radii, n3, self.df, self.kf)
-
-        # Heuristic from Fortran: ensure rg3 is not smaller than rg1
-        # (avoids issues if rg calculation is noisy for small N)
-        if self.rg1 > 0 and rg3 < self.rg1:
-            logger.info(
-                f"Gamma calc: Adjusted rg3 from {rg3:.2e} to match rg1 {self.rg1:.2e}"
+        else:
+            return utils.gamma_calculation(
+                self.m1,
+                self.rg1,
+                self.radii[: self.n1],
+                m2,
+                rg2,
+                np.array([self.initial_radii[self.n1]]),
+                self.df,
+                self.kf,
             )
-            rg3 = self.rg1
+        # n1 = self.n1
+        # n2 = 1
+        # n3 = n1 + n2
+        # m1 = self.m1
+        # m3 = m1 + m2
 
-        gamma_pc = 0.0
-        gamma_real = False
+        # if heuristic:
+        #     m1 = n1
+        #     m2 = n2
+        #     m3 = n3
 
-        try:
-            term1 = (m3**2) * (rg3**2)
-            term2 = m3 * (self.m1 * self.rg1**2 + m2 * rg2**2)  # rg2 is for monomer
-            denominator = self.m1 * m2
+        # # Ensure index is valid before accessing initial_radii
+        # if n1 >= self.N:
+        #     logger.error(
+        #         f"Gamma calculation requested for particle index {n1} >= N ({self.N})"
+        #     )
+        #     return False, 0.0
 
-            # Check if radicand is positive and denominator is non-zero
-            radicand = term1 - term2
-            if (
-                radicand > utils.FLOATING_POINT_ERROR
-                and denominator > utils.FLOATING_POINT_ERROR
-            ):  # Use tolerance
-                gamma_pc = np.sqrt(radicand / denominator)
-                gamma_real = True
-            else:
-                # Keep gamma_real False
-                logger.debug(
-                    f"Gamma_pc calculation non-real or denominator zero: "
-                    f"n1={self.n1}, m1={self.m1:.2e}, rg1={self.rg1:.2e}, "
-                    f"m2={m2:.2e}, rg2={rg2:.2e}, "
-                    f"m3={m3:.2e}, rg3={rg3:.2e} -> "
-                    f"radicand={radicand:.2e}, denominator={denominator:.2e}"
-                )
+        # # Radii of particles already in cluster + the next one to be added
+        # combined_radii = np.concatenate((self.radii[:n1], [self.initial_radii[n1]]))
+        # rg3 = utils.calculate_rg(combined_radii, n3, self.df, self.kf)
 
-        except (ValueError, ZeroDivisionError, OverflowError) as e:
-            logger.warning(f"Gamma calculation internal failed: {e}")
-            gamma_real = False
+        # # Heuristic from Fortran: ensure rg3 is not smaller than rg1
+        # # (avoids issues if rg calculation is noisy for small N)
+        # if self.rg1 > 0 and rg3 < self.rg1:
+        #     logger.info(
+        #         f"Gamma calc: Adjusted rg3 from {rg3:.2e} to match rg1 {self.rg1:.2e}"
+        #     )
+        #     rg3 = self.rg1
 
-        return gamma_real, gamma_pc
+        # gamma_pc = 0.0
+        # gamma_real = False
+
+        # term1 = (m3**2) * (rg3**2)
+        # term2 = m3 * (m1 * self.rg1**2 + m2 * rg2**2)  # rg2 is for monomer
+        # denominator = m1 * m2
+        # radicand = term1 - term2
+        # try:
+        #     gamma_pc = np.sqrt(radicand / denominator)
+        #     gamma_real = True
+        # except (ValueError, ZeroDivisionError, OverflowError) as e:
+        #     logger.warning(f"Gamma calculation internal failed: {e}")
+        #     logger.warning(
+        #         f"Gamma_pc calculation non-real or denominator zero: "
+        #         f"n1={n1}, m1={m1:.2e}, rg1={self.rg1:.2e}, "
+        #         f"m2={m2:.2e}, rg2={rg2:.2e}, "
+        #         f"m3={m3:.2e}, rg3={rg3:.2e} -> "
+        #         f"radicand={radicand:.2e}, denominator={denominator:.2e}"
+        #     )
+        #     gamma_real = False
+
+        # return gamma_real, gamma_pc
 
     def _select_candidates(
         self, radius_k: float, gamma_pc: float, gamma_real: bool
@@ -532,9 +555,7 @@ class PCAggregator:
 
             # --- Outer loop to allow re-searching/swapping if all candidates fail overlap ---
             search_attempt = 0
-            max_search_attempts = (
-                self.N
-            )  # Limit attempts to prevent infinite loops in edge cases
+            max_search_attempts = self.N
             sticking_successful = False
 
             while not sticking_successful and search_attempt < max_search_attempts:
@@ -553,9 +574,8 @@ class PCAggregator:
                 ) = search_result
 
                 # Check if search failed completely (no candidates even after swaps)
-                if (
-                    initial_candidate_idx < 0 or not gamma_real
-                ):  # Don't need len(candidates_list) check here
+                # Don't need len(candidates_list) check here
+                if initial_candidate_idx < 0 or not gamma_real:
                     logger.error(
                         f"PCA failed Search/Swap for k={k} (Attempt {search_attempt}). No valid gamma/candidates found even after swaps."
                     )
