@@ -279,12 +279,18 @@ class PCAggregator:
         return np.array(candidates, dtype=int), self.r_max  # Return updated r_max
 
     def _search_and_select_candidate(
-        self, k: int, considered_indices: list[int]
+        self, k: int, considered_indices: list[int], force_swap: bool = False
     ) -> tuple[int, float, float, bool, float, np.ndarray]:
         """
         Handles the complex logic of selecting a candidate, potentially swapping
         monomer 'k' with another if the initial attempt yields no candidates.
         Corresponds roughly to the loop calling `Search_list` and `Random_select_list`.
+
+        Args:
+            k: The index of the particle being added to the aggregate.
+            considered_indices: List of particle indices already successfully placed.
+            force_swap: If True, forces a particle swap even if candidates exist.
+                       This is needed when all candidates fail the overlap check.
 
         Returns:
             tuple: (selected_idx, m2, rg2, gamma_real, gamma_pc, candidate_list)
@@ -317,7 +323,7 @@ class PCAggregator:
                     f"PCA search k={k}: Found {len(candidates)} candidates: {candidates}"
                 )
 
-            if len(candidates) > 0:
+            if len(candidates) > 0 and not force_swap:
                 # Select one candidate randomly (will be used as starting point in run loop)
                 idx_in_candidates = np.random.randint(len(candidates))
                 selected_initial_candidate = candidates[idx_in_candidates]
@@ -334,9 +340,15 @@ class PCAggregator:
                     candidates,  # Return the list of all candidates
                 )
             else:
-                logger.debug(
-                    f"PCA search k={k}: No candidates found or gamma not real. Looking for swap."
-                )
+                # Need to swap: either no candidates OR force_swap=True
+                if force_swap:
+                    logger.debug(
+                        f"PCA search k={k}: force_swap=True - will swap particle even though {len(candidates)} candidates exist."
+                    )
+                else:
+                    logger.debug(
+                        f"PCA search k={k}: No candidates found or gamma not real. Looking for swap."
+                    )
                 # --- No candidates: Try swapping k with an untried, available monomer ---
                 # Find monomers eligible for swapping (not k itself, not already tried at pos k,
                 # and not already successfully placed in the aggregate)
@@ -363,8 +375,14 @@ class PCAggregator:
                 # Select a random monomer to swap with k
                 swap_idx_in_eligible = np.random.randint(len(eligible_for_swap))
                 swap_target_original_idx = eligible_for_swap[swap_idx_in_eligible]
-                logger.debug(
-                    f"  PCA k={k}: Swapping with monomer original index {swap_target_original_idx}."
+
+                # Store original values for logging
+                radius_before = self.initial_radii[k]
+                radius_after = self.initial_radii[swap_target_original_idx]
+
+                logger.info(
+                    f"  PCA k={k}: SWAP - Particle radius {radius_before:.2f} → {radius_after:.2f} "
+                    f"(swapping with index {swap_target_original_idx})"
                 )
 
                 # Perform the swap in the initial_radii and initial_mass arrays
@@ -562,8 +580,12 @@ class PCAggregator:
                 search_attempt += 1
                 logger.debug(f"PCA k={k}: Search/Swap Attempt #{search_attempt}")
 
-                # --- Perform Search/Swap (as before) ---
-                search_result = self._search_and_select_candidate(k, considered_indices)
+                # --- Perform Search/Swap ---
+                # Force particle swap on retry attempts (when previous candidates failed)
+                force_swap = (search_attempt > 1)
+                search_result = self._search_and_select_candidate(
+                    k, considered_indices, force_swap=force_swap
+                )
                 (
                     initial_candidate_idx,
                     m2,
