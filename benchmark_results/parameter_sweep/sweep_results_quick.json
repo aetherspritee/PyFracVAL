@@ -1,0 +1,1584 @@
+{
+  "metadata": {
+    "timestamp": "2026-01-09 16:22:00",
+    "total_combinations": 105,
+    "quick_mode": true
+  },
+  "results": [
+    {
+      "Df": 1.6,
+      "kf": 0.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0016330877939860027,
+      "seeds_used": [
+        1559698597,
+        193538754,
+        527598642
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 0.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0014619827270507812,
+      "seeds_used": [
+        1343454526,
+        858816144,
+        729944581
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.0,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_runtime": 0.5616208712259928,
+      "seeds_used": [
+        163729003,
+        124571075,
+        676604353
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.3869021733601888,
+      "seeds_used": [
+        1331220101,
+        665949959,
+        1394316424
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.41696874300638836,
+      "seeds_used": [
+        305609989,
+        138927018,
+        894010146
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_runtime": 0.2821354866027832,
+      "seeds_used": [
+        1568168243,
+        2114446255,
+        144984228
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_runtime": 0.37595097223917645,
+      "seeds_used": [
+        1368207810,
+        1661429733,
+        421718381
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 0.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.02358531951904297,
+      "seeds_used": [
+        101823640,
+        791167027,
+        76598312
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 0.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.1413106918334961,
+      "seeds_used": [
+        30823815,
+        1675942795,
+        2049486059
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.0,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.5995814005533854,
+      "seeds_used": [
+        160286471,
+        785625450,
+        1922210964
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.41298524538675946,
+      "seeds_used": [
+        526466081,
+        623029457,
+        768500155
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.2640380064646403,
+      "seeds_used": [
+        2012959278,
+        477490685,
+        982387456
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.23942160606384277,
+      "seeds_used": [
+        2076602665,
+        1817032150,
+        1206379121
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.011105775833129883,
+      "seeds_used": [
+        431310241,
+        1195554489,
+        942364593
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 0.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03215710322062174,
+      "seeds_used": [
+        64552169,
+        1444559002,
+        119892438
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 0.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.7063960234324137,
+      "seeds_used": [
+        136761803,
+        1824854606,
+        862627344
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.0,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.9134976069132487,
+      "seeds_used": [
+        1938523356,
+        1230742687,
+        336746041
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.9922696749369303,
+      "seeds_used": [
+        329594251,
+        1514354412,
+        193638577
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.3193347454071045,
+      "seeds_used": [
+        441046872,
+        409456619,
+        1074999617
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.016589959462483723,
+      "seeds_used": [
+        957101489,
+        956711947,
+        2017111958
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.002228816350301107,
+      "seeds_used": [
+        2144422946,
+        1251872437,
+        38636301
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 0.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_runtime": 0.7517634232838949,
+      "seeds_used": [
+        172075992,
+        995319847,
+        1341820985
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 0.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 0.9209646383921305,
+      "seeds_used": [
+        1820309644,
+        439955965,
+        607338944
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.0,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 1.3926848570505779,
+      "seeds_used": [
+        459006025,
+        760886170,
+        431161522
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.04177467028299967,
+      "seeds_used": [
+        127893920,
+        1923203196,
+        1694310899
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.036206722259521484,
+      "seeds_used": [
+        923379010,
+        1876059207,
+        1803510908
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0021440982818603516,
+      "seeds_used": [
+        1811490176,
+        1335297986,
+        1543132290
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.005857308705647786,
+      "seeds_used": [
+        1859536524,
+        2114968532,
+        1700851690
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 0.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 1.079257647196452,
+      "seeds_used": [
+        1140463264,
+        345902053,
+        1055813596
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 0.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 1.5721837679545085,
+      "seeds_used": [
+        1503470140,
+        421235629,
+        1226579635
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.0,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 1.3138807614644368,
+      "seeds_used": [
+        710889504,
+        171739105,
+        1489651229
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 4.973885695139567,
+      "seeds_used": [
+        848355411,
+        1374980392,
+        1408884682
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.007177591323852539,
+      "seeds_used": [
+        650507594,
+        487803490,
+        1561375206
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.6,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.003202358881632487,
+      "seeds_used": [
+        1231780997,
+        599127174,
+        21846396
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.8,
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0023461182912190757,
+      "seeds_used": [
+        1702507988,
+        506065357,
+        1946085140
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 0.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.007247209548950195,
+      "seeds_used": [
+        13522716,
+        1560410118,
+        798193818
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 0.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.031844536463419594,
+      "seeds_used": [
+        1554001010,
+        1954186342,
+        70155954
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.0,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_runtime": 1.1531986395517986,
+      "seeds_used": [
+        1534781510,
+        1770670568,
+        1812602181
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.2954898675282796,
+      "seeds_used": [
+        631623857,
+        767294732,
+        395707811
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.22088122367858887,
+      "seeds_used": [
+        743623042,
+        633823818,
+        729674384
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.028452316919962566,
+      "seeds_used": [
+        780839041,
+        428529590,
+        1945520475
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03220987319946289,
+      "seeds_used": [
+        771313486,
+        365990127,
+        1616164537
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 0.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.005403836568196614,
+      "seeds_used": [
+        1642347298,
+        1015262423,
+        307690253
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 0.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 1.1169315179189045,
+      "seeds_used": [
+        1071018139,
+        1386842014,
+        1743632443
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.0,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_runtime": 0.5012131532033285,
+      "seeds_used": [
+        473311223,
+        835126583,
+        1571448698
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.4985891977945964,
+      "seeds_used": [
+        284756225,
+        1989558368,
+        1885902422
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.051756064097086586,
+      "seeds_used": [
+        1705539287,
+        494734319,
+        1274473160
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.04287497202555338,
+      "seeds_used": [
+        565026897,
+        51502356,
+        2010073082
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.016873677571614582,
+      "seeds_used": [
+        1496907172,
+        1708318930,
+        1598633894
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 0.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.6882366339365641,
+      "seeds_used": [
+        677104867,
+        1893566980,
+        1012683308
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 0.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 1.284598429997762,
+      "seeds_used": [
+        213224858,
+        1265289812,
+        183085903
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.0,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.7114693323771158,
+      "seeds_used": [
+        1991414747,
+        842750880,
+        1306907503
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0789329210917155,
+      "seeds_used": [
+        1587738084,
+        1437028781,
+        1101036430
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03159848848978678,
+      "seeds_used": [
+        1431796095,
+        1960120169,
+        2071730771
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.030921777089436848,
+      "seeds_used": [
+        951126903,
+        410433780,
+        1341483205
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.005405823389689128,
+      "seeds_used": [
+        145666985,
+        776658363,
+        377228292
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 0.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime": 1.5693655014038086,
+      "seeds_used": [
+        1857660716,
+        343554333,
+        105651195
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 0.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.3761931260426839,
+      "seeds_used": [
+        2126085084,
+        2096108151,
+        683193387
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.0,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.09240539868672688,
+      "seeds_used": [
+        1483873691,
+        75611856,
+        1605349819
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03778735796610514,
+      "seeds_used": [
+        201370308,
+        2094741432,
+        1224637206
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.05202651023864746,
+      "seeds_used": [
+        881257582,
+        1201721424,
+        535589312
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0168001651763916,
+      "seeds_used": [
+        1879028063,
+        350383795,
+        5870545
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.002061923344930013,
+      "seeds_used": [
+        1148120087,
+        442714081,
+        1675671944
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 0.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 0.9954810937245687,
+      "seeds_used": [
+        672247038,
+        1409673992,
+        843515316
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 0.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.07890431086222331,
+      "seeds_used": [
+        1509980664,
+        748143580,
+        140315973
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.0,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.08347193400065105,
+      "seeds_used": [
+        1272350646,
+        241758975,
+        1893730367
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.06668972969055176,
+      "seeds_used": [
+        369959415,
+        248636984,
+        1827555703
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.012986977895100912,
+      "seeds_used": [
+        216558517,
+        888999608,
+        958662249
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.6,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.006108840306599935,
+      "seeds_used": [
+        1512735998,
+        825284528,
+        594282446
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.8,
+      "sigma_p_geo": 1.5,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.002725839614868164,
+      "seeds_used": [
+        1079567874,
+        483145127,
+        834033846
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 0.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.01309045155843099,
+      "seeds_used": [
+        397100497,
+        1815332922,
+        884640153
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 0.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0431365172068278,
+      "seeds_used": [
+        426322261,
+        1973565815,
+        180253575
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.0,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.07939640680948894,
+      "seeds_used": [
+        492501728,
+        466364759,
+        513966084
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.054811716079711914,
+      "seeds_used": [
+        1499216958,
+        1180537576,
+        686667043
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03450965881347656,
+      "seeds_used": [
+        669364639,
+        356744114,
+        200985201
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.042599757512410484,
+      "seeds_used": [
+        2063016078,
+        1781381576,
+        617264135
+      ]
+    },
+    {
+      "Df": 1.6,
+      "kf": 1.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.04575077692667643,
+      "seeds_used": [
+        1300027996,
+        2117297030,
+        359564599
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 0.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03687310218811035,
+      "seeds_used": [
+        166196835,
+        2143149652,
+        1743327074
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 0.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.06622823079427083,
+      "seeds_used": [
+        1426985999,
+        914033020,
+        920308029
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.0,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.04814457893371582,
+      "seeds_used": [
+        1621404344,
+        1965702501,
+        1176458174
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.018774986267089844,
+      "seeds_used": [
+        1097083483,
+        1152266927,
+        952930240
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.04426948229471842,
+      "seeds_used": [
+        1835320845,
+        2136564149,
+        415925556
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.02856906255086263,
+      "seeds_used": [
+        458203372,
+        134878080,
+        452667128
+      ]
+    },
+    {
+      "Df": 1.8,
+      "kf": 1.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.01796611150105794,
+      "seeds_used": [
+        302869430,
+        1409717064,
+        277148878
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 0.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 2,
+      "success_rate": 0.6666666666666666,
+      "avg_runtime": 1.3791303634643555,
+      "seeds_used": [
+        1211669444,
+        172137995,
+        1523332032
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 0.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.050018310546875,
+      "seeds_used": [
+        1491353475,
+        2001550438,
+        99427597
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.0,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.13734332720438638,
+      "seeds_used": [
+        648713995,
+        1870629717,
+        819161049
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.04747978846232096,
+      "seeds_used": [
+        1164169145,
+        502833349,
+        1610838764
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.023453712463378906,
+      "seeds_used": [
+        180537766,
+        1729666632,
+        1717906995
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.011070807774861654,
+      "seeds_used": [
+        1323601280,
+        327518729,
+        62856320
+      ]
+    },
+    {
+      "Df": 2.0,
+      "kf": 1.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.017400264739990234,
+      "seeds_used": [
+        1132020997,
+        1088524255,
+        1212395273
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 0.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 1,
+      "success_rate": 0.3333333333333333,
+      "avg_runtime": 1.2991318702697754,
+      "seeds_used": [
+        1114454459,
+        2132457587,
+        517390317
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 0.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0915524164835612,
+      "seeds_used": [
+        144360722,
+        377525802,
+        995538038
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.0,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.020058552424112957,
+      "seeds_used": [
+        262657289,
+        52701208,
+        1930644560
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.05581855773925781,
+      "seeds_used": [
+        1475440973,
+        1260378403,
+        646915277
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.022784312566121418,
+      "seeds_used": [
+        895182509,
+        1583165901,
+        1551560167
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.01594702402750651,
+      "seeds_used": [
+        1281878576,
+        99361176,
+        986635673
+      ]
+    },
+    {
+      "Df": 2.2,
+      "kf": 1.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.026715914408365887,
+      "seeds_used": [
+        212616783,
+        1338842022,
+        1099888908
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 0.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03294777870178223,
+      "seeds_used": [
+        997409758,
+        1556957493,
+        1624188036
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 0.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.024270931879679363,
+      "seeds_used": [
+        1227521988,
+        407131891,
+        2147267636
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.0,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03151822090148926,
+      "seeds_used": [
+        175284803,
+        1893078516,
+        979793564
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.2000000000000002,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.01812124252319336,
+      "seeds_used": [
+        638602457,
+        1135686834,
+        1042045261
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.4000000000000001,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03393848737080892,
+      "seeds_used": [
+        1924940075,
+        1929294044,
+        127212404
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.6,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.015006939570109049,
+      "seeds_used": [
+        1977718376,
+        2115518474,
+        196631356
+      ]
+    },
+    {
+      "Df": 2.4,
+      "kf": 1.8,
+      "sigma_p_geo": 2.0,
+      "N": 128,
+      "trials": 3,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.02116076151529948,
+      "seeds_used": [
+        348927972,
+        1344834502,
+        385670018
+      ]
+    }
+  ]
+}
