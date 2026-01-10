@@ -780,7 +780,7 @@ class PCAggregator:
                     self.radii[k] = radius_k_current
                     self.mass[k] = mass_k_current
 
-                    cov_max = utils.calculate_max_overlap_pca_fast(
+                    cov_max = utils.calculate_max_overlap_pca_auto(
                         self.coords[: self.n1],
                         self.radii[: self.n1],
                         self.coords[k],
@@ -891,13 +891,14 @@ class PCAggregator:
                                     intento = batch_end
                     else:
                         # Sequential rotation (Phase 1 - optimal for N<1000)
+                        # Phase 3B: Auto-dispatch to parallel overlap for large N
                         while cov_max > self.tol_ov and intento < max_rotations:
                             intento += 1
                             coord_k_new, theta_a_new = self._reintento(
                                 k, vec_0, i_vec, j_vec, attempt=intento
                             )
                             self.coords[k] = coord_k_new
-                            cov_max = utils.calculate_max_overlap_pca_fast(
+                            cov_max = utils.calculate_max_overlap_pca_auto(
                                 self.coords[: self.n1],
                                 self.radii[: self.n1],
                                 self.coords[k],
