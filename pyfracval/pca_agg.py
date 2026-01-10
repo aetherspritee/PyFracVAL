@@ -3,6 +3,7 @@
 import logging
 
 import numpy as np
+from scipy.spatial import cKDTree
 
 from . import config, utils
 from .logs import TRACE_LEVEL_NUM
@@ -10,6 +11,9 @@ from .logs import TRACE_LEVEL_NUM
 logger = logging.getLogger(__name__)
 
 FLOATING_POINT_ERROR = 1e-9  # Defined in utils, but maybe locally needed? Use utils.
+
+# Spatial indexing threshold: use k-d tree when aggregate has more than this many particles
+KDTREE_THRESHOLD = 50  # Empirically tuned: tree overhead < linear search benefit
 
 
 class PCAggregator:
@@ -242,8 +246,64 @@ class PCAggregator:
             f"  _select_candidates: Checking N1={self.n1} particles against Gamma_pc={gamma_pc:.4f}, R_k={radius_k:.4f}"
         )
 
-        # Vectorized candidate selection (2-3x faster than sequential loop)
-        if self.n1 > 0:
+        # Use spatial indexing (k-d tree) for large aggregates, vectorized for small
+        if self.n1 > KDTREE_THRESHOLD:
+            # SPATIAL INDEXING: O(log n) candidate search with k-d tree
+            # Build k-d tree from current aggregate coordinates
+            tree = cKDTree(self.coords[: self.n1])
+
+            # Conservative search radius: particles within gamma_pc ± maximum possible radius_sum
+            # This includes all potentially valid candidates
+            max_radius_in_aggregate = (
+                np.max(self.radii[: self.n1]) if self.n1 > 0 else 0.0
+            )
+            search_radius = gamma_pc + radius_k + max_radius_in_aggregate
+
+            # Query k-d tree for particles within search radius of CM
+            candidate_indices = tree.query_ball_point(self.cm, search_radius)
+
+            # Refine candidates with exact geometric constraints
+            if len(candidate_indices) > 0:
+                # Compute distances from CM for candidates only (not all particles)
+                distances = np.linalg.norm(
+                    self.coords[candidate_indices] - self.cm, axis=1
+                )
+                radii_candidates = self.radii[candidate_indices]
+
+                # Apply Fortran geometric conditions
+                radius_sum = radius_k + radii_candidates
+                lower_dist_bound = gamma_pc - radius_sum
+                upper_dist_bound = gamma_pc + radius_sum
+
+                radius_sum_check = radius_sum <= (gamma_pc + utils.FLOATING_POINT_ERROR)
+                lower_bound_check = distances > (
+                    lower_dist_bound - utils.FLOATING_POINT_ERROR
+                )
+                upper_bound_check = distances <= (
+                    upper_dist_bound + utils.FLOATING_POINT_ERROR
+                )
+
+                all_checks = radius_sum_check & lower_bound_check & upper_bound_check
+                valid_candidate_mask = np.where(all_checks)[0]
+
+                # Map back to original indices
+                candidates = np.array(
+                    [candidate_indices[i] for i in valid_candidate_mask]
+                )
+
+                # Debug logging (only if enabled)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(
+                        f"  Spatial indexing: {len(candidate_indices)} in radius {search_radius:.2f}, "
+                        f"{len(candidates)} passed geometric checks"
+                    )
+                    for i in candidates:
+                        logger.debug(f"      -> Candidate {i} ADDED (via k-d tree).")
+            else:
+                candidates = np.array([], dtype=int)
+
+        elif self.n1 > 0:
+            # VECTORIZED: O(n) search for small aggregates (faster due to lower overhead)
             # Compute distances from CM for all particles (vectorized)
             distances = np.linalg.norm(self.coords[: self.n1] - self.cm, axis=1)
 
