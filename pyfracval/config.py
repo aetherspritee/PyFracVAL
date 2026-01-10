@@ -18,6 +18,14 @@ EXT_CASE: int = 0  # CCA Sticking: 0 for standard, 1 for 'extreme cases'
 N_SUBCL_PERCENTAGE: float = 0.1  # PCA: Target fraction of N for subcluster size
 TOL_OVERLAP: float = 1.0e-6  # Overlap tolerance for sticking
 
+# --- Performance Tuning ---
+USE_BATCH_ROTATION: bool = (
+    False  # Enable batch rotation (slower for N<1000, keep False)
+)
+ROTATION_BATCH_SIZE: int = (
+    32  # Number of rotation angles to evaluate in parallel (if enabled)
+)
+
 # --- Constants ---
 PI: float = np.pi
 
