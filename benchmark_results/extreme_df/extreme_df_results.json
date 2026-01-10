@@ -1,0 +1,397 @@
+{
+  "metadata": {
+    "timestamp": "2026-01-10 02:01:30",
+    "total_configurations": 20,
+    "description": "Testing extreme Df values to find algorithmic boundaries",
+    "sigma_fixed": 1.3,
+    "N_fixed": 128
+  },
+  "results": [
+    {
+      "Df": 1.3,
+      "kf": 1.7,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime": 0.38242297172546386,
+      "successful_seeds": [
+        2086915270,
+        827349888,
+        1973499365,
+        418873713,
+        1695050073
+      ],
+      "failure_modes": {
+        "pca": 0,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.3,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.003967952728271484,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.35,
+      "kf": 1.65,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 4,
+      "success_rate": 0.8,
+      "avg_runtime": 0.31075215339660645,
+      "successful_seeds": [
+        2013935047,
+        876758056,
+        1769286158,
+        1005690999
+      ],
+      "failure_modes": {
+        "pca": 1,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.35,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0033154964447021486,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.4,
+      "kf": 1.6,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime": 0.4423060894012451,
+      "successful_seeds": [
+        700655822,
+        172981840,
+        1979366410,
+        486912862,
+        509815849
+      ],
+      "failure_modes": {
+        "pca": 0,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.4,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.006192636489868164,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.45,
+      "kf": 1.55,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime": 0.3139683246612549,
+      "successful_seeds": [
+        1331983146,
+        1141569905,
+        213930715,
+        1630083917,
+        1636594172
+      ],
+      "failure_modes": {
+        "pca": 0,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.45,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.024129962921142577,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.5,
+      "kf": 1.5,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime": 0.6964870452880859,
+      "successful_seeds": [
+        1707140700,
+        772018227,
+        789985880,
+        1708121387,
+        1971163305
+      ],
+      "failure_modes": {
+        "pca": 0,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 1.5,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.014899539947509765,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.5,
+      "kf": 0.5,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime": 1.4540676593780517,
+      "successful_seeds": [
+        1258504004,
+        1958674853,
+        1388398051,
+        1540633427,
+        1486970654
+      ],
+      "failure_modes": {
+        "pca": 0,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.5,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 3,
+      "success_rate": 0.6,
+      "avg_runtime": 3.8359819412231446,
+      "successful_seeds": [
+        385670018,
+        1492733373,
+        1759405958
+      ],
+      "failure_modes": {
+        "pca": 2,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.6,
+      "kf": 0.3999999999999999,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 3,
+      "success_rate": 0.6,
+      "avg_runtime": 0.7377887725830078,
+      "successful_seeds": [
+        2094089187,
+        329880398,
+        920542069
+      ],
+      "failure_modes": {
+        "pca": 2,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.6,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 2,
+      "success_rate": 0.4,
+      "avg_runtime": 34.58679852485657,
+      "successful_seeds": [
+        1963867448,
+        1407243556
+      ],
+      "failure_modes": {
+        "pca": 3,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.7,
+      "kf": 0.2999999999999998,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03723058700561523,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.7,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.07524523735046387,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.8,
+      "kf": 0.20000000000000018,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.007530498504638672,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.8,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.050889444351196286,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.9,
+      "kf": 0.10000000000000009,
+      "kf_strategy": "empirical",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.0023361682891845704,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    },
+    {
+      "Df": 2.9,
+      "kf": 1.0,
+      "kf_strategy": "fixed_1.0",
+      "sigma_p_geo": 1.3,
+      "N": 128,
+      "trials": 5,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime": 0.03555340766906738,
+      "successful_seeds": [],
+      "failure_modes": {
+        "pca": 5,
+        "cca": 0,
+        "exception": 0
+      }
+    }
+  ]
+}
