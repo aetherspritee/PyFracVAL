@@ -802,45 +802,135 @@ class PCAggregator:
                     # Check TRACE logging once (optimization: avoid check on every rotation)
                     trace_enabled = logger.isEnabledFor(TRACE_LEVEL_NUM)
 
-                    while cov_max > self.tol_ov and intento < max_rotations:
-                        intento += 1
-                        coord_k_new, theta_a_new = self._reintento(
-                            k, vec_0, i_vec, j_vec, attempt=intento
-                        )
-                        self.coords[k] = coord_k_new
-                        cov_max = utils.calculate_max_overlap_pca_fast(
-                            self.coords[: self.n1],
-                            self.radii[: self.n1],
-                            self.coords[k],
-                            self.radii[k],
-                            tolerance=self.tol_ov,
-                        )
-                        # Add detailed trace log here if needed (as before)
-                        if trace_enabled:  # TRACE level (checked once for performance)
-                            ov_details = []
-                            for idx_agg in range(self.n1):
-                                if idx_agg == current_selected_idx:
-                                    continue  # Skip self-check with candidate? No needed here.
-                                ov_agg = 1 - (
-                                    np.linalg.norm(
-                                        self.coords[k] - self.coords[idx_agg]
+                    # Choose rotation strategy based on configuration
+                    if config.USE_BATCH_ROTATION:
+                        # Batch rotation evaluation (Phase 3 - experimental, slower for N<1000)
+                        batch_size = config.ROTATION_BATCH_SIZE
+                        golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
+
+                        # If intersection radius is near zero, skip rotation attempts
+                        if vec_0[3] < utils.FLOATING_POINT_ERROR:
+                            logger.debug(
+                                f"  PCA k={k}, cand={current_selected_idx}: Intersection radius near zero, no rotation needed."
+                            )
+                            # cov_max already computed above, will be checked later
+                        else:
+                            # Batch rotation loop
+                            while cov_max > self.tol_ov and intento < max_rotations:
+                                # Determine batch range
+                                batch_start = intento
+                                batch_end = min(intento + batch_size, max_rotations)
+                                batch_count = batch_end - batch_start
+
+                                if batch_count == 0:
+                                    break
+
+                                # Generate batch of angles using Fibonacci spiral
+                                attempts = np.arange(batch_start, batch_end)
+                                angles = 2.0 * config.PI * attempts / golden_ratio
+
+                                # Calculate all positions in batch (parallel)
+                                candidate_positions = (
+                                    utils.batch_calculate_positions_pca(
+                                        vec_0, i_vec, j_vec, angles
                                     )
-                                    / (self.radii[k] + self.radii[idx_agg])
                                 )
-                                ov_details.append(f"vs{idx_agg}:{ov_agg:.2e}")
-                            logger.log(
-                                TRACE_LEVEL_NUM,
-                                f"    PCA k={k}, cand={current_selected_idx}, Rot {intento}: Overlap = {cov_max:.4e} ({', '.join(ov_details)})",
+
+                                # Check overlaps for all positions in batch (parallel)
+                                overlaps = utils.batch_check_overlaps_pca(
+                                    self.coords[: self.n1],
+                                    self.radii[: self.n1],
+                                    candidate_positions,
+                                    self.radii[k],
+                                    self.tol_ov,
+                                )
+
+                                # Find first valid position (overlap <= tolerance)
+                                valid_indices = np.where(overlaps <= self.tol_ov)[0]
+
+                                if len(valid_indices) > 0:
+                                    # Found valid position
+                                    best_idx = valid_indices[0]
+                                    intento = batch_start + best_idx + 1
+                                    self.coords[k] = candidate_positions[best_idx]
+                                    cov_max = overlaps[best_idx]
+
+                                    if trace_enabled:
+                                        logger.log(
+                                            TRACE_LEVEL_NUM,
+                                            f"    PCA k={k}, cand={current_selected_idx}, Batch rotation {intento}: Found valid position with overlap={cov_max:.4e}",
+                                        )
+                                    break  # Exit rotation loop
+                                else:
+                                    # No valid position in this batch
+                                    # Use best (minimum overlap) from batch
+                                    best_idx = np.argmin(overlaps)
+                                    intento = batch_start + best_idx + 1
+                                    self.coords[k] = candidate_positions[best_idx]
+                                    cov_max = overlaps[best_idx]
+
+                                    # Check adaptive tolerance
+                                    if (
+                                        intento >= adaptive_tol_threshold
+                                        and cov_max <= relaxed_tol
+                                    ):
+                                        logger.info(
+                                            f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
+                                            f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                                        )
+                                        used_adaptive_tol = True
+                                        break
+
+                                    if trace_enabled:
+                                        logger.log(
+                                            TRACE_LEVEL_NUM,
+                                            f"    PCA k={k}, cand={current_selected_idx}, Batch {batch_start}-{batch_end}: Best overlap={cov_max:.4e} at attempt {intento}",
+                                        )
+
+                                    # Continue to next batch
+                                    intento = batch_end
+                    else:
+                        # Sequential rotation (Phase 1 - optimal for N<1000)
+                        while cov_max > self.tol_ov and intento < max_rotations:
+                            intento += 1
+                            coord_k_new, theta_a_new = self._reintento(
+                                k, vec_0, i_vec, j_vec, attempt=intento
+                            )
+                            self.coords[k] = coord_k_new
+                            cov_max = utils.calculate_max_overlap_pca_fast(
+                                self.coords[: self.n1],
+                                self.radii[: self.n1],
+                                self.coords[k],
+                                self.radii[k],
+                                tolerance=self.tol_ov,
                             )
 
-                        # Adaptive tolerance: relax constraint after many attempts
-                        if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
-                            logger.info(
-                                f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
-                                f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
-                            )
-                            used_adaptive_tol = True
-                            break
+                            if trace_enabled:
+                                ov_details = []
+                                for idx_agg in range(self.n1):
+                                    ov_agg = 1 - (
+                                        np.linalg.norm(
+                                            self.coords[k] - self.coords[idx_agg]
+                                        )
+                                        / (self.radii[k] + self.radii[idx_agg])
+                                    )
+                                    ov_details.append(f"vs{idx_agg}:{ov_agg:.2e}")
+                                logger.log(
+                                    TRACE_LEVEL_NUM,
+                                    f"    PCA k={k}, cand={current_selected_idx}, Rot {intento}: Overlap = {cov_max:.4e} ({', '.join(ov_details)})",
+                                )
+
+                            # Adaptive tolerance: relax constraint after many attempts
+                            if (
+                                intento >= adaptive_tol_threshold
+                                and cov_max <= relaxed_tol
+                            ):
+                                logger.info(
+                                    f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
+                                    f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                                )
+                                used_adaptive_tol = True
+                                break
 
                     if cov_max <= self.tol_ov or used_adaptive_tol:
                         logger.debug(

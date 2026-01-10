@@ -333,6 +333,312 @@ def rodrigues_rotation(
     return v_rot
 
 
+@jit(parallel=True, fastmath=True, cache=True, nopython=True)
+def batch_calculate_positions_pca(
+    vec_0: np.ndarray,
+    i_vec: np.ndarray,
+    j_vec: np.ndarray,
+    angles: np.ndarray,
+) -> np.ndarray:
+    """Calculate batch of positions on intersection circle for PCA.
+
+    Uses Numba parallel loops to compute multiple rotation positions simultaneously.
+
+    Parameters
+    ----------
+    vec_0 : np.ndarray
+        [x0, y0, z0, r0] - center and radius of intersection circle
+    i_vec : np.ndarray
+        First basis vector (3D)
+    j_vec : np.ndarray
+        Second basis vector (3D)
+    angles : np.ndarray
+        Array of rotation angles (1D)
+
+    Returns
+    -------
+    np.ndarray
+        (N, 3) array of positions, one per angle
+    """
+    n_angles = angles.shape[0]
+    positions = np.empty((n_angles, 3), dtype=np.float64)
+
+    x0, y0, z0, r0 = vec_0
+
+    # Parallel loop over angles
+    for i in prange(n_angles):
+        theta = angles[i]
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+
+        # Calculate position: center + r0 * (cos(theta)*i_vec + sin(theta)*j_vec)
+        positions[i, 0] = x0 + r0 * (cos_theta * i_vec[0] + sin_theta * j_vec[0])
+        positions[i, 1] = y0 + r0 * (cos_theta * i_vec[1] + sin_theta * j_vec[1])
+        positions[i, 2] = z0 + r0 * (cos_theta * i_vec[2] + sin_theta * j_vec[2])
+
+    return positions
+
+
+@jit(parallel=True, fastmath=True, cache=True, nopython=True)
+def batch_check_overlaps_pca(
+    coords_agg: np.ndarray,
+    radii_agg: np.ndarray,
+    candidate_positions: np.ndarray,
+    radius_new: float,
+    tolerance: float,
+) -> np.ndarray:
+    """Check overlap for batch of candidate positions (PCA).
+
+    Uses Numba parallel loops to evaluate multiple positions simultaneously.
+
+    Parameters
+    ----------
+    coords_agg : np.ndarray
+        Current aggregate coordinates (n_agg, 3)
+    radii_agg : np.ndarray
+        Current aggregate radii (n_agg,)
+    candidate_positions : np.ndarray
+        Batch of candidate positions to test (n_candidates, 3)
+    radius_new : float
+        Radius of new particle
+    tolerance : float
+        Overlap tolerance
+
+    Returns
+    -------
+    np.ndarray
+        (n_candidates,) array of max overlap values for each position
+    """
+    n_candidates = candidate_positions.shape[0]
+    n_agg = coords_agg.shape[0]
+    overlaps = np.empty(n_candidates, dtype=np.float64)
+
+    # Parallel loop over candidate positions
+    for idx in prange(n_candidates):
+        coord_new = candidate_positions[idx]
+        max_overlap = -np.inf
+
+        # For each candidate, check against all aggregate particles
+        for j in range(n_agg):
+            coord_agg = coords_agg[j]
+            radius_agg = radii_agg[j]
+            radius_sum = radius_new + radius_agg
+
+            # Compute squared distance
+            d_sq = 0.0
+            for dim in range(3):
+                diff = coord_new[dim] - coord_agg[dim]
+                d_sq += diff * diff
+
+            # Bounding sphere pre-check
+            radius_sum_sq = radius_sum * radius_sum
+            if d_sq > radius_sum_sq:
+                continue
+
+            # Compute overlap
+            dist = np.sqrt(d_sq)
+            overlap = 1.0 - dist / radius_sum
+
+            if overlap > max_overlap:
+                max_overlap = overlap
+
+            # Early termination check (can't break in prange, but helps inner loop)
+            if overlap > tolerance:
+                max_overlap = overlap
+                break
+
+        overlaps[idx] = max_overlap
+
+    return overlaps
+
+
+@jit(parallel=True, fastmath=True, cache=True, nopython=True)
+def batch_check_overlaps_cca(
+    coords1: np.ndarray,
+    radii1: np.ndarray,
+    coords2_batch: np.ndarray,
+    radii2: np.ndarray,
+    tolerance: float,
+) -> np.ndarray:
+    """Check overlap for batch of cluster2 configurations (CCA).
+
+    Uses Numba parallel loops to evaluate multiple cluster configurations simultaneously.
+
+    Parameters
+    ----------
+    coords1 : np.ndarray
+        Cluster 1 coordinates (n1, 3)
+    radii1 : np.ndarray
+        Cluster 1 radii (n1,)
+    coords2_batch : np.ndarray
+        Batch of cluster 2 configurations (n_batch, n2, 3)
+    radii2 : np.ndarray
+        Cluster 2 radii (n2,) - same for all configurations
+    tolerance : float
+        Overlap tolerance
+
+    Returns
+    -------
+    np.ndarray
+        (n_batch,) array of max overlap values for each configuration
+    """
+    n_batch = coords2_batch.shape[0]
+    n1 = coords1.shape[0]
+    n2 = coords2_batch.shape[1]
+    overlaps = np.empty(n_batch, dtype=np.float64)
+
+    # Parallel loop over batch
+    for batch_idx in prange(n_batch):
+        coords2 = coords2_batch[batch_idx]
+        max_overlap = -np.inf
+
+        # Check all pairs between cluster1 and cluster2
+        for i in range(n1):
+            coord1 = coords1[i]
+            radius1 = radii1[i]
+
+            for j in range(n2):
+                coord2 = coords2[j]
+                radius2 = radii2[j]
+                radius_sum = radius1 + radius2
+
+                # Compute squared distance
+                d_sq = 0.0
+                for dim in range(3):
+                    diff = coord1[dim] - coord2[dim]
+                    d_sq += diff * diff
+
+                # Bounding sphere pre-check
+                radius_sum_sq = radius_sum * radius_sum
+                if d_sq > radius_sum_sq:
+                    continue
+
+                # Compute overlap
+                dist = np.sqrt(d_sq)
+                overlap = 1.0 - dist / radius_sum
+
+                if overlap > max_overlap:
+                    max_overlap = overlap
+
+                # Early termination for inner loops
+                if overlap > tolerance:
+                    max_overlap = overlap
+                    break
+
+            # If already over tolerance, no need to check more cluster1 particles
+            if max_overlap > tolerance:
+                break
+
+        overlaps[batch_idx] = max_overlap
+
+    return overlaps
+
+
+def batch_rotate_cluster_cca(
+    coords2_in: np.ndarray,
+    cm2: np.ndarray,
+    cand2_idx: int,
+    vec_0: np.ndarray,
+    i_vec: np.ndarray,
+    j_vec: np.ndarray,
+    angles: np.ndarray,
+) -> np.ndarray:
+    """Batch rotate cluster2 for multiple angles (CCA).
+
+    For each angle, calculates the target position on the intersection circle,
+    then rotates the entire cluster to align the candidate particle with that target.
+
+    Parameters
+    ----------
+    coords2_in : np.ndarray
+        Cluster 2 coordinates (n2, 3)
+    cm2 : np.ndarray
+        Center of mass of cluster 2 (3,)
+    cand2_idx : int
+        Index of candidate particle in cluster 2
+    vec_0 : np.ndarray
+        [x0, y0, z0, r0] - center and radius of intersection circle
+    i_vec : np.ndarray
+        First basis vector (3,)
+    j_vec : np.ndarray
+        Second basis vector (3,)
+    angles : np.ndarray
+        Array of rotation angles (n_angles,)
+
+    Returns
+    -------
+    np.ndarray
+        (n_angles, n2, 3) array of rotated cluster configurations
+    """
+    n_angles = angles.shape[0]
+    n2 = coords2_in.shape[0]
+    rotated_clusters = np.empty((n_angles, n2, 3), dtype=np.float64)
+
+    x0, y0, z0, r0 = vec_0
+
+    # Current position of candidate particle relative to CM
+    current_p2 = coords2_in[cand2_idx]
+    v1_rot = current_p2 - cm2
+    norm_v1 = np.linalg.norm(v1_rot)
+
+    # For each angle, calculate target and rotate cluster
+    for i in range(n_angles):
+        theta = angles[i]
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+
+        # Target position on intersection circle
+        target_p2 = np.array(
+            [
+                x0 + r0 * (cos_theta * i_vec[0] + sin_theta * j_vec[0]),
+                y0 + r0 * (cos_theta * i_vec[1] + sin_theta * j_vec[1]),
+                z0 + r0 * (cos_theta * i_vec[2] + sin_theta * j_vec[2]),
+            ]
+        )
+
+        # Vector from CM to target
+        v2_rot = target_p2 - cm2
+        norm_v2 = np.linalg.norm(v2_rot)
+
+        # Determine rotation axis and angle
+        if norm_v1 > 1e-9 and norm_v2 > 1e-9:
+            v1_u = v1_rot / norm_v1
+            v2_u = v2_rot / norm_v2
+            dot_prod = np.dot(v1_u, v2_u)
+            dot_prod = np.clip(dot_prod, -1.0, 1.0)
+
+            if abs(dot_prod) > 1.0 - 1e-9:
+                # Vectors are parallel or anti-parallel
+                if dot_prod < 0:
+                    # Anti-parallel: 180 degree rotation
+                    rot_angle = np.pi
+                    # Choose perpendicular axis
+                    if abs(v1_u[0]) < 1e-9 and abs(v1_u[1]) < 1e-9:
+                        rot_axis = np.array([1.0, 0.0, 0.0])
+                    else:
+                        rot_axis = np.array([-v1_u[1], v1_u[0], 0.0])
+                        rot_axis /= np.linalg.norm(rot_axis)
+                else:
+                    # Parallel: no rotation needed
+                    rotated_clusters[i] = coords2_in.copy()
+                    continue
+            else:
+                # Normal case: compute rotation axis and angle
+                rot_angle = np.arccos(dot_prod)
+                rot_axis = np.cross(v1_u, v2_u)
+                rot_axis /= np.linalg.norm(rot_axis)
+
+            # Rotate cluster around CM
+            coords_centered = coords2_in - cm2
+            coords_rotated = rodrigues_rotation(coords_centered, rot_axis, rot_angle)
+            rotated_clusters[i] = coords_rotated + cm2
+        else:
+            # Degenerate case: no rotation
+            rotated_clusters[i] = coords2_in.copy()
+
+    return rotated_clusters
+
+
 def two_sphere_intersection(
     sphere_1: np.ndarray, sphere_2: np.ndarray
 ) -> Tuple[float, float, float, float, np.ndarray, np.ndarray, np.ndarray, bool]:

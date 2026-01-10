@@ -868,7 +868,7 @@ class CCAggregator:
             )
             # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Initial overlap = {cov_max:.4e}")
 
-            # Rotation attempts if needed
+            # Rotation attempts
             intento = 0
             max_rotations = 360  # From Fortran
             current_coords2 = coords2_stick.copy()  # Keep track of rotated coords2
@@ -876,47 +876,122 @@ class CCAggregator:
             relaxed_tol = 1.0e-5  # Relaxed tolerance (10x more lenient)
             used_adaptive_tol = False
 
-            while cov_max > self.tol_ov and intento < max_rotations:
-                intento += 1
-                coords2_rotated, theta_a_new = self._cca_reintento(
-                    current_coords2,
-                    cm2_stick,
-                    cand2_idx,  # Use CM after initial translation
-                    vec_0,
-                    i_vec,
-                    j_vec,
-                    attempt=intento,
-                )
-                # Check overlap with the rotated coords2
-                # cov_max = self._cca_overlap_check(
-                #     coords1_stick, radii1_in, coords2_rotated, radii2_in
-                # )
-                cov_max = utils.calculate_max_overlap_cca_fast(
-                    coords1_stick,
-                    radii1_in,
-                    coords2_rotated,
-                    radii2_in,
-                    tolerance=self.tol_ov,
-                )
+            # Choose rotation strategy based on configuration
+            if config.USE_BATCH_ROTATION:
+                # Batch rotation (Phase 3 - experimental, slower for N<1000)
+                batch_size = config.ROTATION_BATCH_SIZE
+                golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
 
-                # Update coords for next potential rotation
-                current_coords2 = coords2_rotated
-                logger.trace(f"    Rotation {intento}: Overlap = {cov_max:.4e}")  # pyright: ignore
+                while cov_max > self.tol_ov and intento < max_rotations:
+                    # Determine batch range
+                    batch_start = intento
+                    batch_end = min(intento + batch_size, max_rotations)
+                    batch_count = batch_end - batch_start
 
-                # Adaptive tolerance: relax constraint after many attempts
-                if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
-                    logger.info(
-                        f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting relaxed tolerance "
-                        f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                    if batch_count == 0:
+                        break
+
+                    # Generate batch of angles using Fibonacci spiral
+                    attempts = np.arange(batch_start, batch_end)
+                    angles = 2.0 * config.PI * attempts / golden_ratio
+
+                    # Batch rotate cluster2 for all angles (parallel computation)
+                    coords2_batch = utils.batch_rotate_cluster_cca(
+                        current_coords2,
+                        cm2_stick,
+                        cand2_idx,
+                        vec_0,
+                        i_vec,
+                        j_vec,
+                        angles,
                     )
-                    used_adaptive_tol = True
-                    break
 
-                # Fortran logic for picking new *candidate* after 359 rotations is complex.
-                # If max rotations fail here, we consider this candidate pair (cand1, cand2) failed.
-                if intento >= max_rotations and cov_max > self.tol_ov:
-                    # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Failed after {max_rotations} rotations.")
-                    break  # Exit rotation loop for this pair
+                    # Check overlaps for all rotated configurations (parallel)
+                    overlaps = utils.batch_check_overlaps_cca(
+                        coords1_stick,
+                        radii1_in,
+                        coords2_batch,
+                        radii2_in,
+                        self.tol_ov,
+                    )
+
+                    # Find first valid configuration (overlap <= tolerance)
+                    valid_indices = np.where(overlaps <= self.tol_ov)[0]
+
+                    if len(valid_indices) > 0:
+                        # Found valid configuration
+                        best_idx = valid_indices[0]
+                        intento = batch_start + best_idx + 1
+                        current_coords2 = coords2_batch[best_idx]
+                        cov_max = overlaps[best_idx]
+
+                        logger.trace(
+                            f"    CCA Batch rotation {intento}: Found valid config with overlap={cov_max:.4e}"
+                        )  # pyright: ignore
+                        break  # Exit rotation loop
+                    else:
+                        # No valid configuration in this batch
+                        # Use best (minimum overlap) from batch
+                        best_idx = np.argmin(overlaps)
+                        intento = batch_start + best_idx + 1
+                        current_coords2 = coords2_batch[best_idx]
+                        cov_max = overlaps[best_idx]
+
+                        # Check adaptive tolerance
+                        if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
+                            logger.info(
+                                f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting relaxed tolerance "
+                                f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                            )
+                            used_adaptive_tol = True
+                            break
+
+                        logger.trace(
+                            f"    CCA Batch {batch_start}-{batch_end}: Best overlap={cov_max:.4e} at attempt {intento}"
+                        )  # pyright: ignore
+
+                        # Continue to next batch
+                        intento = batch_end
+
+                    # Check if we've exceeded max rotations
+                    if intento >= max_rotations and cov_max > self.tol_ov:
+                        break  # Exit rotation loop for this pair
+            else:
+                # Sequential rotation (Phase 1 - optimal for N<1000)
+                while cov_max > self.tol_ov and intento < max_rotations:
+                    intento += 1
+                    coords2_rotated, theta_a_new = self._cca_reintento(
+                        current_coords2,
+                        cm2_stick,
+                        cand2_idx,
+                        vec_0,
+                        i_vec,
+                        j_vec,
+                        attempt=intento,
+                    )
+                    cov_max = utils.calculate_max_overlap_cca_fast(
+                        coords1_stick,
+                        radii1_in,
+                        coords2_rotated,
+                        radii2_in,
+                        tolerance=self.tol_ov,
+                    )
+
+                    # Update coords for next potential rotation
+                    current_coords2 = coords2_rotated
+                    logger.trace(f"    Rotation {intento}: Overlap = {cov_max:.4e}")  # pyright: ignore
+
+                    # Adaptive tolerance: relax constraint after many attempts
+                    if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
+                        logger.info(
+                            f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting relaxed tolerance "
+                            f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                        )
+                        used_adaptive_tol = True
+                        break
+
+                    if intento >= max_rotations and cov_max > self.tol_ov:
+                        break
 
             # Check if overlap is acceptable
             if cov_max <= self.tol_ov or used_adaptive_tol:
