@@ -1122,3 +1122,224 @@ def calculate_max_overlap_cca_fast(
                 return overlap
 
     return max_overlap_val
+
+
+# ============================================================================
+# Phase 3B: Hybrid Strategy - Parallel Overlap with Sequential Rotation
+# ============================================================================
+
+# Threshold for using parallel overlap calculation (particles in aggregate)
+PARALLEL_OVERLAP_THRESHOLD = 200
+
+
+@jit(parallel=True, fastmath=True, cache=True, nopython=True)
+def calculate_max_overlap_pca_parallel(
+    coords_agg: np.ndarray,
+    radii_agg: np.ndarray,
+    coord_new: np.ndarray,
+    radius_new: float,
+) -> float:
+    """Calculate max overlap for PCA with parallel execution (no early termination).
+
+    This version uses Numba prange to parallelize overlap checks across all
+    aggregate particles. Trade-off: No early termination, but faster for large N.
+
+    Use for n_agg > PARALLEL_OVERLAP_THRESHOLD (~200 particles).
+
+    Parameters
+    ----------
+    coords_agg : np.ndarray
+        Current aggregate coordinates (n_agg, 3)
+    radii_agg : np.ndarray
+        Current aggregate radii (n_agg,)
+    coord_new : np.ndarray
+        New particle coordinates (3,)
+    radius_new : float
+        New particle radius
+
+    Returns
+    -------
+    float
+        Maximum overlap fraction found across all particles
+    """
+    n_agg = coords_agg.shape[0]
+    overlaps = np.empty(n_agg, dtype=np.float64)
+
+    # Parallel loop over all aggregate particles
+    for j in prange(n_agg):
+        coord_agg = coords_agg[j]
+        radius_agg = radii_agg[j]
+        radius_sum = radius_new + radius_agg
+
+        # Compute squared distance
+        d_sq = 0.0
+        for dim in range(3):
+            diff = coord_new[dim] - coord_agg[dim]
+            d_sq += diff * diff
+
+        # Bounding sphere pre-check
+        radius_sum_sq = radius_sum * radius_sum
+        if d_sq > radius_sum_sq:
+            overlaps[j] = -np.inf
+            continue
+
+        # Compute overlap
+        dist = np.sqrt(d_sq)
+        overlaps[j] = 1.0 - dist / radius_sum
+
+    return np.max(overlaps)
+
+
+@jit(parallel=True, fastmath=True, cache=True, nopython=True)
+def calculate_max_overlap_cca_parallel(
+    coords1: np.ndarray,
+    radii1: np.ndarray,
+    coords2: np.ndarray,
+    radii2: np.ndarray,
+) -> float:
+    """Calculate max overlap for CCA with parallel execution (no early termination).
+
+    This version uses Numba prange to parallelize overlap checks. Computes all
+    pair overlaps in parallel.
+
+    Use for n1 * n2 > PARALLEL_OVERLAP_THRESHOLD (~200 pairs).
+
+    Parameters
+    ----------
+    coords1 : np.ndarray
+        Cluster 1 coordinates (n1, 3)
+    radii1 : np.ndarray
+        Cluster 1 radii (n1,)
+    coords2 : np.ndarray
+        Cluster 2 coordinates (n2, 3)
+    radii2 : np.ndarray
+        Cluster 2 radii (n2,)
+
+    Returns
+    -------
+    float
+        Maximum overlap fraction found across all particle pairs
+    """
+    n1 = coords1.shape[0]
+    n2 = coords2.shape[0]
+    total_pairs = n1 * n2
+
+    # Flatten to 1D array for parallel processing
+    all_overlaps = np.empty(total_pairs, dtype=np.float64)
+
+    # Parallel loop over all pairs
+    for pair_idx in prange(total_pairs):
+        i = pair_idx // n2
+        j = pair_idx % n2
+
+        coord1 = coords1[i]
+        radius1 = radii1[i]
+        coord2 = coords2[j]
+        radius2 = radii2[j]
+        radius_sum = radius1 + radius2
+
+        # Compute squared distance
+        d_sq = 0.0
+        for dim in range(3):
+            diff = coord1[dim] - coord2[dim]
+            d_sq += diff * diff
+
+        # Bounding sphere pre-check
+        radius_sum_sq = radius_sum * radius_sum
+        if d_sq > radius_sum_sq:
+            all_overlaps[pair_idx] = -np.inf
+            continue
+
+        # Compute overlap
+        dist = np.sqrt(d_sq)
+        all_overlaps[pair_idx] = 1.0 - dist / radius_sum
+
+    return np.max(all_overlaps)
+
+
+def calculate_max_overlap_pca_auto(
+    coords_agg: np.ndarray,
+    radii_agg: np.ndarray,
+    coord_new: np.ndarray,
+    radius_new: float,
+    tolerance: float = 1e-6,
+) -> float:
+    """Auto-dispatch to parallel or sequential overlap check based on size.
+
+    For large aggregates (n > PARALLEL_OVERLAP_THRESHOLD), uses parallel version
+    without early termination. For small aggregates, uses sequential with early exit.
+
+    Parameters
+    ----------
+    coords_agg : np.ndarray
+        Current aggregate coordinates (n_agg, 3)
+    radii_agg : np.ndarray
+        Current aggregate radii (n_agg,)
+    coord_new : np.ndarray
+        New particle coordinates (3,)
+    radius_new : float
+        New particle radius
+    tolerance : float, optional
+        Overlap tolerance for early termination (default: 1e-6)
+
+    Returns
+    -------
+    float
+        Maximum overlap fraction
+    """
+    n_agg = coords_agg.shape[0]
+
+    if n_agg > PARALLEL_OVERLAP_THRESHOLD:
+        # Large aggregate: use parallel (no early termination)
+        return calculate_max_overlap_pca_parallel(
+            coords_agg, radii_agg, coord_new, radius_new
+        )
+    else:
+        # Small aggregate: use sequential with early termination
+        return calculate_max_overlap_pca_fast(
+            coords_agg, radii_agg, coord_new, radius_new, tolerance
+        )
+
+
+def calculate_max_overlap_cca_auto(
+    coords1: np.ndarray,
+    radii1: np.ndarray,
+    coords2: np.ndarray,
+    radii2: np.ndarray,
+    tolerance: float = 1e-6,
+) -> float:
+    """Auto-dispatch to parallel or sequential overlap check based on size.
+
+    For large cluster pairs, uses parallel version without early termination.
+    For small pairs, uses sequential with early exit.
+
+    Parameters
+    ----------
+    coords1 : np.ndarray
+        Cluster 1 coordinates (n1, 3)
+    radii1 : np.ndarray
+        Cluster 1 radii (n1,)
+    coords2 : np.ndarray
+        Cluster 2 coordinates (n2, 3)
+    radii2 : np.ndarray
+        Cluster 2 radii (n2,)
+    tolerance : float, optional
+        Overlap tolerance for early termination (default: 1e-6)
+
+    Returns
+    -------
+    float
+        Maximum overlap fraction
+    """
+    n1 = coords1.shape[0]
+    n2 = coords2.shape[0]
+    total_pairs = n1 * n2
+
+    if total_pairs > PARALLEL_OVERLAP_THRESHOLD:
+        # Many pairs: use parallel (no early termination)
+        return calculate_max_overlap_cca_parallel(coords1, radii1, coords2, radii2)
+    else:
+        # Few pairs: use sequential with early termination
+        return calculate_max_overlap_cca_fast(
+            coords1, radii1, coords2, radii2, tolerance
+        )

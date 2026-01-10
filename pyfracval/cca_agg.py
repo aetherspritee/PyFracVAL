@@ -859,7 +859,8 @@ class CCAggregator:
             # cov_max = self._cca_overlap_check(
             #     coords1_stick, radii1_in, coords2_stick, radii2_in
             # )
-            cov_max = utils.calculate_max_overlap_cca_fast(
+            # Phase 3B: Auto-dispatch to parallel overlap for large N
+            cov_max = utils.calculate_max_overlap_cca_auto(
                 coords1_stick,
                 radii1_in,
                 coords2_stick,
@@ -958,6 +959,7 @@ class CCAggregator:
                         break  # Exit rotation loop for this pair
             else:
                 # Sequential rotation (Phase 1 - optimal for N<1000)
+                # Phase 3B: Auto-dispatch to parallel overlap for large N
                 while cov_max > self.tol_ov and intento < max_rotations:
                     intento += 1
                     coords2_rotated, theta_a_new = self._cca_reintento(
@@ -969,7 +971,7 @@ class CCAggregator:
                         j_vec,
                         attempt=intento,
                     )
-                    cov_max = utils.calculate_max_overlap_cca_fast(
+                    cov_max = utils.calculate_max_overlap_cca_auto(
                         coords1_stick,
                         radii1_in,
                         coords2_rotated,
