@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""
+Phase Comparison Benchmark
+
+Compares performance across:
+- Stock (before optimizations): commit be672c1
+- Phase 1 (early termination, vectorization): commit b8009c3
+- Phase 2 (spatial indexing, incremental Rg): current
+
+Run this on each commit to collect baseline data.
+"""
+
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from pyfracval.main_runner import run_simulation
+
+
+def test_configuration(config, trials=3):
+    """Test a single configuration multiple times."""
+    runtimes = []
+    successes = 0
+
+    for trial in range(trials):
+        seed = 2000 + trial
+        start = time.time()
+        try:
+            success, coords, radii = run_simulation(
+                1, config, output_base_dir="/tmp/phase_comparison", seed=seed
+            )
+            runtime = time.time() - start
+
+            if success:
+                successes += 1
+                runtimes.append(runtime)
+        except Exception as e:
+            print(f"    Trial {trial} failed: {e}")
+            continue
+
+    if successes > 0:
+        return {
+            "success_rate": successes / trials,
+            "avg_runtime": float(np.mean(runtimes)),
+            "std_runtime": float(np.std(runtimes)),
+            "min_runtime": float(np.min(runtimes)),
+            "max_runtime": float(np.max(runtimes)),
+            "all_runtimes": [float(r) for r in runtimes],
+        }
+    else:
+        return None
+
+
+def main():
+    """Run benchmark."""
+    print("=" * 80)
+    print("Phase Comparison Benchmark")
+    print("=" * 80)
+
+    # Get current commit
+    import subprocess
+
+    try:
+        commit = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
+            )
+            .decode()
+            .strip()
+        )
+    except:
+        commit = "unknown"
+
+    print(f"Current commit: {commit}")
+    print()
+
+    # Test configurations
+    configs = [
+        {
+            "name": "N=128, Optimal",
+            "N": 128,
+            "Df": 1.8,
+            "kf": 1.0,
+            "rp_gstd": 1.3,
+        },
+        {
+            "name": "N=256, Optimal",
+            "N": 256,
+            "Df": 1.9,
+            "kf": 1.2,
+            "rp_gstd": 1.3,
+        },
+        {
+            "name": "N=512, Optimal",
+            "N": 512,
+            "Df": 1.9,
+            "kf": 1.1,
+            "rp_gstd": 1.3,
+        },
+    ]
+
+    results = {}
+
+    for config_def in configs:
+        name = config_def.pop("name")
+
+        print(f"Testing: {name}")
+        print(f"  Parameters: {config_def}")
+
+        # Build full config
+        full_config = {
+            **config_def,
+            "rp_g": 100.0,
+            "tol_ov": 1e-6,
+            "n_subcl_percentage": 0.1,
+            "ext_case": 0,
+        }
+
+        result = test_configuration(full_config, trials=3)
+
+        if result:
+            print(f"  Success: {result['success_rate'] * 100:.0f}%")
+            print(
+                f"  Runtime: {result['avg_runtime']:.3f}s ± {result['std_runtime']:.3f}s"
+            )
+            print(
+                f"  Range: [{result['min_runtime']:.3f}s - {result['max_runtime']:.3f}s]"
+            )
+            results[name] = result
+        else:
+            print(f"  Failed all trials")
+            results[name] = None
+
+        print()
+
+    # Save results
+    output_file = Path(f"benchmark_results/phase_comparison_{commit}.json")
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_file, "w") as f:
+        json.dump(
+            {
+                "commit": commit,
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "results": results,
+            },
+            f,
+            indent=2,
+        )
+
+    print(f"Results saved to: {output_file}")
+
+    # Summary
+    print("\n" + "=" * 80)
+    print("SUMMARY")
+    print("=" * 80)
+
+    for name, result in results.items():
+        if result:
+            print(
+                f"{name:25s} {result['avg_runtime']:6.3f}s ± {result['std_runtime']:5.3f}s"
+            )
+
+    print(f"\nTo compare with other phases, run this script on different commits:")
+    print(f"  Stock:   git checkout be672c1")
+    print(f"  Phase 1: git checkout b8009c3")
+    print(f"  Phase 2: git checkout {commit}")
+
+
+if __name__ == "__main__":
+    main()
