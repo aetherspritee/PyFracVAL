@@ -235,6 +235,9 @@ class CCAggregator:
                 f"Cluster {i}: N={len(radii_i)}, Rg={rg_i:.3f}, Rmax={r_max_i:.3f}, Mass={m_i:.2e}"
             )
 
+        # Check TRACE logging once (optimization: avoid check in inner loop)
+        trace_enabled = logger.isEnabledFor(TRACE_LEVEL_NUM)
+
         # Pairing loop
         for i in range(self.i_t):
             if np.sum(id_agglomerated[i, :]) > 0 or cluster_props[i][0] == 0.0:
@@ -262,7 +265,7 @@ class CCAggregator:
                 )
 
                 # Log trace information
-                if logger.isEnabledFor(TRACE_LEVEL_NUM):  # TRACE level
+                if trace_enabled:  # TRACE level (checked once for performance)
                     logger.log(
                         TRACE_LEVEL_NUM,
                         f"Pair ({i},{j}): G={gamma_pc:.3f}, R1+R2={sum_rmax:.3f}, StrictOK={strict_condition}, RelaxOK={relaxed_condition} (Factor={CCA_PAIRING_FACTOR})",
@@ -856,11 +859,12 @@ class CCAggregator:
             # cov_max = self._cca_overlap_check(
             #     coords1_stick, radii1_in, coords2_stick, radii2_in
             # )
-            cov_max = utils.calculate_max_overlap_cca(
+            cov_max = utils.calculate_max_overlap_cca_fast(
                 coords1_stick,
                 radii1_in,
                 coords2_stick,
                 radii2_in,
+                tolerance=self.tol_ov,
             )
             # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Initial overlap = {cov_max:.4e}")
 
@@ -887,11 +891,12 @@ class CCAggregator:
                 # cov_max = self._cca_overlap_check(
                 #     coords1_stick, radii1_in, coords2_rotated, radii2_in
                 # )
-                cov_max = utils.calculate_max_overlap_cca(
+                cov_max = utils.calculate_max_overlap_cca_fast(
                     coords1_stick,
                     radii1_in,
                     coords2_rotated,
                     radii2_in,
+                    tolerance=self.tol_ov,
                 )
 
                 # Update coords for next potential rotation

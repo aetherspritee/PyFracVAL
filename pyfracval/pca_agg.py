@@ -241,42 +241,52 @@ class PCAggregator:
         logger.debug(
             f"  _select_candidates: Checking N1={self.n1} particles against Gamma_pc={gamma_pc:.4f}, R_k={radius_k:.4f}"
         )
-        for i in range(self.n1):  # Iterate through particles 0 to n1-1
-            dist_sq = np.sum((self.coords[i] - self.cm) ** 2)
-            dist = np.sqrt(dist_sq)
-            # r_max_current = max(r_max_current, dist) # Rmax updated above
 
-            radius_i = self.radii[i]  # Radius of particle 'i' in the cluster
+        # Vectorized candidate selection (2-3x faster than sequential loop)
+        if self.n1 > 0:
+            # Compute distances from CM for all particles (vectorized)
+            distances = np.linalg.norm(self.coords[: self.n1] - self.cm, axis=1)
 
-            radius_sum = radius_k + radius_i
+            # Get radii for all particles
+            radii_all = self.radii[: self.n1]
+
+            # Vectorized geometric checks
+            radius_sum = radius_k + radii_all
             lower_dist_bound = gamma_pc - radius_sum
             upper_dist_bound = gamma_pc + radius_sum
 
-            # Fortran conditions (translated):
-            # 1) (R_k + R_i) <= Gamma_pc
-            radius_sum_check = radius_sum <= gamma_pc + utils.FLOATING_POINT_ERROR
-
-            # 2) dist > (Gamma_pc - R_k - R_i)
-            lower_bound_check = dist > lower_dist_bound - utils.FLOATING_POINT_ERROR
-
-            # 3) dist <= (Gamma_pc + R_k + R_i)
-            upper_bound_check = dist <= upper_dist_bound + utils.FLOATING_POINT_ERROR
-
-            logger.debug(
-                f"    Cand i={i}: Dist={dist:.4f}, R_i={radius_i:.4f} | "
-                f"Cond1 (Rk+Ri <= G): {radius_sum:.4f} <= {gamma_pc:.4f}? -> {radius_sum_check} | "
-                f"Cond2 (Dist > G-Rk-Ri): {dist:.4f} > {lower_dist_bound:.4f}? -> {lower_bound_check} | "
-                f"Cond3 (Dist <= G+Rk+Ri): {dist:.4f} <= {upper_dist_bound:.4f}? -> {upper_bound_check}"
+            # Apply all three Fortran conditions (vectorized)
+            radius_sum_check = radius_sum <= (gamma_pc + utils.FLOATING_POINT_ERROR)
+            lower_bound_check = distances > (
+                lower_dist_bound - utils.FLOATING_POINT_ERROR
+            )
+            upper_bound_check = distances <= (
+                upper_dist_bound + utils.FLOATING_POINT_ERROR
             )
 
-            if radius_sum_check and lower_bound_check and upper_bound_check:
-                candidates.append(i)
-                logger.debug(f"      -> Candidate {i} ADDED.")
+            # Combine all conditions
+            all_checks = radius_sum_check & lower_bound_check & upper_bound_check
+
+            # Get indices of candidates
+            candidates = np.where(all_checks)[0]
+
+            # Debug logging (only if enabled)
+            if logger.isEnabledFor(logging.DEBUG):
+                for i in candidates:
+                    logger.debug(
+                        f"    Cand i={i}: Dist={distances[i]:.4f}, R_i={radii_all[i]:.4f} | "
+                        f"Cond1 (Rk+Ri <= G): {radius_sum[i]:.4f} <= {gamma_pc:.4f}? -> {radius_sum_check[i]} | "
+                        f"Cond2 (Dist > G-Rk-Ri): {distances[i]:.4f} > {lower_dist_bound[i]:.4f}? -> {lower_bound_check[i]} | "
+                        f"Cond3 (Dist <= G+Rk+Ri): {distances[i]:.4f} <= {upper_dist_bound[i]:.4f}? -> {upper_bound_check[i]}"
+                    )
+                    logger.debug(f"      -> Candidate {i} ADDED.")
+        else:
+            candidates = np.array([], dtype=int)
 
         logger.debug(
             f"PCA selecting candidates for radius {radius_k:.2f} (gamma={gamma_pc:.3f}): Found {len(candidates)} candidates from {self.n1} particles."
         )
-        return np.array(candidates, dtype=int), self.r_max  # Return updated r_max
+        return candidates, self.r_max  # Return updated r_max
 
     def _search_and_select_candidate(
         self, k: int, considered_indices: list[int], force_swap: bool = False
@@ -663,11 +673,12 @@ class PCAggregator:
                     self.radii[k] = radius_k_current
                     self.mass[k] = mass_k_current
 
-                    cov_max = utils.calculate_max_overlap_pca(
+                    cov_max = utils.calculate_max_overlap_pca_fast(
                         self.coords[: self.n1],
                         self.radii[: self.n1],
                         self.coords[k],
                         self.radii[k],
+                        tolerance=self.tol_ov,
                     )
                     logger.debug(
                         f"  PCA k={k}, cand={current_selected_idx}: Initial overlap = {cov_max:.4e}"
@@ -681,20 +692,24 @@ class PCAggregator:
                     relaxed_tol = 1.0e-5  # Relaxed tolerance (10x more lenient)
                     used_adaptive_tol = False
 
+                    # Check TRACE logging once (optimization: avoid check on every rotation)
+                    trace_enabled = logger.isEnabledFor(TRACE_LEVEL_NUM)
+
                     while cov_max > self.tol_ov and intento < max_rotations:
                         intento += 1
                         coord_k_new, theta_a_new = self._reintento(
                             k, vec_0, i_vec, j_vec, attempt=intento
                         )
                         self.coords[k] = coord_k_new
-                        cov_max = utils.calculate_max_overlap_pca(
+                        cov_max = utils.calculate_max_overlap_pca_fast(
                             self.coords[: self.n1],
                             self.radii[: self.n1],
                             self.coords[k],
                             self.radii[k],
+                            tolerance=self.tol_ov,
                         )
                         # Add detailed trace log here if needed (as before)
-                        if logger.isEnabledFor(TRACE_LEVEL_NUM):  # TRACE level
+                        if trace_enabled:  # TRACE level (checked once for performance)
                             ov_details = []
                             for idx_agg in range(self.n1):
                                 if idx_agg == current_selected_idx:
