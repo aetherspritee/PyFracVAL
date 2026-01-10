@@ -85,6 +85,9 @@ class PCAggregator:
         self.cm = np.zeros(3)  # Center of mass of the current aggregate
         self.r_max: float = 0.0  # Max distance from CM in the current aggregate
 
+        # Incremental Rg calculation: track sum of log(radii) for O(1) updates
+        self.sum_log_radii: float = 0.0  # Running sum of log(radii) for geo mean
+
         self.not_able_pca: bool = False
 
     def _random_point_sphere(self) -> tuple[float, float]:
@@ -94,6 +97,41 @@ class PCAggregator:
         theta = 2.0 * config.PI * u
         phi = np.arccos(2.0 * v - 1.0)
         return theta, phi
+
+    def _update_rg_incremental(self, new_radius: float) -> float:
+        """Incrementally update radius of gyration when adding a particle.
+
+        This is O(1) vs O(n) for recalculating from scratch.
+        Uses running sum of log(radii) for geometric mean.
+
+        Parameters
+        ----------
+        new_radius : float
+            Radius of the particle being added.
+
+        Returns
+        -------
+        float
+            Updated radius of gyration.
+        """
+        if new_radius <= 1e-12:
+            # Skip near-zero radii (same filter as calculate_rg)
+            return self.rg1
+
+        # Update running sum of log(radii)
+        self.sum_log_radii += np.log(new_radius)
+
+        # Calculate geometric mean from running sum
+        # geo_mean_r = exp(sum_log_radii / n)
+        geo_mean_r = np.exp(self.sum_log_radii / self.n1)
+
+        # Calculate Rg using fractal scaling law
+        # Rg = geo_mean_r * (n / kf)^(1/df)
+        if self.kf > 0 and self.df > 0:
+            rg = geo_mean_r * (self.n1 / self.kf) ** (1.0 / self.df)
+            return max(rg, 0.0)
+        else:
+            return 0.0
 
     def _first_two_monomers(self):
         """Places the first two monomers."""
@@ -121,8 +159,17 @@ class PCAggregator:
 
         self.n1 = 2
         self.m1 = self.mass[0] + self.mass[1]
-        # Use utils for rg calculation
+
+        # Initialize incremental Rg calculation for first two particles
+        valid_radii = [r for r in [self.radii[0], self.radii[1]] if r > 1e-12]
+        if len(valid_radii) > 0:
+            self.sum_log_radii = sum(np.log(r) for r in valid_radii)
+        else:
+            self.sum_log_radii = 0.0
+
+        # Use utils for rg calculation (initial setup)
         self.rg1 = utils.calculate_rg(self.radii[: self.n1], self.n1, self.df, self.kf)
+
         if self.m1 > utils.FLOATING_POINT_ERROR:  # Use utils tolerance
             self.cm = (
                 self.coords[0] * self.mass[0] + self.coords[1] * self.mass[1]
@@ -840,9 +887,9 @@ class PCAggregator:
                 self.cm = (self.cm * m_old + self.coords[k] * self.mass[k]) / self.m1
             else:
                 self.cm = np.mean(self.coords[: self.n1], axis=0)
-            self.rg1 = utils.calculate_rg(
-                self.radii[: self.n1], self.n1, self.df, self.kf
-            )
+
+            # Incremental Rg update (O(1) vs O(n))
+            self.rg1 = self._update_rg_incremental(self.radii[k])
             considered_indices.append(k)
             logger.debug(
                 f"--- PCA Step: Successfully added particle k={k}. Aggregate size n1={self.n1} ---"
