@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-03-09 22:22:16",
+  "total_combinations": 3,
+  "trials_per_combo": 30,
+  "sizes": [
+    128
+  ],
+  "sigmas": [
+    1.0,
+    2.0,
+    3.0
+  ],
+  "df_values": [
+    1.79
+  ],
+  "kf_values": [
+    1.4
+  ],
+  "total_runtime_s": 255.85654425621033,
+  "results": [
+    {
+      "N": 128,
+      "Df": 1.79,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 30,
+      "successes": 30,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.3240434010823568,
+      "median_runtime_s": 0.2981175184249878,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.79,
+      "kf": 1.4,
+      "rp_gstd": 2.0,
+      "trials": 30,
+      "successes": 30,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.5053037405014038,
+      "median_runtime_s": 1.180991530418396,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.79,
+      "kf": 1.4,
+      "rp_gstd": 3.0,
+      "trials": 30,
+      "successes": 30,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.698814455668131,
+      "median_runtime_s": 5.8446714878082275,
+      "failure_stage_counts": {}
+    }
+  ]
+}
