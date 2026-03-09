@@ -121,6 +121,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Save raw per-trial results to JSONL",
     )
 
+    parser.add_argument(
+        "--trial-timeout",
+        type=int,
+        default=None,
+        help=(
+            "Wall-clock timeout in seconds per trial (default: no limit). "
+            "Timed-out trials are counted as failures."
+        ),
+    )
+
     return parser
 
 
@@ -193,6 +203,7 @@ def main() -> int:
                                 params,
                                 trial_num=trial,
                                 category="stability_sweep",
+                                trial_timeout=args.trial_timeout,
                             )
                             case_results.append(result)
 
