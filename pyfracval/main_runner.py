@@ -20,6 +20,7 @@ def run_simulation(
     sim_config_dict: dict[str, Any],
     output_base_dir: str = "RESULTS",
     seed: int | None = None,
+    max_runtime_seconds: float | None = None,
 ) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
     """
     Run one full FracVAL aggregate generation (PCA + CCA).
@@ -47,6 +48,11 @@ def run_simulation(
         Base directory to save the output `.dat` file, by default "RESULTS".
     seed : int | None, optional
         Random seed for reproducibility, by default None (time-based).
+    max_runtime_seconds : float | None, optional
+        If set, abort and return (False, None, None) if the total elapsed
+        wall-clock time exceeds this value between retry attempts.
+        This allows callers to bound the worst-case runtime for parameter
+        regions that are difficult or impossible to aggregate.
 
     Returns
     -------
@@ -88,6 +94,16 @@ def run_simulation(
     pca_success = False
 
     for attempt in range(1, max_attempts + 1):
+        # Check wall-clock budget before starting a new attempt
+        if max_runtime_seconds is not None:
+            elapsed = time.time() - start_time
+            if elapsed >= max_runtime_seconds:
+                logger.warning(
+                    f"run_simulation: wall-clock budget of {max_runtime_seconds}s "
+                    f"exhausted after {elapsed:.1f}s (attempt {attempt}). Aborting."
+                )
+                return False, None, None
+
         # 1+2. Generate AND shuffle radii every attempt (Fortran does both per restart)
         try:
             initial_radii = particle_generation.lognormal_pp_radii(

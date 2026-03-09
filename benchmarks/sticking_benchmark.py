@@ -18,7 +18,6 @@ Usage:
 """
 
 import json
-import multiprocessing
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -28,51 +27,6 @@ import numpy as np
 
 from pyfracval.main_runner import run_simulation
 from pyfracval.schemas import SimulationParameters
-
-
-def _run_trial_worker(
-    full_params: Dict,
-    output_dir_str: str,
-    category: str,
-    trial_num: int,
-) -> tuple:
-    """Worker function executed in a subprocess for each benchmark trial.
-
-    Returns a tuple of (success, runtime, final_N, final_Rg, failure_stage, failure_reason).
-    Must be a top-level function to be picklable.
-    """
-    import time as _time
-
-    from pyfracval.main_runner import run_simulation as _run
-
-    seed = full_params["seed"]
-    start = _time.time()
-    try:
-        success, final_coords, final_radii = _run(
-            iteration=trial_num,
-            sim_config_dict=full_params,
-            output_base_dir=output_dir_str,
-            seed=seed,
-        )
-        runtime = _time.time() - start
-        final_N = None
-        final_Rg = None
-        if success and final_coords is not None and final_radii is not None:
-            final_N = int(final_coords.shape[0])
-            try:
-                from pyfracval.utils import calculate_cluster_properties as _ccp
-
-                _, rg, _, _ = _ccp(
-                    final_coords, final_radii, full_params["Df"], full_params["kf"]
-                )
-                final_Rg = float(rg) if rg is not None else None
-            except Exception:
-                pass
-        failure_stage = None if success else "UNKNOWN"
-        failure_reason = None if success else "Check logs"
-        return (success, runtime, final_N, final_Rg, failure_stage, failure_reason)
-    except Exception as exc:
-        return (False, _time.time() - start, None, None, "EXCEPTION", str(exc))
 
 
 @dataclass
@@ -343,9 +297,13 @@ class StickingBenchmark:
             params: Test case parameters
             trial_num: Trial number (for seed generation)
             category: Benchmark category name
-            trial_timeout: Maximum seconds allowed per trial (None = no limit).
-                Uses a subprocess to enforce the limit, so it works even when
-                C-extension code (numpy) does not release the GIL.
+            trial_timeout: Maximum wall-clock seconds allowed per trial
+                (None = no limit).  Passed as ``max_runtime_seconds`` to
+                ``run_simulation``, which aborts cleanly between retry
+                attempts when the budget is exhausted.  Because the check
+                happens between attempts (not inside C-extension loops), an
+                individual attempt may still overshoot by the duration of one
+                CCA sticking phase.
 
         Returns:
             BenchmarkResult with success status and metrics
@@ -382,71 +340,38 @@ class StickingBenchmark:
         start_time = time.time()
 
         try:
-            if trial_timeout is not None:
-                # Run in a subprocess with a result queue so we can forcibly
-                # terminate it if it exceeds the time limit.  ProcessPoolExecutor
-                # cannot kill a running worker, so we use multiprocessing.Process
-                # + multiprocessing.Queue instead.
-                q: multiprocessing.Queue = multiprocessing.Queue()
+            # Run inline — max_runtime_seconds provides a between-attempt budget
+            success, final_coords, final_radii = run_simulation(
+                iteration=trial_num,
+                sim_config_dict=full_params,
+                output_base_dir=output_dir_str,
+                seed=seed,
+                max_runtime_seconds=float(trial_timeout)
+                if trial_timeout is not None
+                else None,
+            )
+            runtime = time.time() - start_time
+            final_N = None
+            final_Rg = None
+            failure_stage = None
+            failure_reason = None
+            if success and final_coords is not None and final_radii is not None:
+                final_N = int(final_coords.shape[0])
+                try:
+                    from pyfracval.utils import calculate_cluster_properties
 
-                def _target() -> None:
-                    result = _run_trial_worker(
-                        full_params, output_dir_str, category, trial_num
+                    _, rg, _, _ = calculate_cluster_properties(
+                        final_coords,
+                        final_radii,
+                        full_params["Df"],
+                        full_params["kf"],
                     )
-                    q.put(result)
-
-                proc = multiprocessing.Process(target=_target, daemon=True)
-                proc.start()
-                proc.join(timeout=trial_timeout)
-                if proc.is_alive():
-                    proc.kill()
-                    proc.join()
-                    runtime = time.time() - start_time
-                    print(
-                        f"  [TIMEOUT] Trial {trial_num + 1} exceeded {trial_timeout}s limit."
-                    )
-                    return BenchmarkResult(
-                        category=category,
-                        success=False,
-                        runtime_seconds=runtime,
-                        failure_stage="TIMEOUT",
-                        failure_reason=f"Exceeded {trial_timeout}s wall-clock limit",
-                        **{k: v for k, v in full_params.items() if k in _result_fields},
-                    )
-                worker_result = q.get_nowait()
-                success, runtime, final_N, final_Rg, failure_stage, failure_reason = (
-                    worker_result
-                )
+                    final_Rg = float(rg) if rg is not None else None
+                except Exception:
+                    pass
             else:
-                # No timeout: run inline for lowest overhead
-                success, final_coords, final_radii = run_simulation(
-                    iteration=trial_num,
-                    sim_config_dict=full_params,
-                    output_base_dir=output_dir_str,
-                    seed=seed,
-                )
-                runtime = time.time() - start_time
-                final_N = None
-                final_Rg = None
-                failure_stage = None
-                failure_reason = None
-                if success and final_coords is not None and final_radii is not None:
-                    final_N = int(final_coords.shape[0])
-                    try:
-                        from pyfracval.utils import calculate_cluster_properties
-
-                        _, rg, _, _ = calculate_cluster_properties(
-                            final_coords,
-                            final_radii,
-                            full_params["Df"],
-                            full_params["kf"],
-                        )
-                        final_Rg = float(rg) if rg is not None else None
-                    except Exception:
-                        pass
-                else:
-                    failure_stage = "UNKNOWN"
-                    failure_reason = "Check logs"
+                failure_stage = "UNKNOWN"
+                failure_reason = "Check logs"
 
             result = BenchmarkResult(
                 category=category,
