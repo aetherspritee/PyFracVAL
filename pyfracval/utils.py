@@ -179,9 +179,18 @@ def gamma_calculation(
     df: float,
     kf: float,
     heuristic: bool = True,
+    all_radii: npt.NDArray | None = None,
 ) -> tuple[bool, float]:
     """
     Calculates Gamma_pc for adding the next monomer (aggregate 2).
+
+    Parameters
+    ----------
+    all_radii : np.ndarray, optional
+        If provided, the geometric mean radius for rg3 is computed from this
+        full set of radii (matching Fortran behaviour where R contains all N
+        particles). When None the geometric mean is taken from the local
+        combined set (radii1 + radii2).
     """
     n1 = radii1.size
     n2 = radii2.size
@@ -194,9 +203,10 @@ def gamma_calculation(
         m2 = n2
         m3 = n3
 
-    # Radii of particles already in cluster + the next one to be added
-    combined_radii = np.concatenate((radii1, radii2))
-    rg3 = calculate_rg(combined_radii, n3, df, kf)
+    # Use the full particle set for the geometric-mean radius when available,
+    # matching Fortran: rg3 = geomean(R_all) * (n3/kf)^(1/Df)
+    rg3_radii = all_radii if all_radii is not None else np.concatenate((radii1, radii2))
+    rg3 = calculate_rg(rg3_radii, n3, df, kf)
 
     # Heuristic from Fortran: ensure rg3 is not smaller than rg1
     # (avoids issues if rg calculation is noisy for small N)

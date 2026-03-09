@@ -6,10 +6,8 @@ import math
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import particle_generation
 from .pca_agg import PCAggregator
-
-# Ensure access to utils if needed, though likely not directly
-# from . import utils
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +60,13 @@ class Subclusterer(BaseModel):
     kf: float = Field(..., gt=0.0)
     tol_ov: float
     n_subcl_percentage: float = Field(default=0.1, lt=1.0)
+    # Optional lognormal parameters for per-subcluster retry with fresh radii.
+    # When set (rp_gstd > 1.0), a failed subcluster is retried up to
+    # `max_subcluster_retries` times by drawing a fresh set of radii from the
+    # same lognormal distribution instead of failing the entire simulation.
+    rp_g: float = Field(default=100.0, gt=0.0)
+    rp_gstd: float = Field(default=1.0, ge=1.0)
+    max_subcluster_retries: int = Field(default=200, ge=0)
 
     N: int = Field(default=0)
     all_coords: np.ndarray = Field(default=np.zeros(0))
@@ -187,21 +192,23 @@ class Subclusterer(BaseModel):
         current_n_start_idx = 0  # Index in the initial_radii array
         current_fill_idx = 0  # Index in the final all_coords/all_radii
 
-        pca_df = self.df
-        pca_kf = self.kf
-        # --- Define Df/kf to use *specifically* for PCA ---
-        # Use fixed, stable values, e.g., typical DLCA or Filippov mono values
-        # pca_df = 1.79
-        # pca_kf = 1.40
-        # Alternatively, use overrides if they were passed during init:
-        # pca_df = self.pca_df_override if self.pca_df_override is not None else 1.79
-        # pca_kf = self.pca_kf_override if self.pca_kf_override is not None else 1.40
-        # --- Do NOT use self.target_df / self.target_kf here if they cause issues ---
+        # --- Define Df/kf to use *specifically* for PCA stage ---
+        # Use fixed, stable DLCA values regardless of the target morphology.
+        # The subclusters built here are later assembled by CCA with the target Df/kf.
+        # Using the densest/most-spherical anchor (Df=1.79, kf=1.40) maximises the
+        # chance that a valid candidate exists even for wide polydisperse distributions.
+        pca_df = 1.79
+        pca_kf = 1.40
         logger.info(
             f"--- Using fixed parameters for PCA stage: Df={pca_df:.2f}, kf={pca_kf:.2f} ---"
         )
 
-        # TODO: replace with enumerate, its cleaner
+        # Whether per-subcluster retry with fresh radii is enabled.
+        # Requires rp_gstd > 1.0 (polydisperse) and rp_g > 0.
+        can_retry_with_fresh_radii = (
+            self.rp_gstd > 1.0 and self.rp_g > 0.0 and self.max_subcluster_retries > 0
+        )
+
         for i in range(self.number_clusters):
             self.number_clusters_processed = i  # Track for error reporting
             num_particles_in_subcluster = subcluster_sizes[i]
@@ -209,29 +216,52 @@ class Subclusterer(BaseModel):
                 f"--- Processing Subcluster {i + 1}/{self.number_clusters} (Size: {num_particles_in_subcluster}) ---"
             )
 
-            # TODO: why creash if only one subcluster is 1 (last one?)
             if num_particles_in_subcluster < 2:
                 logger.error(
                     f"Subcluster {i + 1} has size {num_particles_in_subcluster}, needs >= 2 for PCA."
                 )
-                # This should not happen if _determine_subcluster_sizes is correct
                 self.not_able_pca = True
                 return False
 
-            # Extract radii for this subcluster
+            # Extract radii for this subcluster (initial attempt uses the
+            # pre-shuffled radii from the caller).
             idx_start = current_n_start_idx
             idx_end = current_n_start_idx + num_particles_in_subcluster
             subcluster_radii = self.initial_radii[idx_start:idx_end]
 
-            # Run PCA for this subcluster using the *fixed* pca_df, pca_kf
-            pca_runner = PCAggregator(subcluster_radii, pca_df, pca_kf, self.tol_ov)
-            subcluster_data = pca_runner.run()  # Returns Nx4 [X,Y,Z,R] or None
+            # --- Run PCA with optional per-subcluster retry ---
+            subcluster_data = None
+            total_attempts = 1 + (
+                self.max_subcluster_retries if can_retry_with_fresh_radii else 0
+            )
 
-            if subcluster_data is None or pca_runner.not_able_pca:
-                logger.error(f"PCA failed for subcluster {i + 1}.")
+            for attempt in range(total_attempts):
+                if attempt > 0:
+                    # Draw fresh radii from the same lognormal distribution.
+                    # This mirrors the Fortran top-level restart but is much cheaper
+                    # (only N_subcl radii instead of all N).
+                    subcluster_radii = particle_generation.lognormal_pp_radii(
+                        self.rp_gstd, self.rp_g, num_particles_in_subcluster
+                    )
+                    logger.warning(
+                        f"  Subcluster {i + 1}: PCA failed, retrying with fresh radii "
+                        f"(attempt {attempt + 1}/{total_attempts})."
+                    )
+
+                pca_runner = PCAggregator(subcluster_radii, pca_df, pca_kf, self.tol_ov)
+                subcluster_data = pca_runner.run()  # Returns Nx4 [X,Y,Z,R] or None
+
+                if subcluster_data is not None and not pca_runner.not_able_pca:
+                    break  # Success
+
+                subcluster_data = None  # Ensure None on failure for check below
+
+            if subcluster_data is None:
+                logger.error(
+                    f"PCA failed for subcluster {i + 1} after {total_attempts} attempt(s)."
+                )
                 self.not_able_pca = True
-                # No need to return immediately, let main_runner handle retry
-                return False  # Signal failure for this attempt
+                return False  # Signal failure
 
             # Store the results
             num_added = subcluster_data.shape[0]

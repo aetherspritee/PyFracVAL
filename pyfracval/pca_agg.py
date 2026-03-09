@@ -66,12 +66,13 @@ class PCAggregator:
         if self.N < 2:
             raise ValueError("PCA requires at least 2 particles.")
 
-        # Sort radii in ascending order before PCA.
-        # For polydisperse distributions, placing smaller particles first keeps
-        # the aggregate compact and avoids the geometric impossibility where
-        # gamma_pc < max_aggregate_radius + r_k (which 360 rotations can't resolve).
-        # This significantly improves stability for sigma >= 2.0.
-        self.initial_radii = np.sort(initial_radii)
+        # Do NOT sort radii — use them in the order passed in (after shuffling in
+        # main_runner). The Fortran processes subcluster particles in whatever
+        # global order they appear; sorting (ascending or descending) creates
+        # pathological cases where the first two particles are either both tiny
+        # (making rg1 tiny and gamma_pc huge) or both huge (creating immediate
+        # overlap).  Random order from shuffling avoids both extremes.
+        self.initial_radii = initial_radii.copy()
         # Calculate initial mass using utils consistently
         self.initial_mass = utils.calculate_mass(self.initial_radii)
 
@@ -206,6 +207,7 @@ class PCAggregator:
                 np.array([self.initial_radii[self.n1]]),
                 self.df,
                 self.kf,
+                all_radii=self.initial_radii,
             )
         else:
             return utils.gamma_calculation(
@@ -217,6 +219,7 @@ class PCAggregator:
                 np.array([self.initial_radii[self.n1]]),
                 self.df,
                 self.kf,
+                all_radii=self.initial_radii,
             )
         # n1 = self.n1
         # n2 = 1
@@ -401,7 +404,11 @@ class PCAggregator:
         return candidates, self.r_max  # Return updated r_max
 
     def _search_and_select_candidate(
-        self, k: int, considered_indices: list[int], force_swap: bool = False
+        self,
+        k: int,
+        considered_indices: list[int],
+        force_swap: bool = False,
+        tried_swaps: set[int] | None = None,
     ) -> tuple[int, float, float, bool, float, np.ndarray]:
         """
         Handles the complex logic of selecting a candidate, potentially swapping
@@ -413,6 +420,10 @@ class PCAggregator:
             considered_indices: List of particle indices already successfully placed.
             force_swap: If True, forces a particle swap even if candidates exist.
                        This is needed when all candidates fail the overlap check.
+            tried_swaps: Persistent set of monomer indices already tried at position k.
+                        When provided (not None) it is updated in-place so the caller
+                        can pass the same set on subsequent calls and avoid retrying
+                        the same swaps.  If None a fresh set is created (legacy use).
 
         Returns:
             tuple: (selected_idx, m2, rg2, gamma_real, gamma_pc, candidate_list)
@@ -420,7 +431,14 @@ class PCAggregator:
                    candidate_list is the list of indices (0 to n1-1) found for the *final* particle k.
         """
         available_monomers = list(range(k, self.N))  # Indices of unprocessed monomers
-        tried_swaps = {k}  # Monomers tried *at position k*
+        if tried_swaps is None:
+            tried_swaps = {k}  # Monomers tried *at position k* (fresh set)
+        else:
+            tried_swaps.add(k)  # Ensure current k is always in the tried set
+        # Track whether we have already done the forced swap this call.
+        # After the first forced swap the remaining iterations should check
+        # candidates normally (just like in the Fortran Search_list loop).
+        swap_done = False
 
         while True:
             # --- Try with current monomer k ---
@@ -445,7 +463,11 @@ class PCAggregator:
                     f"PCA search k={k}: Found {len(candidates)} candidates: {candidates}"
                 )
 
-            if len(candidates) > 0 and not force_swap:
+            # force_swap only applies to the very first iteration (before any swap
+            # has been done).  Once we have performed a swap the candidates should
+            # be evaluated normally so we don't keep swapping indefinitely.
+            need_swap = (force_swap and not swap_done) or len(candidates) == 0
+            if len(candidates) > 0 and not need_swap:
                 # Select one candidate randomly (will be used as starting point in run loop)
                 idx_in_candidates = np.random.randint(len(candidates))
                 selected_initial_candidate = candidates[idx_in_candidates]
@@ -462,8 +484,8 @@ class PCAggregator:
                     candidates,  # Return the list of all candidates
                 )
             else:
-                # Need to swap: either no candidates OR force_swap=True
-                if force_swap:
+                # Need to swap: either no candidates OR a forced initial swap
+                if force_swap and not swap_done:
                     logger.debug(
                         f"PCA search k={k}: force_swap=True - will swap particle even though {len(candidates)} candidates exist."
                     )
@@ -471,6 +493,9 @@ class PCAggregator:
                     logger.debug(
                         f"PCA search k={k}: No candidates found or gamma not real. Looking for swap."
                     )
+                swap_done = (
+                    True  # mark that we have performed (or are about to perform) a swap
+                )
                 # --- No candidates: Try swapping k with an untried, available monomer ---
                 # Find monomers eligible for swapping (not k itself, not already tried at pos k,
                 # and not already successfully placed in the aggregate)
@@ -715,6 +740,12 @@ class PCAggregator:
             search_attempt = 0
             max_search_attempts = self.N
             sticking_successful = False
+            # Persistent set of monomers already tried at position k.
+            # Must survive across search attempts so that each retry swaps in a
+            # DIFFERENT monomer (mirrors Fortran's `considerados` array which
+            # accumulates tried particles across all Search_list calls for a
+            # given k step).
+            tried_swaps_for_k: set[int] = set()
 
             while not sticking_successful and search_attempt < max_search_attempts:
                 search_attempt += 1
@@ -724,7 +755,10 @@ class PCAggregator:
                 # Force particle swap on retry attempts (when previous candidates failed)
                 force_swap = search_attempt > 1
                 search_result = self._search_and_select_candidate(
-                    k, considered_indices, force_swap=force_swap
+                    k,
+                    considered_indices,
+                    force_swap=force_swap,
+                    tried_swaps=tried_swaps_for_k,
                 )
                 (
                     initial_candidate_idx,
@@ -758,27 +792,6 @@ class PCAggregator:
                     # This case might happen if _select_candidates fails geometrically
                     # even if gamma was real after a swap.
                     continue  # Go to next iteration of the outer while loop
-
-                # --- Early geometric feasibility check ---
-                # If gamma_pc < (max radius in aggregate + r_k), then any placement
-                # at distance gamma_pc from the CM will intersect the largest particle.
-                # Detect this and immediately trigger a force_swap on the next attempt
-                # to avoid wasting 360 rotation attempts on a geometrically impossible case.
-                if self.n1 > 0:
-                    max_r_in_agg = np.max(self.radii[: self.n1])
-                    if (
-                        gamma_pc
-                        < max_r_in_agg + radius_k_current - utils.FLOATING_POINT_ERROR
-                    ):
-                        logger.debug(
-                            f"PCA k={k}, Attempt {search_attempt}: gamma_pc={gamma_pc:.4f} < "
-                            f"max_agg_r({max_r_in_agg:.4f}) + r_k({radius_k_current:.4f}) = "
-                            f"{max_r_in_agg + radius_k_current:.4f}. "
-                            "Geometrically impossible — skipping to force_swap."
-                        )
-                        # Immediately trigger force_swap on the next iteration
-                        # by treating this as all candidates failed
-                        continue  # Go to next iteration (force_swap=True will be set)
 
                 candidates_to_try = utils.shuffle_array(candidates_list.copy())
                 logger.debug(
@@ -1005,8 +1018,17 @@ class PCAggregator:
             else:
                 self.cm = np.mean(self.coords[: self.n1], axis=0)
 
-            # Incremental Rg update (O(1) vs O(n))
-            self.rg1 = self._update_rg_incremental(self.radii[k])
+            # Update rg1 using the FULL subcluster geomean (Fortran line 145):
+            #   rg1 = geomean(R_all) * (n1/kf)^(1/Df)
+            # This matches the Fortran exactly: after each step the growing
+            # aggregate's Rg is estimated from the theoretical fractal law
+            # using the global subcluster geometric mean, not just the placed
+            # particles.  Using only the placed particles underestimates rg1,
+            # making gamma_pc too large and breaking condition 2.
+            all_geomean = np.exp(np.mean(np.log(self.initial_radii)))
+            self.rg1 = all_geomean * (self.n1 / self.kf) ** (1.0 / self.df)
+            # Keep sum_log_radii in sync (used by _update_rg_incremental if called elsewhere)
+            self.sum_log_radii = np.sum(np.log(self.initial_radii))
             considered_indices.append(k)
             logger.debug(
                 f"--- PCA Step: Successfully added particle k={k}. Aggregate size n1={self.n1} ---"
