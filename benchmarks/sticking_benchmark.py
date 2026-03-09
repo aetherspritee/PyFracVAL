@@ -18,7 +18,7 @@ Usage:
 """
 
 import json
-import signal
+import multiprocessing
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -30,12 +30,49 @@ from pyfracval.main_runner import run_simulation
 from pyfracval.schemas import SimulationParameters
 
 
-class _TrialTimeoutError(Exception):
-    """Raised when a single benchmark trial exceeds its time limit."""
+def _run_trial_worker(
+    full_params: Dict,
+    output_dir_str: str,
+    category: str,
+    trial_num: int,
+) -> tuple:
+    """Worker function executed in a subprocess for each benchmark trial.
 
+    Returns a tuple of (success, runtime, final_N, final_Rg, failure_stage, failure_reason).
+    Must be a top-level function to be picklable.
+    """
+    import time as _time
 
-def _timeout_handler(signum: int, frame: object) -> None:  # noqa: ARG001
-    raise _TrialTimeoutError("Trial exceeded time limit")
+    from pyfracval.main_runner import run_simulation as _run
+
+    seed = full_params["seed"]
+    start = _time.time()
+    try:
+        success, final_coords, final_radii = _run(
+            iteration=trial_num,
+            sim_config_dict=full_params,
+            output_base_dir=output_dir_str,
+            seed=seed,
+        )
+        runtime = _time.time() - start
+        final_N = None
+        final_Rg = None
+        if success and final_coords is not None and final_radii is not None:
+            final_N = int(final_coords.shape[0])
+            try:
+                from pyfracval.utils import calculate_cluster_properties as _ccp
+
+                _, rg, _, _ = _ccp(
+                    final_coords, final_radii, full_params["Df"], full_params["kf"]
+                )
+                final_Rg = float(rg) if rg is not None else None
+            except Exception:
+                pass
+        failure_stage = None if success else "UNKNOWN"
+        failure_reason = None if success else "Check logs"
+        return (success, runtime, final_N, final_Rg, failure_stage, failure_reason)
+    except Exception as exc:
+        return (False, _time.time() - start, None, None, "EXCEPTION", str(exc))
 
 
 @dataclass
@@ -307,7 +344,8 @@ class StickingBenchmark:
             trial_num: Trial number (for seed generation)
             category: Benchmark category name
             trial_timeout: Maximum seconds allowed per trial (None = no limit).
-                Uses SIGALRM on Linux/macOS; ignored on other platforms.
+                Uses a subprocess to enforce the limit, so it works even when
+                C-extension code (numpy) does not release the GIL.
 
         Returns:
             BenchmarkResult with success status and metrics
@@ -340,59 +378,87 @@ class StickingBenchmark:
             "description",
         ]
 
+        output_dir_str = str(self.output_dir / "aggregates" / category)
         start_time = time.time()
 
-        # Arm optional per-trial wall-clock timeout (SIGALRM, POSIX only)
-        _alarm_available = hasattr(signal, "alarm")
-        if trial_timeout is not None and _alarm_available:
-            signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(trial_timeout)
-
         try:
-            success, final_coords, final_radii = run_simulation(
-                iteration=trial_num,
-                sim_config_dict=full_params,
-                output_base_dir=str(self.output_dir / "aggregates" / category),
-                seed=seed,
-            )
+            if trial_timeout is not None:
+                # Run in a subprocess with a result queue so we can forcibly
+                # terminate it if it exceeds the time limit.  ProcessPoolExecutor
+                # cannot kill a running worker, so we use multiprocessing.Process
+                # + multiprocessing.Queue instead.
+                q: multiprocessing.Queue = multiprocessing.Queue()
 
-            runtime = time.time() - start_time
+                def _target() -> None:
+                    result = _run_trial_worker(
+                        full_params, output_dir_str, category, trial_num
+                    )
+                    q.put(result)
+
+                proc = multiprocessing.Process(target=_target, daemon=True)
+                proc.start()
+                proc.join(timeout=trial_timeout)
+                if proc.is_alive():
+                    proc.kill()
+                    proc.join()
+                    runtime = time.time() - start_time
+                    print(
+                        f"  [TIMEOUT] Trial {trial_num + 1} exceeded {trial_timeout}s limit."
+                    )
+                    return BenchmarkResult(
+                        category=category,
+                        success=False,
+                        runtime_seconds=runtime,
+                        failure_stage="TIMEOUT",
+                        failure_reason=f"Exceeded {trial_timeout}s wall-clock limit",
+                        **{k: v for k, v in full_params.items() if k in _result_fields},
+                    )
+                worker_result = q.get_nowait()
+                success, runtime, final_N, final_Rg, failure_stage, failure_reason = (
+                    worker_result
+                )
+            else:
+                # No timeout: run inline for lowest overhead
+                success, final_coords, final_radii = run_simulation(
+                    iteration=trial_num,
+                    sim_config_dict=full_params,
+                    output_base_dir=output_dir_str,
+                    seed=seed,
+                )
+                runtime = time.time() - start_time
+                final_N = None
+                final_Rg = None
+                failure_stage = None
+                failure_reason = None
+                if success and final_coords is not None and final_radii is not None:
+                    final_N = int(final_coords.shape[0])
+                    try:
+                        from pyfracval.utils import calculate_cluster_properties
+
+                        _, rg, _, _ = calculate_cluster_properties(
+                            final_coords,
+                            final_radii,
+                            full_params["Df"],
+                            full_params["kf"],
+                        )
+                        final_Rg = float(rg) if rg is not None else None
+                    except Exception:
+                        pass
+                else:
+                    failure_stage = "UNKNOWN"
+                    failure_reason = "Check logs"
 
             result = BenchmarkResult(
                 category=category,
                 success=success,
                 runtime_seconds=runtime,
+                failure_stage=failure_stage,
+                failure_reason=failure_reason,
+                final_N=final_N,
+                final_Rg=final_Rg,
                 **{k: v for k, v in full_params.items() if k in _result_fields},
             )
-
-            if success and final_coords is not None:
-                result.final_N = final_coords.shape[0]
-                # Calculate Rg if needed
-                from pyfracval.utils import calculate_cluster_properties
-
-                _, rg, _, _ = calculate_cluster_properties(
-                    final_coords, final_radii, full_params["Df"], full_params["kf"]
-                )
-                result.final_Rg = rg
-            else:
-                # Try to determine failure stage from logs
-                # (This requires enhanced logging in main_runner.py)
-                result.failure_stage = "UNKNOWN"
-                result.failure_reason = "Check logs"
-
             return result
-
-        except _TrialTimeoutError:
-            runtime = time.time() - start_time
-            print(f"  [TIMEOUT] Trial {trial_num + 1} exceeded {trial_timeout}s limit.")
-            return BenchmarkResult(
-                category=category,
-                success=False,
-                runtime_seconds=runtime,
-                failure_stage="TIMEOUT",
-                failure_reason=f"Exceeded {trial_timeout}s wall-clock limit",
-                **{k: v for k, v in full_params.items() if k in _result_fields},
-            )
 
         except Exception as e:
             runtime = time.time() - start_time
@@ -404,11 +470,6 @@ class StickingBenchmark:
                 failure_reason=str(e),
                 **{k: v for k, v in full_params.items() if k in _result_fields},
             )
-
-        finally:
-            # Always disarm the alarm to avoid leaking it into the next trial
-            if trial_timeout is not None and _alarm_available:
-                signal.alarm(0)
 
     def run_suite(
         self, category: str, n_trials: int = 10, save_individual: bool = True
