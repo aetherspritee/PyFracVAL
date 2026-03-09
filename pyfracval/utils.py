@@ -211,19 +211,39 @@ def gamma_calculation(
     term2 = m3 * (m1 * rg1**2 + m2 * rg2**2)  # rg2 is for monomer
     denominator = m1 * m2
     radicand = term1 - term2
-    try:
-        gamma_pc = np.sqrt(radicand / denominator)
-        gamma_real = True
-    except (ValueError, ZeroDivisionError, OverflowError) as e:
-        logger.warning(f"Gamma calculation internal failed: {e}")
+
+    # Explicitly check for non-real conditions before calling sqrt.
+    # np.sqrt(negative) produces nan + RuntimeWarning (not a Python exception),
+    # so a try/except is insufficient — we must guard explicitly.
+    if denominator <= 0.0:
         logger.warning(
-            f"Gamma_pc calculation non-real or denominator zero: "
-            f"n1={n1}, m1={m1:.2e}, rg1={rg1:.2e}, "
-            f"n2={n2}, m2={m2:.2e}, rg2={rg2:.2e}, "
-            f"n3={n3}, m3={m3:.2e}, rg3={rg3:.2e} -> "
-            f"radicand={radicand:.2e}, denominator={denominator:.2e}"
+            f"Gamma_pc calculation: denominator={denominator:.2e} <= 0 "
+            f"(n1={n1}, m1={m1:.2e}, n2={n2}, m2={m2:.2e})"
         )
         gamma_real = False
+    elif radicand < 0.0:
+        logger.debug(
+            f"Gamma_pc calculation: radicand={radicand:.2e} < 0 (non-real result). "
+            f"n1={n1}, rg1={rg1:.2e}, n2={n2}, rg2={rg2:.2e}, rg3={rg3:.2e}"
+        )
+        gamma_real = False
+    else:
+        try:
+            val = radicand / denominator
+            gamma_pc = float(np.sqrt(val))
+            # Sanity check: sqrt should never produce nan/inf here, but guard anyway
+            if not np.isfinite(gamma_pc):
+                logger.warning(
+                    f"Gamma_pc calculation: non-finite result {gamma_pc} "
+                    f"(radicand={radicand:.2e}, denominator={denominator:.2e})"
+                )
+                gamma_pc = 0.0
+                gamma_real = False
+            else:
+                gamma_real = True
+        except (ValueError, ZeroDivisionError, OverflowError) as e:
+            logger.warning(f"Gamma calculation internal failed: {e}")
+            gamma_real = False
 
     return gamma_real, gamma_pc
 

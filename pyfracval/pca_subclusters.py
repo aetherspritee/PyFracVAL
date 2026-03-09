@@ -137,8 +137,16 @@ class Subclusterer(BaseModel):
         # Adjust the last cluster size if N is not perfectly divisible
         remainder = self.N % n_subcl
         if remainder != 0:
-            # remainder = self.N - n_subcl * (self.number_clusters - 1)
             subcluster_sizes[-1] = remainder
+
+        # Guard: PCA requires at least 2 particles per subcluster.
+        # If the last subcluster has size 1, merge it into the second-to-last.
+        # This avoids the "Subcluster has size 1, needs >= 2 for PCA" failure.
+        if len(subcluster_sizes) >= 2 and subcluster_sizes[-1] == 1:
+            subcluster_sizes[-2] += 1
+            subcluster_sizes = subcluster_sizes[:-1]
+            self.number_clusters -= 1
+            logger.info("Last subcluster had size 1; merged into previous subcluster.")
 
         # Sanity check
         if np.sum(subcluster_sizes) != self.N:

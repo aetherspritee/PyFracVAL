@@ -12,16 +12,10 @@
     beads
   ];
 
-  # shell = lib.mkForce pkgs.fish;
-
-  # https://devenv.sh/scripts/
-  scripts.hello.exec = ''
-    echo hello from $GREET
-  '';
-
   enterShell = ''
-    hello
-    git --version
+    if [ ! -L "$DEVENV_ROOT/.venv" ]; then
+        ln -s "$DEVENV_STATE/venv/" "$DEVENV_ROOT/.venv"
+    fi
   '';
 
   # https://devenv.sh/tasks/
@@ -29,18 +23,6 @@
   #   "myproj:setup".exec = "mytool build";
   #   "devenv:enterShell".after = [ "myproj:setup" ];
   # };
-
-  # https://devenv.sh/tests/
-  enterTest = ''
-    echo "Running tests"
-    git --version | grep --color=auto "${pkgs.git.version}"
-    uv run pyfracval --version
-  '';
-
-  # https://devenv.sh/git-hooks/
-  # git-hooks.hooks.shellcheck.enable = true;
-
-  # See full reference at https://devenv.sh/reference/options/
 
   languages.python = {
     enable = true;

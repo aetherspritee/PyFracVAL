@@ -66,7 +66,12 @@ class PCAggregator:
         if self.N < 2:
             raise ValueError("PCA requires at least 2 particles.")
 
-        self.initial_radii = initial_radii.copy()
+        # Sort radii in ascending order before PCA.
+        # For polydisperse distributions, placing smaller particles first keeps
+        # the aggregate compact and avoids the geometric impossibility where
+        # gamma_pc < max_aggregate_radius + r_k (which 360 rotations can't resolve).
+        # This significantly improves stability for sigma >= 2.0.
+        self.initial_radii = np.sort(initial_radii)
         # Calculate initial mass using utils consistently
         self.initial_mass = utils.calculate_mass(self.initial_radii)
 
@@ -753,6 +758,27 @@ class PCAggregator:
                     # This case might happen if _select_candidates fails geometrically
                     # even if gamma was real after a swap.
                     continue  # Go to next iteration of the outer while loop
+
+                # --- Early geometric feasibility check ---
+                # If gamma_pc < (max radius in aggregate + r_k), then any placement
+                # at distance gamma_pc from the CM will intersect the largest particle.
+                # Detect this and immediately trigger a force_swap on the next attempt
+                # to avoid wasting 360 rotation attempts on a geometrically impossible case.
+                if self.n1 > 0:
+                    max_r_in_agg = np.max(self.radii[: self.n1])
+                    if (
+                        gamma_pc
+                        < max_r_in_agg + radius_k_current - utils.FLOATING_POINT_ERROR
+                    ):
+                        logger.debug(
+                            f"PCA k={k}, Attempt {search_attempt}: gamma_pc={gamma_pc:.4f} < "
+                            f"max_agg_r({max_r_in_agg:.4f}) + r_k({radius_k_current:.4f}) = "
+                            f"{max_r_in_agg + radius_k_current:.4f}. "
+                            "Geometrically impossible — skipping to force_swap."
+                        )
+                        # Immediately trigger force_swap on the next iteration
+                        # by treating this as all candidates failed
+                        continue  # Go to next iteration (force_swap=True will be set)
 
                 candidates_to_try = utils.shuffle_array(candidates_list.copy())
                 logger.debug(
