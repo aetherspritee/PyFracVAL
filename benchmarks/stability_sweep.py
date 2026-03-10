@@ -2,6 +2,11 @@
 
 This script builds on benchmarks/sticking_benchmark.py to measure
 success rates for aggregate generation across parameter grids.
+
+Dask mode (--dask):
+    Trials for *each* parameter combination are dispatched as individual
+    Dask tasks and collected with ``as_completed``.  Use ``--dask-scheduler``
+    to connect to a running scheduler; otherwise a local cluster is started.
 """
 
 from __future__ import annotations
@@ -131,7 +136,227 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    # --- Dask options ---
+    parser.add_argument(
+        "--dask",
+        action="store_true",
+        help="Distribute trials across a Dask cluster.",
+    )
+    parser.add_argument(
+        "--dask-scheduler",
+        default=None,
+        metavar="URL",
+        help=(
+            "Address of a running Dask scheduler "
+            "(e.g. tcp://host:8786).  "
+            "When omitted, a LocalCluster is started."
+        ),
+    )
+    parser.add_argument(
+        "--dask-workers",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Number of workers for the local Dask cluster (default: all CPUs).",
+    )
+
     return parser
+
+
+def _run_sweep_sequential(
+    args, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
+):
+    """Inner loop for the sequential (non-Dask) sweep."""
+    total_combos = len(sizes) * len(sigmas) * len(df_values) * len(kf_values)
+    combo_index = 0
+
+    for n_val in sizes:
+        for rp_gstd in sigmas:
+            for df_val in df_values:
+                for kf_val in kf_values:
+                    combo_index += 1
+                    label = (
+                        f"N={n_val},Df={_format_param(df_val)},"
+                        f"kf={_format_param(kf_val)},rp_gstd={_format_param(rp_gstd)}"
+                    )
+                    print(f"[{combo_index}/{total_combos}] {label}")
+
+                    params = {
+                        "N": n_val,
+                        "Df": df_val,
+                        "kf": kf_val,
+                        "rp_gstd": rp_gstd,
+                        "rp_g": args.rp_g,
+                        "tol_ov": args.tol_ov,
+                        "n_subcl_percentage": args.n_subcl_percentage,
+                        "ext_case": args.ext_case,
+                        "description": label,
+                    }
+
+                    case_results = []
+                    for trial in range(args.trials):
+                        result = benchmark.run_single_trial(
+                            params,
+                            trial_num=trial,
+                            category="stability_sweep",
+                            trial_timeout=args.trial_timeout,
+                        )
+                        case_results.append(result)
+
+                        if raw_handle is not None:
+                            raw_record = asdict(result)
+                            raw_handle.write(json.dumps(raw_record))
+                            raw_handle.write("\n")
+
+                    _append_sweep_row(
+                        sweep_rows,
+                        n_val,
+                        df_val,
+                        kf_val,
+                        rp_gstd,
+                        args.trials,
+                        case_results,
+                    )
+
+
+def _run_sweep_dask(
+    args, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
+):
+    """Inner loop for the Dask-distributed sweep."""
+    from dask.distributed import as_completed as dask_as_completed
+
+    from pyfracval.dask_runner import get_client
+    from pyfracval.main_runner import run_simulation
+
+    total_combos = len(sizes) * len(sigmas) * len(df_values) * len(kf_values)
+    total_trials = total_combos * args.trials
+    print(
+        f"Submitting {total_trials} tasks across {total_combos} combos "
+        f"to Dask ({args.dask_scheduler or 'local cluster'}) …"
+    )
+
+    with get_client(
+        scheduler_address=args.dask_scheduler,
+        n_workers=args.dask_workers,
+    ) as client:
+        # Build a flat list of (combo_key, trial) → future
+        combo_futures: dict = {}  # future → (combo_key, trial_index)
+        combo_params: dict = {}  # combo_key → params dict
+
+        combo_index = 0
+        for n_val in sizes:
+            for rp_gstd in sigmas:
+                for df_val in df_values:
+                    for kf_val in kf_values:
+                        combo_index += 1
+                        label = (
+                            f"N={n_val},Df={_format_param(df_val)},"
+                            f"kf={_format_param(kf_val)},rp_gstd={_format_param(rp_gstd)}"
+                        )
+                        params = {
+                            "N": n_val,
+                            "Df": df_val,
+                            "kf": kf_val,
+                            "rp_gstd": rp_gstd,
+                            "rp_g": args.rp_g,
+                            "tol_ov": args.tol_ov,
+                            "n_subcl_percentage": args.n_subcl_percentage,
+                            "ext_case": args.ext_case,
+                            "description": label,
+                        }
+                        combo_key = (n_val, rp_gstd, df_val, kf_val)
+                        combo_params[combo_key] = params
+
+                        for trial in range(args.trials):
+                            seed = abs(
+                                hash((n_val, df_val, kf_val, rp_gstd, trial))
+                            ) % (2**31)
+                            fut = client.submit(
+                                run_simulation,
+                                trial,
+                                params,
+                                "/tmp/dask_sweep_output",
+                                seed,
+                                args.trial_timeout,
+                            )
+                            combo_futures[fut] = (combo_key, trial)
+
+        # Collect results
+        combo_results: dict = {k: [] for k in combo_params}
+
+        try:
+            from tqdm import tqdm as _tqdm
+
+            completed_iter = _tqdm(
+                dask_as_completed(combo_futures),
+                total=total_trials,
+                desc="Trials",
+            )
+        except ImportError:
+            completed_iter = dask_as_completed(combo_futures)
+
+        for future in completed_iter:
+            combo_key, trial = combo_futures[future]
+            try:
+                success, _coords, _radii = future.result()
+            except Exception:
+                success = False
+            combo_results[combo_key].append(success)
+
+        # Build sweep rows in original order
+        combo_index = 0
+        for n_val in sizes:
+            for rp_gstd in sigmas:
+                for df_val in df_values:
+                    for kf_val in kf_values:
+                        combo_index += 1
+                        combo_key = (n_val, rp_gstd, df_val, kf_val)
+                        successes_list = combo_results[combo_key]
+                        successes = sum(successes_list)
+                        label = combo_params[combo_key]["description"]
+                        print(
+                            f"[{combo_index}/{total_combos}] {label} → "
+                            f"{successes}/{args.trials} success"
+                        )
+                        sweep_rows.append(
+                            {
+                                "N": n_val,
+                                "Df": df_val,
+                                "kf": kf_val,
+                                "rp_gstd": rp_gstd,
+                                "trials": args.trials,
+                                "successes": successes,
+                                "success_rate": successes / args.trials,
+                                "avg_runtime_s": 0.0,
+                                "median_runtime_s": 0.0,
+                                "failure_stage_counts": {},
+                            }
+                        )
+
+
+def _append_sweep_row(
+    sweep_rows, n_val, df_val, kf_val, rp_gstd, n_trials, case_results
+):
+    successes = sum(1 for r in case_results if r.success)
+    runtimes = [r.runtime_seconds for r in case_results]
+    failure_stages = [r.failure_stage or "NONE" for r in case_results if not r.success]
+    stage_counts = {
+        stage: failure_stages.count(stage) for stage in sorted(set(failure_stages))
+    }
+    sweep_rows.append(
+        {
+            "N": n_val,
+            "Df": df_val,
+            "kf": kf_val,
+            "rp_gstd": rp_gstd,
+            "trials": n_trials,
+            "successes": successes,
+            "success_rate": successes / n_trials,
+            "avg_runtime_s": mean(runtimes),
+            "median_runtime_s": median(runtimes),
+            "failure_stage_counts": stage_counts,
+        }
+    )
 
 
 def main() -> int:
@@ -166,78 +391,35 @@ def main() -> int:
         f"{total_combos} parameter combinations and {args.trials} trials each."
     )
 
-    sweep_rows = []
+    sweep_rows: list = []
     raw_path = summary_dir / "stability_sweep_raw.jsonl"
     raw_handle = raw_path.open("w", encoding="utf-8") if args.save_raw else None
 
     try:
-        combo_index = 0
         sweep_start = time.time()
 
-        for n_val in sizes:
-            for rp_gstd in sigmas:
-                for df_val in df_values:
-                    for kf_val in kf_values:
-                        combo_index += 1
-                        label = (
-                            f"N={n_val},Df={_format_param(df_val)},"
-                            f"kf={_format_param(kf_val)},rp_gstd={_format_param(rp_gstd)}"
-                        )
-                        print(f"[{combo_index}/{total_combos}] {label}")
-
-                        params = {
-                            "N": n_val,
-                            "Df": df_val,
-                            "kf": kf_val,
-                            "rp_gstd": rp_gstd,
-                            "rp_g": args.rp_g,
-                            "tol_ov": args.tol_ov,
-                            "n_subcl_percentage": args.n_subcl_percentage,
-                            "ext_case": args.ext_case,
-                            "description": label,
-                        }
-
-                        case_results = []
-                        for trial in range(args.trials):
-                            result = benchmark.run_single_trial(
-                                params,
-                                trial_num=trial,
-                                category="stability_sweep",
-                                trial_timeout=args.trial_timeout,
-                            )
-                            case_results.append(result)
-
-                            if raw_handle is not None:
-                                raw_record = asdict(result)
-                                raw_handle.write(json.dumps(raw_record))
-                                raw_handle.write("\n")
-
-                        successes = sum(1 for r in case_results if r.success)
-                        runtimes = [r.runtime_seconds for r in case_results]
-                        failure_stages = [
-                            r.failure_stage or "NONE"
-                            for r in case_results
-                            if not r.success
-                        ]
-                        stage_counts = {
-                            stage: failure_stages.count(stage)
-                            for stage in sorted(set(failure_stages))
-                        }
-
-                        sweep_rows.append(
-                            {
-                                "N": n_val,
-                                "Df": df_val,
-                                "kf": kf_val,
-                                "rp_gstd": rp_gstd,
-                                "trials": args.trials,
-                                "successes": successes,
-                                "success_rate": successes / args.trials,
-                                "avg_runtime_s": mean(runtimes),
-                                "median_runtime_s": median(runtimes),
-                                "failure_stage_counts": stage_counts,
-                            }
-                        )
+        if getattr(args, "dask", False):
+            _run_sweep_dask(
+                args,
+                sizes,
+                sigmas,
+                df_values,
+                kf_values,
+                benchmark,
+                sweep_rows,
+                raw_handle,
+            )
+        else:
+            _run_sweep_sequential(
+                args,
+                sizes,
+                sigmas,
+                df_values,
+                kf_values,
+                benchmark,
+                sweep_rows,
+                raw_handle,
+            )
 
         sweep_runtime = time.time() - sweep_start
         summary = {

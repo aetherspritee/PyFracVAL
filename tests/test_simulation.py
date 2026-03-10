@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import numpy.testing as npt
 import pytest
+
 from pyfracval import utils
 from pyfracval.main_runner import run_simulation
 from pyfracval.schemas import Metadata
@@ -26,6 +27,8 @@ def output_dir(tmp_path: Path) -> Path:
 def _run_and_load(
     sim_config: dict, output_dir: Path, iteration: int = 1, seed: int | None = None
 ):
+    # Work on a local copy so we never mutate the caller's dict
+    sim_config = dict(sim_config)
     if seed is None:
         seed = int(time.time() * 1000) % (2**32)
     sim_config["seed"] = seed
@@ -51,7 +54,6 @@ def _run_and_load(
             )
             # Use a different seed for retry to avoid identical failure
             sim_config["seed"] = seed + attempt
-            np.random.seed(sim_config["seed"])  # Reset numpy seed for this attempt
 
         current_success, current_coords, current_radii = run_simulation(
             iteration=iteration,
@@ -233,14 +235,14 @@ def test_reproducibility(output_dir: Path):
     output_dir_run1 = output_dir / "run1"
     output_dir_run1.mkdir()
     metadata1, data1, n1, _ = _run_and_load(
-        sim_config, output_dir_run1, seed=fixed_seed
+        sim_config.copy(), output_dir_run1, seed=fixed_seed
     )
 
     logger.info("--- Reproducibility Test: Run 2 ---")
     output_dir_run2 = output_dir / "run2"
     output_dir_run2.mkdir()
     metadata2, data2, n2, _ = _run_and_load(
-        sim_config, output_dir_run2, seed=fixed_seed
+        sim_config.copy(), output_dir_run2, seed=fixed_seed
     )
 
     assert n1 == n2, f"Number of particles differs between runs ({n1} vs {n2})"
@@ -256,3 +258,34 @@ def test_reproducibility(output_dir: Path):
     ) == metadata2.simulation_parameters.model_dump(exclude={"seed"})
     assert metadata1.aggregate_properties == metadata2.aggregate_properties
     logger.info("Reproducibility test passed.")
+
+
+def test_dask_local_batch(tmp_path: Path):
+    """Smoke test: generate 2 aggregates via a local Dask cluster."""
+    from pyfracval.batch_runner import generate_aggregates_parallel
+
+    config = {
+        "N": 16,
+        "Df": 1.8,
+        "kf": 1.3,
+        "rp_g": 10.0,
+        "rp_gstd": 1.0,
+        "tol_ov": 1e-4,
+        "n_subcl_percentage": 0.2,
+        "ext_case": 0,
+    }
+    output_dir = tmp_path / "dask_test"
+    output_dir.mkdir()
+
+    results = generate_aggregates_parallel(
+        n_aggregates=2,
+        config=config,
+        output_base_dir=str(output_dir),
+        seed_start=9000,
+        n_workers=2,
+        show_progress=False,
+    )
+
+    assert len(results) == 2, "Expected 2 results"
+    successes = sum(1 for s, _, _ in results if s)
+    assert successes == 2, f"Expected 2 successes, got {successes}"

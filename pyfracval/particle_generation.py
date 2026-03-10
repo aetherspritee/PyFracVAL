@@ -8,15 +8,14 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def random_normal_custom() -> float:
+def random_normal_custom(rng: np.random.Generator | None = None) -> float:
     """
     Generates a normally distributed random number using the Ziggurat method
     as implemented in numpy, which is generally preferred over custom
     acceptance-rejection methods unless specific properties are needed.
     """
-    # The custom Fortran implementation is an acceptance-rejection method.
-    # For standard normal distribution, numpy's is highly optimized and recommended.
-    return np.random.normal(0.0, 1.0)
+    _rng = rng if rng is not None else np.random.default_rng()
+    return float(_rng.standard_normal())
 
 
 def lognormal_pp_radii(
@@ -25,6 +24,7 @@ def lognormal_pp_radii(
     n: int,
     seed: int | None = None,
     truncate: bool = True,
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray:
     """Generate N random radii from a lognormal distribution.
 
@@ -38,9 +38,14 @@ def lognormal_pp_radii(
     n : int
         Number of radii to generate.
     seed : int | None, optional
-        Random seed for reproducibility, by default None.
+        Deprecated. Prefer passing ``rng`` directly. If both are given,
+        ``rng`` takes precedence.
     truncate : bool, optional
         Use the FracVAL 2*sigma truncate version
+    rng : np.random.Generator | None, optional
+        A NumPy Generator instance (e.g. ``np.random.default_rng(seed)``).
+        If provided, ``seed`` is ignored. If None and ``seed`` is also None,
+        a fresh Generator is created.
 
     Returns
     -------
@@ -54,13 +59,17 @@ def lognormal_pp_radii(
 
     Notes
     -----
-    Uses `numpy.random.lognormal`. The underlying normal distribution's
+    Uses `numpy.random.Generator.lognormal`. The underlying normal distribution's
     parameters are mu=log(rp_g) and sigma=log(rp_gstd).
     The original Fortran code included optional truncation at approximately
     +/- 2 geometric standard deviations; this is not enabled by default here.
     """
-    if seed is not None:
-        np.random.seed(seed)
+    if rng is not None:
+        _rng = rng
+    elif seed is not None:
+        _rng = np.random.default_rng(seed)
+    else:
+        _rng = np.random.default_rng()
 
     if rp_gstd < 1.0:
         logger.warning("Geometric standard deviation should be >= 1.0. Setting to 1.0.")
@@ -82,7 +91,7 @@ def lognormal_pp_radii(
         sigma = np.log(rp_gstd)
 
         if not truncate:
-            radii = np.random.lognormal(mean=mu, sigma=sigma, size=n)
+            radii = _rng.lognormal(mean=mu, sigma=sigma, size=n)
 
             logger.info(
                 f"Generated polydisperse particles (mean={np.mean(radii):.2f}, std={np.std(radii):.2f})."
@@ -90,8 +99,6 @@ def lognormal_pp_radii(
         else:
             # The Fortran code truncates at rp_g / (rp_gstd**2) and rp_g * (rp_gstd**2)
             # This corresponds to approximately +/- 2 sigma in the underlying normal distribution.
-            # np.random.lognormal directly generates from the distribution.
-            # If strict truncation matching the Fortran code is needed:
             min_val = rp_g / (rp_gstd**2)
             max_val = rp_g * (rp_gstd**2)
             radii = np.zeros(n, dtype=float)
@@ -99,7 +106,7 @@ def lognormal_pp_radii(
             while generated_count < n:
                 # Generate candidates (can generate more than needed for efficiency)
                 num_needed = n - generated_count
-                candidates = np.random.lognormal(
+                candidates = _rng.lognormal(
                     mean=mu, sigma=sigma, size=num_needed * 2
                 )  # Generate extras
                 valid = candidates[(candidates >= min_val) & (candidates <= max_val)]

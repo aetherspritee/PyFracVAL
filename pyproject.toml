@@ -19,6 +19,7 @@ dependencies = [
   "pandas>=2.2.3",
   "scipy>=1.14.1",
   "tqdm>=4.66.5",
+  "dask[distributed]>=2024.1.0",
   "pyvista>=0.44.1",
   "stpyvista>=0.1.4",
   "streamlit>=1.41.1",

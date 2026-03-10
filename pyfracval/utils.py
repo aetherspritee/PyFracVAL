@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 FLOATING_POINT_ERROR = 1e-9
 
 
-def shuffle_array(arr: np.ndarray) -> np.ndarray:
+def shuffle_array(
+    arr: np.ndarray, rng: np.random.Generator | None = None
+) -> np.ndarray:
     """Randomly shuffle elements of a 1D array in-place (Fisher-Yates).
 
     Modifies the input array directly. Mimics Fortran randsample behavior.
@@ -22,15 +24,19 @@ def shuffle_array(arr: np.ndarray) -> np.ndarray:
     ----------
     arr :
         The 1D NumPy array to shuffle.
+    rng : np.random.Generator | None, optional
+        A NumPy Generator instance for reproducible randomness. If None,
+        a fresh Generator is created.
 
     Returns
     -------
         The input `arr`, modified in-place.
     """
+    _rng = rng if rng is not None else np.random.default_rng()
     n = len(arr)
     for i in range(n - 1):
         # Random index from i to n-1
-        j = np.random.randint(i, n)
+        j = int(_rng.integers(i, n))
         # Swap elements
         arr[i], arr[j] = arr[j], arr[i]
     return arr
@@ -670,7 +676,7 @@ def batch_rotate_cluster_cca(
 
 
 def two_sphere_intersection(
-    sphere_1: np.ndarray, sphere_2: np.ndarray
+    sphere_1: np.ndarray, sphere_2: np.ndarray, rng: np.random.Generator | None = None
 ) -> Tuple[float, float, float, float, np.ndarray, np.ndarray, np.ndarray, bool]:
     """Find the intersection circle of two spheres and pick a random point.
 
@@ -705,6 +711,7 @@ def two_sphere_intersection(
     ----
     https://mathworld.wolfram.com/Sphere-SphereIntersection.html
     """
+    _rng = rng if rng is not None else np.random.default_rng()
     invalid_ret = (0.0, 0.0, 0.0, 0.0, np.zeros(4), np.zeros(3), np.zeros(3), False)
 
     point1 = sphere_1[:3]
@@ -742,7 +749,7 @@ def two_sphere_intersection(
     j_vec = np.cross(i_vec, k_vec)
     j_vec /= np.linalg.norm(j_vec)
 
-    theta = 2.0 * np.pi * np.random.rand()
+    theta = 2.0 * np.pi * _rng.random()
 
     center_k = center0 + r0 * (np.cos(theta) * i_vec + np.sin(theta) * j_vec)
     if np.any(np.isnan(center_k)):

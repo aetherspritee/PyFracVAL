@@ -71,6 +71,7 @@ def run_simulation(
 
     try:
         if seed is not None and "seed" not in sim_config_dict:
+            sim_config_dict = dict(sim_config_dict)  # avoid mutating caller's dict
             sim_config_dict["seed"] = seed
         sim_params = SimulationParameters(**sim_config_dict)
         logger.info(f"Validated Config: {sim_params.model_dump_json(indent=2)}")
@@ -81,8 +82,10 @@ def run_simulation(
     start_time = time.time()
 
     if sim_params.seed is not None:
-        np.random.seed(sim_params.seed)
+        rng = np.random.default_rng(sim_params.seed)
         logger.info(f"Using random seed: {sim_params.seed}")
+    else:
+        rng = np.random.default_rng()
 
     # Maximum number of PCA+CCA attempts (Fortran restarts on failure)
     # The Fortran re-generates radii from lognormal AND re-shuffles on every restart.
@@ -110,11 +113,12 @@ def run_simulation(
                 sim_params.rp_gstd,
                 sim_params.rp_g,
                 sim_params.N,
+                rng=rng,
             )
         except ValueError as e:
             logger.error(f"Error generating radii on attempt {attempt}: {e}")
             continue
-        shuffled_radii = utils.shuffle_array(initial_radii)
+        shuffled_radii = utils.shuffle_array(initial_radii, rng=rng)
 
         logger.info(
             f"--- PCA+CCA Attempt {attempt}/{max_attempts} --- "
@@ -132,6 +136,7 @@ def run_simulation(
             n_subcl_percentage=sim_params.n_subcl_percentage,
             rp_g=sim_params.rp_g,
             rp_gstd=sim_params.rp_gstd,
+            rng=rng,
         )
         pca_success = subcluster_runner.run_subclustering()
         pca_end_time = time.time()
@@ -175,6 +180,7 @@ def run_simulation(
             kf=sim_params.kf,
             tol_ov=sim_params.tol_ov,
             ext_case=sim_params.ext_case,
+            rng=rng,
         )
         cca_result = cca_runner.run_cca()
         cca_end_time = time.time()

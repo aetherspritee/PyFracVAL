@@ -61,7 +61,14 @@ class PCAggregator:
         Flag indicating if the aggregation process failed.
     """
 
-    def __init__(self, initial_radii: np.ndarray, df: float, kf: float, tol_ov: float):
+    def __init__(
+        self,
+        initial_radii: np.ndarray,
+        df: float,
+        kf: float,
+        tol_ov: float,
+        rng: np.random.Generator | None = None,
+    ):
         self.N = len(initial_radii)
         if self.N < 2:
             raise ValueError("PCA requires at least 2 particles.")
@@ -79,6 +86,8 @@ class PCAggregator:
         self.df = df
         self.kf = kf
         self.tol_ov = tol_ov
+
+        self._rng = rng if rng is not None else np.random.default_rng()
 
         # State variables for the growing cluster
         self.coords = np.zeros((self.N, 3), dtype=float)
@@ -98,7 +107,7 @@ class PCAggregator:
 
     def _random_point_sphere(self) -> tuple[float, float]:
         """Generates random angles (theta, phi) for a point on a sphere."""
-        u, v = np.random.rand(2)
+        u, v = self._rng.random(2)
         # Use constant from config
         theta = 2.0 * config.PI * u
         phi = np.arccos(2.0 * v - 1.0)
@@ -469,7 +478,7 @@ class PCAggregator:
             need_swap = (force_swap and not swap_done) or len(candidates) == 0
             if len(candidates) > 0 and not need_swap:
                 # Select one candidate randomly (will be used as starting point in run loop)
-                idx_in_candidates = np.random.randint(len(candidates))
+                idx_in_candidates = int(self._rng.integers(len(candidates)))
                 selected_initial_candidate = candidates[idx_in_candidates]
                 logger.debug(
                     f"PCA search k={k}: Initial candidate {selected_initial_candidate} selected from {len(candidates)} options."
@@ -520,7 +529,7 @@ class PCAggregator:
                     )
 
                 # Select a random monomer to swap with k
-                swap_idx_in_eligible = np.random.randint(len(eligible_for_swap))
+                swap_idx_in_eligible = int(self._rng.integers(len(eligible_for_swap)))
                 swap_target_original_idx = eligible_for_swap[swap_idx_in_eligible]
 
                 # Store original values for logging
@@ -595,7 +604,7 @@ class PCAggregator:
         try:
             # This utility finds the circle and returns *one* random point on it
             x_k, y_k, z_k, theta_a, vec_0, i_vec, j_vec, intersection_valid = (
-                utils.two_sphere_intersection(sphere1, sphere2)
+                utils.two_sphere_intersection(sphere1, sphere2, rng=self._rng)
             )
         except Exception as e:
             logger.error(
@@ -793,7 +802,9 @@ class PCAggregator:
                     # even if gamma was real after a swap.
                     continue  # Go to next iteration of the outer while loop
 
-                candidates_to_try = utils.shuffle_array(candidates_list.copy())
+                candidates_to_try = utils.shuffle_array(
+                    candidates_list.copy(), rng=self._rng
+                )
                 logger.debug(
                     f"PCA k={k}, Attempt {search_attempt}: Trying {len(candidates_to_try)} candidates: {candidates_to_try}"
                 )

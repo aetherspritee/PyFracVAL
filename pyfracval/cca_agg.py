@@ -70,6 +70,7 @@ class CCAggregator:
         kf: float,
         tol_ov: float,
         ext_case: int,
+        rng: np.random.Generator | None = None,
     ):
         if initial_coords.shape[0] != n_total or initial_radii.shape[0] != n_total:
             raise ValueError(
@@ -89,6 +90,10 @@ class CCAggregator:
         self.kf = kf
         self.tol_ov = tol_ov
         self.ext_case = ext_case  # 0 or 1
+
+        self._rng: np.random.Generator = (
+            rng if rng is not None else np.random.default_rng()
+        )
 
         # Current state of the simulation
         self.coords = initial_coords.copy()
@@ -422,7 +427,7 @@ class CCAggregator:
             return -1, -1
 
         # Select a random pair from the available ones
-        selected_pair_idx = np.random.randint(len(available_pairs))
+        selected_pair_idx = int(self._rng.integers(len(available_pairs)))
         return available_pairs[selected_pair_idx]
 
     def _cca_sticking_v1(
@@ -523,7 +528,7 @@ class CCAggregator:
             sphere_1 = np.concatenate((cm1, [d1_max]))
             sphere_2 = np.concatenate((cm2, [d2_max]))  # Use updated cm2
             x_cp, y_cp, z_cp, _, _, _, _, point_valid = utils.two_sphere_intersection(
-                sphere_1, sphere_2
+                sphere_1, sphere_2, rng=self._rng
             )
             if point_valid:
                 contact_point = np.array([x_cp, y_cp, z_cp])
@@ -612,7 +617,7 @@ class CCAggregator:
         sphere_B = np.concatenate((center_B, [radius_B]))
 
         x_cp2, y_cp2, z_cp2, theta_a, vec_0, i_vec, j_vec, intersection_valid = (
-            utils.two_sphere_intersection(sphere_A, sphere_B)
+            utils.two_sphere_intersection(sphere_A, sphere_B, rng=self._rng)
         )
 
         if not intersection_valid:

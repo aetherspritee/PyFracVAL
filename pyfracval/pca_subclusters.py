@@ -60,6 +60,7 @@ class Subclusterer(BaseModel):
     kf: float = Field(..., gt=0.0)
     tol_ov: float
     n_subcl_percentage: float = Field(default=0.1, lt=1.0)
+    rng: np.random.Generator | None = Field(default=None, exclude=True)
     # Optional lognormal parameters for per-subcluster retry with fresh radii.
     # When set (rp_gstd > 1.0), a failed subcluster is retried up to
     # `max_subcluster_retries` times by drawing a fresh set of radii from the
@@ -81,6 +82,9 @@ class Subclusterer(BaseModel):
     def model_post_init(self, __context):
         self.N = len(self.initial_radii)
         self.initial_radii = self.initial_radii.copy()  # Use a copy
+        self._rng: np.random.Generator = (
+            self.rng if self.rng is not None else np.random.default_rng()
+        )
 
         self.all_coords = np.zeros((self.N, 3), dtype=float)
         self.all_radii = np.zeros(self.N, dtype=float)
@@ -241,14 +245,19 @@ class Subclusterer(BaseModel):
                     # This mirrors the Fortran top-level restart but is much cheaper
                     # (only N_subcl radii instead of all N).
                     subcluster_radii = particle_generation.lognormal_pp_radii(
-                        self.rp_gstd, self.rp_g, num_particles_in_subcluster
+                        self.rp_gstd,
+                        self.rp_g,
+                        num_particles_in_subcluster,
+                        rng=self._rng,
                     )
                     logger.warning(
                         f"  Subcluster {i + 1}: PCA failed, retrying with fresh radii "
                         f"(attempt {attempt + 1}/{total_attempts})."
                     )
 
-                pca_runner = PCAggregator(subcluster_radii, pca_df, pca_kf, self.tol_ov)
+                pca_runner = PCAggregator(
+                    subcluster_radii, pca_df, pca_kf, self.tol_ov, rng=self._rng
+                )
                 subcluster_data = pca_runner.run()  # Returns Nx4 [X,Y,Z,R] or None
 
                 if subcluster_data is not None and not pca_runner.not_able_pca:
