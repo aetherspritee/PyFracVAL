@@ -1,0 +1,44 @@
+# stability_n_sweep.toml
+# N-scaling stability sweep: does success_rate hold as N grows to 1024?
+#
+# Motivation
+# ----------
+# For the fractal law N = kf * (R_g / r_geo)^Df, the dimensionless radius
+# ratio X = (N/kf)^(1/Df) grows with N.  Coarse sweep (N=64, 128) showed the
+# stable corridor is X ≲ 15–20 depending on sigma.  At N=1024 with Df=2.0,
+# kf=1.0, X = (1024)^0.5 ≈ 32 — well outside the tested safe range.
+#
+# This sweep covers N up to 1024 with a conservative (Df, kf) grid focused on
+# the physically relevant corridor (Df ∈ 1.8–2.2, kf ∈ 0.6–1.2) plus a few
+# anchors at lower/higher Df to characterise the boundary.
+#
+# Grid: 5 N × 4 Df × 4 kf × 4 sigma × 20 trials = 6400 tasks
+# Expected runtime on Marvin: ~1–2 hours (large N can take minutes each)
+#
+# Run with:
+#   uv run python benchmarks/stability_sweep.py --config configs/stability_n_sweep.toml
+
+sizes     = [64, 128, 256, 512, 1024]
+sigmas    = [1.0, 1.5, 2.0, 2.5]
+
+# Explicit Df/kf grid — focused on the corridor that was stable at N=64/128.
+# Anchors at Df=1.6 and Df=2.4 help characterise the boundary.
+df_values = [1.6, 1.8, 2.0, 2.2, 2.4]
+kf_values = [0.6, 0.8, 1.0, 1.2]
+
+trials    = 20
+save_raw  = false
+output_dir = "benchmark_results/stability_n_sweep"
+
+[dask]
+enable           = true
+scheduler_address = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+# workers not set — use all available on the scheduler
+
+[simulation]
+rp_g               = 100.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+# Generous timeout: large N (1024) can legitimately take several minutes
+trial_timeout      = 600
