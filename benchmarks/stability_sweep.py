@@ -238,6 +238,7 @@ def _run_sweep_dask(
     with get_client(
         scheduler_address=args.dask_scheduler,
         n_workers=args.dask_workers,
+        install_package=args.dask_scheduler is not None,
     ) as client:
         # Build a flat list of (combo_key, trial) → future
         combo_futures: dict = {}  # future → (combo_key, trial_index)

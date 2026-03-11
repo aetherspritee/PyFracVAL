@@ -83,7 +83,11 @@ def generate_aggregates_parallel(
 
     start_time = time.time()
 
-    with get_client(scheduler_address=scheduler_address, n_workers=n_workers) as client:
+    with get_client(
+        scheduler_address=scheduler_address,
+        n_workers=n_workers,
+        install_package=scheduler_address is not None,
+    ) as client:
         # Deterministic seeds: abs(hash((N, Df, kf, sigma, trial_index))) % 2**31
         n_val = config.get("N", 0)
         df_val = config.get("Df", 0.0)
