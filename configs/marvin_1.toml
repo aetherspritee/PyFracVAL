@@ -1,0 +1,25 @@
+# Consistency test — remote Marvin scheduler, run 1
+# 9 combos × 5 trials = 45 tasks (~1 min on the cluster)
+#
+# Compare with marvin_2.toml: success_rate should be IDENTICAL (same seeds,
+# same remote platform).  Compare with local_*.toml to see platform divergence.
+
+sizes   = [64]
+sigmas  = [1.5]
+df_values = [1.8, 2.0, 2.2]
+kf_values = [0.8, 1.0, 1.2]
+trials    = 5
+output_dir = "benchmark_results/consistency/marvin_1"
+save_raw   = false
+
+[dask]
+enable             = true
+scheduler_address  = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+# workers is managed by the remote cluster; leave unset
+
+[simulation]
+rp_g               = 100.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+trial_timeout      = 120

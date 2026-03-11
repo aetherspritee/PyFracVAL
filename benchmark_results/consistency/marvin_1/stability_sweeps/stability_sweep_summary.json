@@ -1,0 +1,171 @@
+{
+  "generated_at": "2026-03-11 06:08:25",
+  "config": {
+    "sizes": [
+      64
+    ],
+    "sigmas": [
+      1.5
+    ],
+    "df_values": [
+      1.8,
+      2.0,
+      2.2
+    ],
+    "kf_values": [
+      0.8,
+      1.0,
+      1.2
+    ],
+    "df_min": 1.4,
+    "df_max": 2.6,
+    "df_step": 0.2,
+    "kf_min": 0.6,
+    "kf_max": 1.6,
+    "kf_step": 0.2,
+    "trials": 5,
+    "save_raw": false,
+    "output_dir": "benchmark_results/consistency/marvin_1",
+    "dask": {
+      "enable": true,
+      "scheduler_address": "tcp://marvin.bv.e-technik.tu-dortmund.de:8786",
+      "workers": null
+    },
+    "simulation": {
+      "rp_g": 100.0,
+      "tol_ov": 1e-06,
+      "n_subcl_percentage": 0.1,
+      "ext_case": 0,
+      "trial_timeout": 120
+    }
+  },
+  "total_combinations": 9,
+  "trials_per_combo": 5,
+  "sizes": [
+    64
+  ],
+  "sigmas": [
+    1.5
+  ],
+  "df_values": [
+    1.8,
+    2.0,
+    2.2
+  ],
+  "kf_values": [
+    0.8,
+    1.0,
+    1.2
+  ],
+  "total_runtime_s": 14.332865476608276,
+  "results": [
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 0.8,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.263446044921875,
+      "median_runtime_s": 1.6550886631011963,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.7474859714508058,
+      "median_runtime_s": 1.2436351776123047,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.7972585678100585,
+      "median_runtime_s": 1.406869888305664,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 0.8,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.332583856582642,
+      "median_runtime_s": 2.267446279525757,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.300445032119751,
+      "median_runtime_s": 3.2965590953826904,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.182742547988892,
+      "median_runtime_s": 1.9503328800201416,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.2,
+      "kf": 0.8,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.347769546508789,
+      "median_runtime_s": 4.592676401138306,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.6428643703460692,
+      "median_runtime_s": 3.3393025398254395,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.549863386154175,
+      "median_runtime_s": 5.709535360336304,
+      "failure_stage_counts": {}
+    }
+  ]
+}

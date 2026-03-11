@@ -1,0 +1,23 @@
+# Consistency test — local Dask cluster, run 2
+# Identical parameters to local_1.toml; only output_dir differs.
+# Results should be IDENTICAL to local_1 (deterministic seeds).
+
+sizes   = [64]
+sigmas  = [1.5]
+df_values = [1.8, 2.0, 2.2]
+kf_values = [0.8, 1.0, 1.2]
+trials    = 5
+output_dir = "benchmark_results/consistency/local_2"
+save_raw   = false
+
+[dask]
+enable  = true
+# scheduler_address not set → spins up a local Dask cluster
+# workers = 4  # omit to use all available CPUs
+
+[simulation]
+rp_g               = 100.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+trial_timeout      = 120

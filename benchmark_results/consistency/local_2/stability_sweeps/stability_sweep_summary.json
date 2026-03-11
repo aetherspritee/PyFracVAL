@@ -1,0 +1,171 @@
+{
+  "generated_at": "2026-03-11 06:08:04",
+  "config": {
+    "sizes": [
+      64
+    ],
+    "sigmas": [
+      1.5
+    ],
+    "df_values": [
+      1.8,
+      2.0,
+      2.2
+    ],
+    "kf_values": [
+      0.8,
+      1.0,
+      1.2
+    ],
+    "df_min": 1.4,
+    "df_max": 2.6,
+    "df_step": 0.2,
+    "kf_min": 0.6,
+    "kf_max": 1.6,
+    "kf_step": 0.2,
+    "trials": 5,
+    "save_raw": false,
+    "output_dir": "benchmark_results/consistency/local_2",
+    "dask": {
+      "enable": true,
+      "scheduler_address": null,
+      "workers": null
+    },
+    "simulation": {
+      "rp_g": 100.0,
+      "tol_ov": 1e-06,
+      "n_subcl_percentage": 0.1,
+      "ext_case": 0,
+      "trial_timeout": 120
+    }
+  },
+  "total_combinations": 9,
+  "trials_per_combo": 5,
+  "sizes": [
+    64
+  ],
+  "sigmas": [
+    1.5
+  ],
+  "df_values": [
+    1.8,
+    2.0,
+    2.2
+  ],
+  "kf_values": [
+    0.8,
+    1.0,
+    1.2
+  ],
+  "total_runtime_s": 11.256820678710938,
+  "results": [
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 0.8,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.6650083541870118,
+      "median_runtime_s": 1.5341808795928955,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.2543415069580077,
+      "median_runtime_s": 1.6890194416046143,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.348422050476074,
+      "median_runtime_s": 1.0694444179534912,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 0.8,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.368279504776001,
+      "median_runtime_s": 4.2948994636535645,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.955092906951904,
+      "median_runtime_s": 4.432447910308838,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.449595499038696,
+      "median_runtime_s": 3.8496179580688477,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.2,
+      "kf": 0.8,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.218871831893921,
+      "median_runtime_s": 6.250759124755859,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 7.518899965286255,
+      "median_runtime_s": 7.6788811683654785,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 8.314023780822755,
+      "median_runtime_s": 8.214810132980347,
+      "failure_stage_counts": {}
+    }
+  ]
+}

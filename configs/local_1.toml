@@ -1,0 +1,25 @@
+# Consistency test — local Dask cluster, run 1
+# 9 combos × 5 trials = 45 tasks (~2–3 min on a laptop)
+#
+# Compare with local_2.toml: success_rate should be IDENTICAL (same seeds,
+# same platform).  Compare with marvin_*.toml to quantify platform divergence.
+
+sizes   = [64]
+sigmas  = [1.5]
+df_values = [1.8, 2.0, 2.2]
+kf_values = [0.8, 1.0, 1.2]
+trials    = 5
+output_dir = "benchmark_results/consistency/local_1"
+save_raw   = false
+
+[dask]
+enable  = true
+# scheduler_address not set → spins up a local Dask cluster
+# workers = 4  # omit to use all available CPUs
+
+[simulation]
+rp_g               = 100.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+trial_timeout      = 120

@@ -3,10 +3,16 @@
 This script builds on benchmarks/sticking_benchmark.py to measure
 success rates for aggregate generation across parameter grids.
 
-Dask mode (--dask):
+Configuration can be provided via a TOML file (``--config path/to/file.toml``).
+If no ``--config`` flag is given, the script looks for ``sweep_config.toml``
+in the current working directory.  All settings in the config file can be
+overridden individually with the corresponding CLI flags.
+
+Dask mode (``[dask] enable = true`` or ``--dask``):
     Trials for *each* parameter combination are dispatched as individual
-    Dask tasks and collected with ``as_completed``.  Use ``--dask-scheduler``
-    to connect to a running scheduler; otherwise a local cluster is started.
+    Dask tasks and collected with ``as_completed``.  Set
+    ``scheduler_address`` (config) or ``--dask-scheduler`` (CLI) to connect
+    to a running scheduler; otherwise a local cluster is started.
 """
 
 from __future__ import annotations
@@ -23,6 +29,7 @@ from typing import Iterable, List
 import numpy as np
 
 from benchmarks.sticking_benchmark import StickingBenchmark
+from pyfracval.config import SweepConfig
 
 
 def _parse_float_list(value: str) -> List[float]:
@@ -67,88 +74,97 @@ def _write_csv(path: Path, rows: Iterable[dict], fieldnames: List[str]) -> None:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Sweep Df/kf/N/rp_gstd to identify stable parameter regions."
+        description=(
+            "Sweep Df/kf/N/rp_gstd to identify stable parameter regions.\n\n"
+            "All settings can be specified in a TOML config file (--config). "
+            "CLI flags always override config file values."
+        )
     )
 
+    # --- Config file --------------------------------------------------------
     parser.add_argument(
-        "--output-dir",
-        default="benchmark_results",
-        help="Base output directory (default: benchmark_results)",
+        "--config",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Path to a TOML sweep config file. "
+            "If omitted, looks for sweep_config.toml in the current directory."
+        ),
     )
+
+    # --- Output / run -------------------------------------------------------
+    # Defaults are None so merged() can detect which flags were explicitly set.
+    parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--trials", type=int, default=None)
     parser.add_argument(
-        "--trials",
-        type=int,
-        default=30,
-        help="Number of trials per parameter set (default: 30)",
+        "--save-raw",
+        action="store_true",
+        default=False,
+        help="Save raw per-trial results to JSONL",
     )
+
+    # --- Grid specification -------------------------------------------------
     parser.add_argument(
         "--sizes",
-        default="powers-of-two",
+        default=None,
         help=(
             "Comma-separated list of N values, or 'powers-of-two' "
-            "(default: powers-of-two up to --max-size)."
+            "(default: from config or powers-of-two up to --max-size)."
         ),
     )
     parser.add_argument(
         "--max-size",
         type=int,
-        default=1024,
+        default=None,
         help="Maximum N when using powers-of-two (default: 1024)",
     )
     parser.add_argument(
         "--sigmas",
-        default="1.0,1.5,2.0,2.5,3.0",
-        help="Comma-separated list of rp_gstd values (default: 1.0,1.5,2.0,2.5,3.0)",
+        default=None,
+        help="Comma-separated list of rp_gstd values",
     )
-    parser.add_argument("--df-min", type=float, default=1.4)
-    parser.add_argument("--df-max", type=float, default=2.6)
-    parser.add_argument("--df-step", type=float, default=0.2)
-    parser.add_argument("--kf-min", type=float, default=0.6)
-    parser.add_argument("--kf-max", type=float, default=1.6)
-    parser.add_argument("--kf-step", type=float, default=0.2)
+    parser.add_argument("--df-min", type=float, default=None)
+    parser.add_argument("--df-max", type=float, default=None)
+    parser.add_argument("--df-step", type=float, default=None)
+    parser.add_argument("--kf-min", type=float, default=None)
+    parser.add_argument("--kf-max", type=float, default=None)
+    parser.add_argument("--kf-step", type=float, default=None)
     parser.add_argument(
         "--df-values",
         default=None,
-        help="Optional comma-separated Df values (overrides df-min/max/step)",
+        help="Comma-separated Df values (overrides df-min/max/step)",
     )
     parser.add_argument(
         "--kf-values",
         default=None,
-        help="Optional comma-separated kf values (overrides kf-min/max/step)",
-    )
-    parser.add_argument("--rp-g", type=float, default=100.0)
-    parser.add_argument("--tol-ov", type=float, default=1e-6)
-    parser.add_argument("--n-subcl-percentage", type=float, default=0.1)
-    parser.add_argument("--ext-case", type=int, default=0)
-    parser.add_argument(
-        "--save-raw",
-        action="store_true",
-        help="Save raw per-trial results to JSONL",
+        help="Comma-separated kf values (overrides kf-min/max/step)",
     )
 
+    # --- Simulation knobs ---------------------------------------------------
+    parser.add_argument("--rp-g", type=float, default=None)
+    parser.add_argument("--tol-ov", type=float, default=None)
+    parser.add_argument("--n-subcl-percentage", type=float, default=None)
+    parser.add_argument("--ext-case", type=int, default=None)
     parser.add_argument(
         "--trial-timeout",
         type=int,
         default=None,
-        help=(
-            "Wall-clock timeout in seconds per trial (default: no limit). "
-            "Timed-out trials are counted as failures."
-        ),
+        help="Wall-clock timeout in seconds per trial (default: no limit).",
     )
 
-    # --- Dask options ---
+    # --- Dask options -------------------------------------------------------
     parser.add_argument(
         "--dask",
         action="store_true",
-        help="Distribute trials across a Dask cluster.",
+        default=False,
+        help="Enable Dask execution backend (sets dask.enable = true).",
     )
     parser.add_argument(
         "--dask-scheduler",
         default=None,
         metavar="URL",
         help=(
-            "Address of a running Dask scheduler "
-            "(e.g. tcp://host:8786).  "
+            "Address of a running Dask scheduler (e.g. tcp://host:8786). "
             "When omitted, a LocalCluster is started."
         ),
     )
@@ -163,10 +179,112 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _resolve_config(args: argparse.Namespace) -> SweepConfig:
+    """Load base config from TOML (if present), then apply CLI overrides."""
+    # 1. Start from TOML file or bare defaults
+    if args.config:
+        cfg = SweepConfig.from_toml(args.config)
+        print(f"Loaded config from {args.config}")
+    elif Path("sweep_config.toml").exists():
+        cfg = SweepConfig.from_toml("sweep_config.toml")
+        print("Loaded config from sweep_config.toml (current directory)")
+    else:
+        cfg = SweepConfig()
+
+    # 2. Build override dict from CLI — only non-None / explicitly-set values
+    overrides: dict = {}
+
+    if args.output_dir is not None:
+        overrides["output_dir"] = args.output_dir
+    if args.trials is not None:
+        overrides["trials"] = args.trials
+    # save_raw is store_true; override only if user explicitly passed it
+    if args.save_raw:
+        overrides["save_raw"] = True
+
+    # Grid — convert CLI string forms to lists/scalars first
+    if args.sizes is not None:
+        if args.sizes == "powers-of-two":
+            max_n = args.max_size or 1024
+            overrides["sizes"] = _powers_of_two(max_n)
+        else:
+            overrides["sizes"] = _parse_int_list(args.sizes)
+    elif args.max_size is not None:
+        # --max-size alone only makes sense with powers-of-two; re-apply
+        overrides["sizes"] = _powers_of_two(args.max_size)
+
+    if args.sigmas is not None:
+        overrides["sigmas"] = _parse_float_list(args.sigmas)
+    if args.df_values is not None:
+        overrides["df_values"] = _parse_float_list(args.df_values)
+    if args.kf_values is not None:
+        overrides["kf_values"] = _parse_float_list(args.kf_values)
+    if args.df_min is not None:
+        overrides["df_min"] = args.df_min
+    if args.df_max is not None:
+        overrides["df_max"] = args.df_max
+    if args.df_step is not None:
+        overrides["df_step"] = args.df_step
+    if args.kf_min is not None:
+        overrides["kf_min"] = args.kf_min
+    if args.kf_max is not None:
+        overrides["kf_max"] = args.kf_max
+    if args.kf_step is not None:
+        overrides["kf_step"] = args.kf_step
+
+    # Simulation knobs
+    sim_overrides: dict = {}
+    if args.rp_g is not None:
+        sim_overrides["rp_g"] = args.rp_g
+    if args.tol_ov is not None:
+        sim_overrides["tol_ov"] = args.tol_ov
+    if args.n_subcl_percentage is not None:
+        sim_overrides["n_subcl_percentage"] = args.n_subcl_percentage
+    if args.ext_case is not None:
+        sim_overrides["ext_case"] = args.ext_case
+    if args.trial_timeout is not None:
+        sim_overrides["trial_timeout"] = args.trial_timeout
+    if sim_overrides:
+        overrides["simulation"] = sim_overrides
+
+    # Dask
+    dask_overrides: dict = {}
+    if args.dask:
+        dask_overrides["enable"] = True
+    if args.dask_scheduler is not None:
+        dask_overrides["scheduler_address"] = args.dask_scheduler
+        dask_overrides["enable"] = True  # implied
+    if args.dask_workers is not None:
+        dask_overrides["workers"] = args.dask_workers
+    if dask_overrides:
+        overrides["dask"] = dask_overrides
+
+    return cfg.merged(overrides)
+
+
+def _resolve_grid(cfg: SweepConfig):
+    """Return (sizes, sigmas, df_values, kf_values) from a resolved SweepConfig."""
+    sizes = cfg.sizes
+    sigmas = cfg.sigmas
+
+    if cfg.df_values is not None:
+        df_values = cfg.df_values
+    else:
+        df_values = _float_grid(cfg.df_min, cfg.df_max, cfg.df_step)
+
+    if cfg.kf_values is not None:
+        kf_values = cfg.kf_values
+    else:
+        kf_values = _float_grid(cfg.kf_min, cfg.kf_max, cfg.kf_step)
+
+    return sizes, sigmas, df_values, kf_values
+
+
 def _run_sweep_sequential(
-    args, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
+    cfg, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
 ):
     """Inner loop for the sequential (non-Dask) sweep."""
+    sim = cfg.simulation
     total_combos = len(sizes) * len(sigmas) * len(df_values) * len(kf_values)
     combo_index = 0
 
@@ -186,20 +304,20 @@ def _run_sweep_sequential(
                         "Df": df_val,
                         "kf": kf_val,
                         "rp_gstd": rp_gstd,
-                        "rp_g": args.rp_g,
-                        "tol_ov": args.tol_ov,
-                        "n_subcl_percentage": args.n_subcl_percentage,
-                        "ext_case": args.ext_case,
+                        "rp_g": sim.rp_g,
+                        "tol_ov": sim.tol_ov,
+                        "n_subcl_percentage": sim.n_subcl_percentage,
+                        "ext_case": sim.ext_case,
                         "description": label,
                     }
 
                     case_results = []
-                    for trial in range(args.trials):
+                    for trial in range(cfg.trials):
                         result = benchmark.run_single_trial(
                             params,
                             trial_num=trial,
                             category="stability_sweep",
-                            trial_timeout=args.trial_timeout,
+                            trial_timeout=sim.trial_timeout,
                         )
                         case_results.append(result)
 
@@ -214,13 +332,13 @@ def _run_sweep_sequential(
                         df_val,
                         kf_val,
                         rp_gstd,
-                        args.trials,
+                        cfg.trials,
                         case_results,
                     )
 
 
 def _run_sweep_dask(
-    args, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
+    cfg, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
 ):
     """Inner loop for the Dask-distributed sweep."""
     from dask.distributed import as_completed as dask_as_completed
@@ -228,19 +346,21 @@ def _run_sweep_dask(
     from pyfracval.dask_runner import get_client
     from pyfracval.main_runner import run_simulation
 
+    sim = cfg.simulation
+    dask_cfg = cfg.dask
+
     total_combos = len(sizes) * len(sigmas) * len(df_values) * len(kf_values)
-    total_trials = total_combos * args.trials
+    total_trials = total_combos * cfg.trials
     print(
         f"Submitting {total_trials} tasks across {total_combos} combos "
-        f"to Dask ({args.dask_scheduler or 'local cluster'}) …"
+        f"to Dask ({dask_cfg.scheduler_address or 'local cluster'}) …"
     )
 
     with get_client(
-        scheduler_address=args.dask_scheduler,
-        n_workers=args.dask_workers,
-        install_package=args.dask_scheduler is not None,
+        scheduler_address=dask_cfg.scheduler_address,
+        n_workers=dask_cfg.workers,
+        install_package=dask_cfg.scheduler_address is not None,
     ) as client:
-        # Build a flat list of (combo_key, trial) → future
         combo_futures: dict = {}  # future → (combo_key, trial_index)
         combo_params: dict = {}  # combo_key → params dict
 
@@ -259,16 +379,16 @@ def _run_sweep_dask(
                             "Df": df_val,
                             "kf": kf_val,
                             "rp_gstd": rp_gstd,
-                            "rp_g": args.rp_g,
-                            "tol_ov": args.tol_ov,
-                            "n_subcl_percentage": args.n_subcl_percentage,
-                            "ext_case": args.ext_case,
+                            "rp_g": sim.rp_g,
+                            "tol_ov": sim.tol_ov,
+                            "n_subcl_percentage": sim.n_subcl_percentage,
+                            "ext_case": sim.ext_case,
                             "description": label,
                         }
                         combo_key = (n_val, rp_gstd, df_val, kf_val)
                         combo_params[combo_key] = params
 
-                        for trial in range(args.trials):
+                        for trial in range(cfg.trials):
                             seed = abs(
                                 hash((n_val, df_val, kf_val, rp_gstd, trial))
                             ) % (2**31)
@@ -278,12 +398,14 @@ def _run_sweep_dask(
                                 params,
                                 "/tmp/dask_sweep_output",
                                 seed,
-                                args.trial_timeout,
+                                sim.trial_timeout,
                             )
                             combo_futures[fut] = (combo_key, trial)
 
-        # Collect results
-        combo_results: dict = {k: [] for k in combo_params}
+        # Collect results — track wall-clock time per completed future
+        combo_results: dict = {k: [] for k in combo_params}  # → list[bool]
+        combo_runtimes: dict = {k: [] for k in combo_params}  # → list[float]
+        future_submit_time: dict = {fut: time.time() for fut in combo_futures}
 
         try:
             from tqdm import tqdm as _tqdm
@@ -297,12 +419,16 @@ def _run_sweep_dask(
             completed_iter = dask_as_completed(combo_futures)
 
         for future in completed_iter:
-            combo_key, trial = combo_futures[future]
+            combo_key, _trial = combo_futures[future]
+            t_done = time.time()
+            t_submit = future_submit_time[future]
+            elapsed = t_done - t_submit
             try:
                 success, _coords, _radii = future.result()
             except Exception:
                 success = False
             combo_results[combo_key].append(success)
+            combo_runtimes[combo_key].append(elapsed)
 
         # Build sweep rows in original order
         combo_index = 0
@@ -313,11 +439,12 @@ def _run_sweep_dask(
                         combo_index += 1
                         combo_key = (n_val, rp_gstd, df_val, kf_val)
                         successes_list = combo_results[combo_key]
+                        runtimes = combo_runtimes[combo_key]
                         successes = sum(successes_list)
                         label = combo_params[combo_key]["description"]
                         print(
                             f"[{combo_index}/{total_combos}] {label} → "
-                            f"{successes}/{args.trials} success"
+                            f"{successes}/{cfg.trials} success"
                         )
                         sweep_rows.append(
                             {
@@ -325,11 +452,13 @@ def _run_sweep_dask(
                                 "Df": df_val,
                                 "kf": kf_val,
                                 "rp_gstd": rp_gstd,
-                                "trials": args.trials,
+                                "trials": cfg.trials,
                                 "successes": successes,
-                                "success_rate": successes / args.trials,
-                                "avg_runtime_s": 0.0,
-                                "median_runtime_s": 0.0,
+                                "success_rate": successes / cfg.trials,
+                                "avg_runtime_s": mean(runtimes) if runtimes else 0.0,
+                                "median_runtime_s": median(runtimes)
+                                if runtimes
+                                else 0.0,
                                 "failure_stage_counts": {},
                             }
                         )
@@ -363,24 +492,12 @@ def _append_sweep_row(
 def main() -> int:
     args = _build_parser().parse_args()
 
-    if args.df_values:
-        df_values = _parse_float_list(args.df_values)
-    else:
-        df_values = _float_grid(args.df_min, args.df_max, args.df_step)
+    # Resolve final config: TOML base + CLI overrides
+    cfg = _resolve_config(args)
 
-    if args.kf_values:
-        kf_values = _parse_float_list(args.kf_values)
-    else:
-        kf_values = _float_grid(args.kf_min, args.kf_max, args.kf_step)
+    sizes, sigmas, df_values, kf_values = _resolve_grid(cfg)
 
-    if args.sizes == "powers-of-two":
-        sizes = _powers_of_two(args.max_size)
-    else:
-        sizes = _parse_int_list(args.sizes)
-
-    sigmas = _parse_float_list(args.sigmas)
-
-    output_root = Path(args.output_dir)
+    output_root = Path(cfg.output_dir)
     summary_dir = output_root / "stability_sweeps"
     summary_dir.mkdir(parents=True, exist_ok=True)
 
@@ -388,20 +505,23 @@ def main() -> int:
 
     total_combos = len(sizes) * len(sigmas) * len(df_values) * len(kf_values)
     print(
-        "Running stability sweep with "
-        f"{total_combos} parameter combinations and {args.trials} trials each."
+        f"Running stability sweep: {total_combos} parameter combinations, "
+        f"{cfg.trials} trials each."
     )
+    if cfg.dask.enable:
+        backend = cfg.dask.scheduler_address or "local Dask cluster"
+        print(f"Dask backend: {backend}")
 
     sweep_rows: list = []
     raw_path = summary_dir / "stability_sweep_raw.jsonl"
-    raw_handle = raw_path.open("w", encoding="utf-8") if args.save_raw else None
+    raw_handle = raw_path.open("w", encoding="utf-8") if cfg.save_raw else None
 
     try:
         sweep_start = time.time()
 
-        if getattr(args, "dask", False):
+        if cfg.dask.enable:
             _run_sweep_dask(
-                args,
+                cfg,
                 sizes,
                 sigmas,
                 df_values,
@@ -412,7 +532,7 @@ def main() -> int:
             )
         else:
             _run_sweep_sequential(
-                args,
+                cfg,
                 sizes,
                 sigmas,
                 df_values,
@@ -425,8 +545,9 @@ def main() -> int:
         sweep_runtime = time.time() - sweep_start
         summary = {
             "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "config": cfg.model_dump(),
             "total_combinations": total_combos,
-            "trials_per_combo": args.trials,
+            "trials_per_combo": cfg.trials,
             "sizes": sizes,
             "sigmas": sigmas,
             "df_values": df_values,
@@ -473,9 +594,9 @@ def main() -> int:
 
         print("Sweep complete.")
         print(f"Summary: {summary_dir / 'stability_sweep_summary.json'}")
-        print(f"CSV: {summary_dir / 'stability_sweep_summary.csv'}")
+        print(f"CSV:     {summary_dir / 'stability_sweep_summary.csv'}")
         if raw_handle is not None:
-            print(f"Raw: {raw_path}")
+            print(f"Raw:     {raw_path}")
 
     finally:
         if raw_handle is not None:
