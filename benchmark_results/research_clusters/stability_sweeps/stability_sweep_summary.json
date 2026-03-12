@@ -1,0 +1,221 @@
+{
+  "generated_at": "2026-03-12 17:45:53",
+  "config": {
+    "sizes": [
+      8,
+      20,
+      48,
+      80,
+      128,
+      256,
+      384,
+      512,
+      640,
+      768,
+      896,
+      1024
+    ],
+    "sigmas": [
+      1.5
+    ],
+    "df_values": [
+      2.0
+    ],
+    "kf_values": [
+      1.0
+    ],
+    "df_min": 1.4,
+    "df_max": 2.6,
+    "df_step": 0.2,
+    "kf_min": 0.6,
+    "kf_max": 1.6,
+    "kf_step": 0.2,
+    "trials": 5,
+    "save_raw": true,
+    "output_dir": "benchmark_results/research_clusters",
+    "dask": {
+      "enable": true,
+      "scheduler_address": "tcp://marvin.bv.e-technik.tu-dortmund.de:8786",
+      "workers": null
+    },
+    "simulation": {
+      "rp_g": 10.0,
+      "tol_ov": 1e-06,
+      "n_subcl_percentage": 0.1,
+      "ext_case": 0,
+      "trial_timeout": 600
+    }
+  },
+  "total_combinations": 12,
+  "trials_per_combo": 5,
+  "sizes": [
+    8,
+    20,
+    48,
+    80,
+    128,
+    256,
+    384,
+    512,
+    640,
+    768,
+    896,
+    1024
+  ],
+  "sigmas": [
+    1.5
+  ],
+  "df_values": [
+    2.0
+  ],
+  "kf_values": [
+    1.0
+  ],
+  "total_runtime_s": 1777.6863150596619,
+  "results": [
+    {
+      "N": 8,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.11321630477905273,
+      "median_runtime_s": 0.021734237670898438,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 20,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.4714853286743164,
+      "median_runtime_s": 0.41579556465148926,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 48,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 10.03014678955078,
+      "median_runtime_s": 7.149762153625488,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 80,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 8.888924407958985,
+      "median_runtime_s": 6.914583683013916,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 12.088159990310668,
+      "median_runtime_s": 6.79028844833374,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 256,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 97.3236042022705,
+      "median_runtime_s": 95.40713858604431,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 384,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 161.53527755737304,
+      "median_runtime_s": 82.00825238227844,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 450.2137930870056,
+      "median_runtime_s": 174.41332077980042,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 640,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 88.0281370639801,
+      "median_runtime_s": 19.90060520172119,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 768,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 221.18604650497437,
+      "median_runtime_s": 220.95502305030823,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 896,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 497.747846698761,
+      "median_runtime_s": 186.12832760810852,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "avg_runtime_s": 746.8194053173065,
+      "median_runtime_s": 547.0784666538239,
+      "failure_stage_counts": {}
+    }
+  ]
+}
