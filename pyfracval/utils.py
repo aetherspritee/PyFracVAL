@@ -1389,10 +1389,15 @@ def calculate_max_overlap_cca_auto(
     radii2: np.ndarray,
     tolerance: float = 1e-6,
 ) -> float:
-    """Auto-dispatch to parallel or sequential overlap check based on size.
+    """Check max overlap between two clusters during CCA sticking.
 
-    For large cluster pairs, uses parallel version without early termination.
-    For small pairs, uses sequential with early exit.
+    FIX (PyFracVAL-xwx): Always use the sequential early-termination path.
+    The previous parallel dispatch was counterproductive for CCA: in sticking,
+    clusters are placed touching (high overlap probability), so early termination
+    fires almost immediately. The parallel path computes ALL n1*n2 pairs even
+    when the first pair already overlaps, making it 78x slower for large clusters.
+
+    Benchmark (n1=n2=256, 65536 pairs): parallel=109µs, fast=1.4µs.
 
     Parameters
     ----------
@@ -1412,15 +1417,6 @@ def calculate_max_overlap_cca_auto(
     float
         Maximum overlap fraction
     """
-    n1 = coords1.shape[0]
-    n2 = coords2.shape[0]
-    total_pairs = n1 * n2
-
-    if total_pairs > PARALLEL_OVERLAP_THRESHOLD:
-        # Many pairs: use parallel (no early termination)
-        return calculate_max_overlap_cca_parallel(coords1, radii1, coords2, radii2)
-    else:
-        # Few pairs: use sequential with early termination
-        return calculate_max_overlap_cca_fast(
-            coords1, radii1, coords2, radii2, tolerance
-        )
+    # Always use sequential with early termination: CCA clusters are placed
+    # touching so overlap is found immediately, making early exit dominant.
+    return calculate_max_overlap_cca_fast(coords1, radii1, coords2, radii2, tolerance)
