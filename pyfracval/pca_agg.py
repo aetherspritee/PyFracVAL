@@ -712,6 +712,208 @@ class PCAggregator:
 
         return coord_k_new, theta_a_new
 
+    def _pca_coarse_scan(
+        self,
+        k: int,
+        vec_0: np.ndarray,
+        i_vec: np.ndarray,
+        j_vec: np.ndarray,
+        n_coarse: int = 20,
+    ) -> tuple:
+        """Phase 1 of bisection: evaluate n_coarse Fibonacci-spiral positions.
+
+        Scans steps 1..n_coarse on the intersection circle and returns enough
+        information for the bisection phase to home in on the best bracket.
+
+        Parameters
+        ----------
+        k : int
+            Particle index being placed.
+        vec_0 : np.ndarray
+            [x0, y0, z0, r0] — intersection circle centre and radius.
+        i_vec, j_vec : np.ndarray
+            Basis vectors of the intersection circle plane.
+        n_coarse : int
+            Number of Fibonacci steps to evaluate (default 20).
+
+        Returns
+        -------
+        tuple: (found, best_coord, best_overlap, best_angle,
+                left_angle, right_angle, steps_used)
+
+            found        : bool   — True if a valid position was found early.
+            best_coord   : np.ndarray  — coords of the best position seen.
+            best_overlap : float  — overlap at best_coord.
+            best_angle   : float  — angle (radians) at best_coord.
+            left_angle   : float  — left bracket angle for bisection.
+            right_angle  : float  — right bracket angle for bisection.
+            steps_used   : int    — number of Fibonacci steps consumed.
+        """
+        golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
+
+        best_overlap = np.inf
+        best_coord = self.coords[k].copy()
+        best_angle = 0.0
+        best_step = 1
+
+        # Track per-step overlaps so we can find the bracket neighbours
+        step_overlaps: list[float] = []
+        step_angles: list[float] = []
+
+        for step in range(1, n_coarse + 1):
+            coord_new, angle = self._reintento(k, vec_0, i_vec, j_vec, attempt=step)
+            self.coords[k] = coord_new
+            ov = utils.calculate_max_overlap_pca_auto(
+                self.coords[: self.n1],
+                self.radii[: self.n1],
+                self.coords[k],
+                self.radii[k],
+                tolerance=self.tol_ov,
+            )
+            step_overlaps.append(ov)
+            step_angles.append(angle)
+
+            if ov < best_overlap:
+                best_overlap = ov
+                best_coord = coord_new.copy()
+                best_angle = angle
+                best_step = step
+
+            if ov <= self.tol_ov:
+                # Valid position found — return early
+                return (
+                    True,
+                    best_coord,
+                    best_overlap,
+                    best_angle,
+                    best_angle,
+                    best_angle,
+                    step,
+                )
+
+        # Build bracket: find left/right neighbours of best_step with higher overlap
+        # Left neighbour: the step just before best_step (wrap to n_coarse if step==1)
+        left_idx = (best_step - 2) % n_coarse  # step is 1-indexed, list is 0-indexed
+        right_idx = best_step % n_coarse  # step after best_step (mod wraps)
+
+        left_angle = step_angles[left_idx]
+        right_angle = step_angles[right_idx]
+
+        # Restore coords to best position before returning
+        self.coords[k] = best_coord
+
+        return (
+            False,
+            best_coord,
+            best_overlap,
+            best_angle,
+            left_angle,
+            right_angle,
+            n_coarse,
+        )
+
+    def _pca_bisection(
+        self,
+        k: int,
+        vec_0: np.ndarray,
+        i_vec: np.ndarray,
+        j_vec: np.ndarray,
+        best_coord: np.ndarray,
+        best_overlap: float,
+        left_angle: float,
+        right_angle: float,
+        n_bisect: int = 15,
+    ) -> tuple:
+        """Phase 2 of bisection: binary search within the bracket from Phase 1.
+
+        Evaluates the midpoint of [left_angle, right_angle] and narrows the
+        bracket toward the half that has lower overlap, homing in on the
+        minimum-overlap arc.
+
+        Parameters
+        ----------
+        k : int
+            Particle index being placed.
+        vec_0, i_vec, j_vec : np.ndarray
+            Intersection circle geometry (same as passed to coarse scan).
+        best_coord : np.ndarray
+            Current best-known coordinates for particle k (from coarse scan).
+        best_overlap : float
+            Overlap at best_coord.
+        left_angle, right_angle : float
+            Angular bracket around the best coarse-scan position (radians).
+        n_bisect : int
+            Maximum bisection iterations (default 15).
+
+        Returns
+        -------
+        tuple: (found, best_coord, best_overlap, steps_used)
+
+            found        : bool  — True if a valid position was found.
+            best_coord   : np.ndarray — coordinates of the best position seen.
+            best_overlap : float — overlap at best_coord.
+            steps_used   : int  — number of bisection steps consumed.
+        """
+        x0, y0, z0, r0 = vec_0
+
+        for step in range(n_bisect):
+            mid_angle = (left_angle + right_angle) / 2.0
+
+            coord_mid = (
+                np.array([x0, y0, z0])
+                + r0 * np.cos(mid_angle) * i_vec
+                + r0 * np.sin(mid_angle) * j_vec
+            )
+            self.coords[k] = coord_mid
+            ov = utils.calculate_max_overlap_pca_auto(
+                self.coords[: self.n1],
+                self.radii[: self.n1],
+                self.coords[k],
+                self.radii[k],
+                tolerance=self.tol_ov,
+            )
+
+            if ov < best_overlap:
+                best_overlap = ov
+                best_coord = coord_mid.copy()
+
+            if ov <= self.tol_ov:
+                self.coords[k] = best_coord
+                return (True, best_coord, best_overlap, step + 1)
+
+            # Narrow bracket: move the endpoint whose midpoint gave lower overlap
+            # toward mid.  Since we don't know the landscape shape, we simply
+            # split the larger half (standard bisection on the half-interval
+            # closest to mid).
+            mid_left = (left_angle + mid_angle) / 2.0
+            coord_mid_left = (
+                np.array([x0, y0, z0])
+                + r0 * np.cos(mid_left) * i_vec
+                + r0 * np.sin(mid_left) * j_vec
+            )
+            self.coords[k] = coord_mid_left
+            ov_left = utils.calculate_max_overlap_pca_auto(
+                self.coords[: self.n1],
+                self.radii[: self.n1],
+                self.coords[k],
+                self.radii[k],
+                tolerance=self.tol_ov,
+            )
+            if ov_left < best_overlap:
+                best_overlap = ov_left
+                best_coord = coord_mid_left.copy()
+            if ov_left <= self.tol_ov:
+                self.coords[k] = best_coord
+                return (True, best_coord, best_overlap, step + 1)
+
+            if ov_left < ov:
+                right_angle = mid_angle
+            else:
+                left_angle = mid_angle
+
+        self.coords[k] = best_coord
+        return (False, best_coord, best_overlap, n_bisect)
+
     def run(self) -> np.ndarray | None:
         """Run the complete PCA process for all N particles.
 
@@ -940,48 +1142,109 @@ class PCAggregator:
                                     # Continue to next batch
                                     intento = batch_end
                     else:
-                        # Sequential rotation (Phase 1 - optimal for N<1000)
-                        # Phase 3B: Auto-dispatch to parallel overlap for large N
-                        while cov_max > self.tol_ov and intento < max_rotations:
-                            intento += 1
-                            coord_k_new, theta_a_new = self._reintento(
-                                k, vec_0, i_vec, j_vec, attempt=intento
-                            )
-                            self.coords[k] = coord_k_new
-                            cov_max = utils.calculate_max_overlap_pca_auto(
-                                self.coords[: self.n1],
-                                self.radii[: self.n1],
-                                self.coords[k],
-                                self.radii[k],
-                                tolerance=self.tol_ov,
-                            )
+                        # Sequential rotation with 3-phase bisection (PyFracVAL-cut)
+                        # Phase 1: coarse Fibonacci scan (steps 1..N_COARSE)
+                        N_COARSE = 20
+                        N_BISECT = 15
+                        (
+                            found_coarse,
+                            best_coord,
+                            cov_max,
+                            best_angle,
+                            left_angle,
+                            right_angle,
+                            intento,
+                        ) = self._pca_coarse_scan(
+                            k, vec_0, i_vec, j_vec, n_coarse=N_COARSE
+                        )
 
-                            if trace_enabled:
-                                ov_details = []
-                                for idx_agg in range(self.n1):
-                                    ov_agg = 1 - (
-                                        np.linalg.norm(
-                                            self.coords[k] - self.coords[idx_agg]
-                                        )
-                                        / (self.radii[k] + self.radii[idx_agg])
+                        if found_coarse:
+                            # Valid position found in coarse scan — done
+                            logger.debug(
+                                f"    PCA k={k}, cand={current_selected_idx}: "
+                                f"Bisect Phase 1 found valid pos at step {intento}, "
+                                f"overlap={cov_max:.4e}"
+                            )
+                        else:
+                            # Phase 2: bisection within the bracket
+                            (
+                                found_bisect,
+                                best_coord,
+                                cov_max,
+                                bisect_steps,
+                            ) = self._pca_bisection(
+                                k,
+                                vec_0,
+                                i_vec,
+                                j_vec,
+                                best_coord,
+                                cov_max,
+                                left_angle,
+                                right_angle,
+                                n_bisect=N_BISECT,
+                            )
+                            intento += bisect_steps
+
+                            if found_bisect:
+                                logger.debug(
+                                    f"    PCA k={k}, cand={current_selected_idx}: "
+                                    f"Bisect Phase 2 found valid pos after {bisect_steps} bisect steps, "
+                                    f"overlap={cov_max:.4e}"
+                                )
+                            else:
+                                # Phase 3: fallback — continue uniform Fibonacci
+                                # from step N_COARSE+1 up to max_rotations
+                                fallback_start = N_COARSE + 1
+                                while cov_max > self.tol_ov and intento < max_rotations:
+                                    intento += 1
+                                    coord_k_new, _ = self._reintento(
+                                        k,
+                                        vec_0,
+                                        i_vec,
+                                        j_vec,
+                                        attempt=fallback_start
+                                        + (intento - N_COARSE - N_BISECT - 1),
                                     )
-                                    ov_details.append(f"vs{idx_agg}:{ov_agg:.2e}")
-                                logger.log(
-                                    TRACE_LEVEL_NUM,
-                                    f"    PCA k={k}, cand={current_selected_idx}, Rot {intento}: Overlap = {cov_max:.4e} ({', '.join(ov_details)})",
-                                )
+                                    self.coords[k] = coord_k_new
+                                    cov_max = utils.calculate_max_overlap_pca_auto(
+                                        self.coords[: self.n1],
+                                        self.radii[: self.n1],
+                                        self.coords[k],
+                                        self.radii[k],
+                                        tolerance=self.tol_ov,
+                                    )
 
-                            # Adaptive tolerance: relax constraint after many attempts
-                            if (
-                                intento >= adaptive_tol_threshold
-                                and cov_max <= relaxed_tol
-                            ):
-                                logger.info(
-                                    f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
-                                    f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
-                                )
-                                used_adaptive_tol = True
-                                break
+                                    if trace_enabled:
+                                        ov_details = []
+                                        for idx_agg in range(self.n1):
+                                            ov_agg = 1 - (
+                                                np.linalg.norm(
+                                                    self.coords[k]
+                                                    - self.coords[idx_agg]
+                                                )
+                                                / (self.radii[k] + self.radii[idx_agg])
+                                            )
+                                            ov_details.append(
+                                                f"vs{idx_agg}:{ov_agg:.2e}"
+                                            )
+                                        logger.log(
+                                            TRACE_LEVEL_NUM,
+                                            f"    PCA k={k}, cand={current_selected_idx}, "
+                                            f"Fallback Rot {intento}: Overlap = {cov_max:.4e} "
+                                            f"({', '.join(ov_details)})",
+                                        )
+
+                                    # Adaptive tolerance: relax constraint after many attempts
+                                    if (
+                                        intento >= adaptive_tol_threshold
+                                        and cov_max <= relaxed_tol
+                                    ):
+                                        logger.info(
+                                            f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
+                                            f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                                        )
+                                        used_adaptive_tol = True
+                                        break
 
                     if cov_max <= self.tol_ov or used_adaptive_tol:
                         logger.debug(
