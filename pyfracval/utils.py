@@ -867,6 +867,124 @@ def batch_rotate_cluster_cca(
     return rotated_clusters
 
 
+@jit(nopython=True, fastmath=True, cache=True)
+def _two_sphere_intersection_kernel(
+    sphere_1: np.ndarray, sphere_2: np.ndarray, theta: float
+) -> Tuple[
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    float,
+    bool,
+]:
+    """JIT-compiled kernel for two_sphere_intersection (PyFracVAL-du0).
+
+    Given two spheres and a pre-sampled angle theta, computes the intersection
+    circle geometry and returns a point on the circle at that angle.
+
+    Parameters
+    ----------
+    sphere_1 : np.ndarray
+        [x1, y1, z1, r1]
+    sphere_2 : np.ndarray
+        [x2, y2, z2, r2]
+    theta : float
+        Pre-sampled angle in [0, 2*pi) for the point on the intersection circle.
+
+    Returns
+    -------
+    tuple of 14 scalars: x, y, z, x0, y0, z0, r0, ix, iy, iz, jx, jy, jz, valid
+        x, y, z    - point on the intersection circle at angle theta
+        x0, y0, z0 - center of the intersection circle
+        r0         - radius of the intersection circle
+        ix, iy, iz - first basis vector of the intersection plane
+        jx, jy, jz - second basis vector of the intersection plane
+        valid      - True if intersection exists, False otherwise
+    """
+    x1 = sphere_1[0]
+    y1 = sphere_1[1]
+    z1 = sphere_1[2]
+    r1 = sphere_1[3]
+
+    x2 = sphere_2[0]
+    y2 = sphere_2[1]
+    z2 = sphere_2[2]
+    r2 = sphere_2[3]
+
+    dpx = x2 - x1
+    dpy = y2 - y1
+    dpz = z2 - z1
+    distance = np.sqrt(dpx * dpx + dpy * dpy + dpz * dpz)
+
+    _invalid = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False)
+
+    if distance > r1 + r2:
+        return _invalid
+    if distance < abs(r1 - r2):
+        return _invalid
+
+    inv_d = 1.0 / distance
+    kx = dpx * inv_d
+    ky = dpy * inv_d
+    kz = dpz * inv_d
+
+    plane_distance = (distance * distance + r1 * r1 - r2 * r2) * (0.5 * inv_d)
+    x0 = x1 + plane_distance * kx
+    y0 = y1 + plane_distance * ky
+    z0 = z1 + plane_distance * kz
+    r0_sq = r1 * r1 - plane_distance * plane_distance
+    r0 = np.sqrt(r0_sq) if r0_sq > 0.0 else 0.0
+
+    # Choose cross-reference vector least aligned with k_vec
+    abs_kx = abs(kx)
+    abs_ky = abs(ky)
+    abs_kz = abs(kz)
+    inv_sqrt3 = 1.0 / np.sqrt(3.0)
+    if abs_kx < inv_sqrt3:
+        cx, cy, cz = 1.0, 0.0, 0.0
+    elif abs_ky < inv_sqrt3:
+        cx, cy, cz = 0.0, 1.0, 0.0
+    else:
+        cx, cy, cz = 0.0, 0.0, 1.0
+
+    # i_vec = cross(k_vec, cross_ref), normalised
+    ix = ky * cz - kz * cy
+    iy = kz * cx - kx * cz
+    iz = kx * cy - ky * cx
+    i_norm = np.sqrt(ix * ix + iy * iy + iz * iz)
+    inv_i = 1.0 / i_norm
+    ix *= inv_i
+    iy *= inv_i
+    iz *= inv_i
+
+    # j_vec = cross(i_vec, k_vec), normalised
+    jx = iy * kz - iz * ky
+    jy = iz * kx - ix * kz
+    jz = ix * ky - iy * kx
+    j_norm = np.sqrt(jx * jx + jy * jy + jz * jz)
+    inv_j = 1.0 / j_norm
+    jx *= inv_j
+    jy *= inv_j
+    jz *= inv_j
+
+    cos_t = np.cos(theta)
+    sin_t = np.sin(theta)
+    x = x0 + r0 * (cos_t * ix + sin_t * jx)
+    y = y0 + r0 * (cos_t * iy + sin_t * jy)
+    z = z0 + r0 * (cos_t * iz + sin_t * jz)
+
+    return x, y, z, x0, y0, z0, r0, ix, iy, iz, jx, jy, jz, True
+
+
 def two_sphere_intersection(
     sphere_1: np.ndarray, sphere_2: np.ndarray, rng: np.random.Generator | None = None
 ) -> Tuple[float, float, float, float, np.ndarray, np.ndarray, np.ndarray, bool]:
@@ -906,179 +1024,36 @@ def two_sphere_intersection(
     _rng = rng if rng is not None else np.random.default_rng()
     invalid_ret = (0.0, 0.0, 0.0, 0.0, np.zeros(4), np.zeros(3), np.zeros(3), False)
 
-    point1 = sphere_1[:3]
-    point2 = sphere_2[:3]
-    r1 = sphere_1[3]
-    r2 = sphere_2[3]
-
-    dp = point2 - point1
-    distance = np.linalg.norm(dp)
-
-    if distance > r1 + r2:
-        logger.debug(
-            f"TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1 + r2:.4f})"
-        )
-        return invalid_ret
-    if distance < abs(r1 - r2):
-        logger.debug(
-            f"TSI: Sphere contained within other (d={distance:.4f}, |r1-r2|={abs(r1 - r2):.4f})"
-        )
-        return invalid_ret
-
-    k_vec = dp / distance
-    plane_distance = (distance**2 + r1**2 - r2**2) / (2 * distance)
-    center0 = point1 + plane_distance * k_vec
-    r0 = np.sqrt(r1**2 - plane_distance**2)
-
-    if abs(np.dot(k_vec, np.array([1.0, 0.0, 0.0]))) < 1 / np.sqrt(3):
-        cross_ref = np.array([1.0, 0.0, 0.0])
-    elif abs(np.dot(k_vec, np.array([0.0, 1.0, 0.0]))) < 1 / np.sqrt(3):
-        cross_ref = np.array([0.0, 1.0, 0.0])
-    else:
-        cross_ref = np.array([0.0, 0.0, 1.0])
-    i_vec = np.cross(k_vec, cross_ref)
-    i_vec /= np.linalg.norm(i_vec)
-    j_vec = np.cross(i_vec, k_vec)
-    j_vec /= np.linalg.norm(j_vec)
-
     theta = 2.0 * np.pi * _rng.random()
 
-    center_k = center0 + r0 * (np.cos(theta) * i_vec + np.sin(theta) * j_vec)
-    if np.any(np.isnan(center_k)):
-        print("""
-              Seems like these two spheres do no intersect!
-              Open up an issue and inform us about it :)
-              """)
+    x, y, z, x0, y0, z0, r0, ix, iy, iz, jx, jy, jz, valid = (
+        _two_sphere_intersection_kernel(sphere_1, sphere_2, theta)
+    )
+
+    if not valid:
+        r1 = sphere_1[3]
+        r2 = sphere_2[3]
+        distance = float(np.linalg.norm(sphere_2[:3] - sphere_1[:3]))
+        if distance > r1 + r2:
+            logger.debug(
+                f"TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1 + r2:.4f})"
+            )
+        else:
+            logger.debug(
+                f"TSI: Sphere contained within other (d={distance:.4f}, |r1-r2|={abs(r1 - r2):.4f})"
+            )
         return invalid_ret
 
     return (
-        center_k[0],
-        center_k[1],
-        center_k[2],
+        x,
+        y,
+        z,
         theta,
-        np.array([center0[0], center0[1], center0[2], r0]),
-        i_vec,
-        j_vec,
+        np.array([x0, y0, z0, r0]),
+        np.array([ix, iy, iz]),
+        np.array([jx, jy, jz]),
         True,
     )
-
-    # x1, y1, z1, r1 = sphere_1
-    # x2, y2, z2, r2 = sphere_2
-    # center1 = sphere_1[:3]
-    # center2 = sphere_2[:3]
-    # v12 = center2 - center1
-    # distance = np.linalg.norm(v12)
-
-    # # Default invalid return values
-    # invalid_ret = (0.0, 0.0, 0.0, 0.0, np.zeros(4), np.zeros(3), np.zeros(3), False)
-
-    # # --- Check for edge cases ---
-    # # 1. Spheres are too far apart
-    # if distance > r1 + r2 + FLOATING_POINT_ERROR:
-    #     logger.debug(
-    #         f"TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1 + r2:.4f})"
-    #     )
-    #     return invalid_ret
-    # # 2. One sphere is contained within the other without touching
-    # if distance < abs(r1 - r2) - FLOATING_POINT_ERROR:
-    #     logger.debug(
-    #         f"TSI: Sphere contained within other (d={distance:.4f}, |r1-r2|={abs(r1 - r2):.4f})"
-    #     )
-    #     return invalid_ret
-    # # TODO: check 2 and 3 should be the same?
-    # # 3. Spheres coincide
-    # if distance < FLOATING_POINT_ERROR and abs(r1 - r2) < FLOATING_POINT_ERROR:
-    #     logger.debug("TSI: Spheres coincide")
-    #     # Intersection is the whole sphere surface - requires different handling if needed
-    #     return invalid_ret  # Cannot define a unique circle
-
-    # # --- Handle Touching Point Case ---
-    # is_touching = False
-    # touch_point = np.zeros(3)
-    # if abs(distance - (r1 + r2)) < FLOATING_POINT_ERROR:  # Touching externally
-    #     is_touching = True
-    #     # Point is on the line segment between centers
-    #     if distance > FLOATING_POINT_ERROR:
-    #         touch_point = center1 + v12 * (r1 / distance)
-    #     else:  # Should be caught by coincident case, but fallback
-    #         touch_point = center1
-    # elif abs(distance - abs(r1 - r2)) < FLOATING_POINT_ERROR:  # Touching internally
-    #     is_touching = True
-    #     # Point is on the line extending from centers
-    #     if distance > FLOATING_POINT_ERROR:
-    #         if r1 > r2:
-    #             touch_point = center1 + v12 * (r1 / distance)
-    #         else:  # r2 > r1
-    #             touch_point = center2 + (-v12) * (
-    #                 r2 / distance
-    #             )  # Point on sphere 2 surface
-    #     else:  # Should be caught by coincident case
-    #         touch_point = center1
-
-    # if is_touching:
-    #     logger.debug(f"TSI: Spheres touching at point {touch_point}")
-    #     # Return the single point, theta=0, r0=0
-    #     vec_0_touch = np.concatenate((touch_point, [0.0]))
-    #     # i_vec, j_vec are ill-defined, return zeros
-    #     return (
-    #         touch_point[0],
-    #         touch_point[1],
-    #         touch_point[2],
-    #         0.0,
-    #         vec_0_touch,
-    #         np.zeros(3),
-    #         np.zeros(3),
-    #         True,
-    #     )
-
-    # # --- Standard Intersection Case (Circle) ---
-    # try:
-    #     # distance 'd' is already computed
-    #     # distance from center1 to intersection plane:
-    #     dist1_plane = (distance**2 - r2**2 + r1**2) / (2 * distance)
-
-    #     # Radius of the intersection circle squared
-    #     r0_sq = r1**2 - dist1_plane**2
-    #     if r0_sq < -FLOATING_POINT_ERROR:  # Tolerance check for numerical issues
-    #         logger.warning(
-    #             f"TSI: Negative r0^2 ({r0_sq}) in sphere intersection. d={distance}, r1={r1}, r2={r2}"
-    #         )
-    #         return invalid_ret
-    #     r0 = np.sqrt(max(0.0, r0_sq))  # Ensure non-negative before sqrt
-
-    #     # Center of the intersection circle
-    #     unit_v12 = v12 / distance
-    #     center0 = center1 + unit_v12 * dist1_plane
-    #     x0, y0, z0 = center0
-
-    #     # Define basis vectors for the intersection plane (perpendicular to v12)
-    #     # k_vec is the normal to the plane (unit_v12)
-    #     k_vec = unit_v12
-
-    #     # Find a vector i_vec perpendicular to k_vec robustly
-    #     # If k_vec is close to x-axis, use y-axis for cross product, otherwise use x-axis
-    #     if abs(np.dot(k_vec, np.array([1.0, 0.0, 0.0]))) < 0.9:
-    #         cross_ref = np.array([1.0, 0.0, 0.0])
-    #     else:
-    #         cross_ref = np.array([0.0, 1.0, 0.0])
-
-    #     j_vec = normalize(cross_product(k_vec, cross_ref))
-    #     i_vec = normalize(cross_product(j_vec, k_vec))
-    #     # Generate random angle theta
-    #     theta = 2.0 * np.pi * np.random.rand()
-
-    #     # Calculate random point on the circle
-    #     point_on_circle = (
-    #         center0 + r0 * np.cos(theta) * i_vec + r0 * np.sin(theta) * j_vec
-    #     )
-    #     x, y, z = point_on_circle
-
-    #     vec_0 = np.array([x0, y0, z0, r0])
-    #     return x, y, z, theta, vec_0, i_vec, j_vec, True
-
-    # except (ZeroDivisionError, ValueError) as e:
-    #     logger.error(f"Error during sphere intersection calculation: {e}")
-    #     return invalid_ret
 
 
 @jit(parallel=True, fastmath=True, cache=True)
