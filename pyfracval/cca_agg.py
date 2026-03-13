@@ -2,6 +2,7 @@
 
 import logging
 import math
+from time import perf_counter
 from typing import Set, Tuple
 
 import numpy as np
@@ -102,6 +103,15 @@ class CCAggregator:
         self.i_t = self.i_orden.shape[0]  # Current number of clusters
 
         self.not_able_cca = False
+
+        # Timing accumulators (used when config.PROFILE_TIMING is True)
+        self._t_cluster_props: float = 0.0
+        self._t_select_candidates: float = 0.0
+        self._t_sticking_v1: float = 0.0
+        self._t_overlap_check: float = 0.0
+        self._t_rotation: float = 0.0
+        self._n_overlap_calls: int = 0
+        self._n_rotation_calls: int = 0
 
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
@@ -801,20 +811,26 @@ class CCAggregator:
             return None  # Cannot stick empty clusters
 
         # --- Calculate Properties and Gamma ---
+        _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
         m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
             coords1_in, radii1_in, self.df, self.kf
         )
         m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
             coords2_in, radii2_in, self.df, self.kf
         )
+        if config.PROFILE_TIMING:
+            self._t_cluster_props += perf_counter() - _t0
         props1 = (m1, rg1, cm1, r_max1, radii1_in)
         props2 = (m2, rg2, cm2, r_max2, radii2_in)
         gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
 
         # --- Generate Candidate List ---
+        _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
         list_matrix = self._cca_select_candidates(
             coords1_in, radii1_in, cm1, coords2_in, radii2_in, cm2, gamma_pc, gamma_real
         )
+        if config.PROFILE_TIMING:
+            self._t_select_candidates += perf_counter() - _t0
 
         if np.sum(list_matrix) == 0:
             logger.warning(
@@ -825,25 +841,21 @@ class CCAggregator:
             return None  # Sticking fails if no candidates
 
         # --- Sticking Attempt Loop ---
-        tried_pairs: Set[Tuple[int, int]] = set()
+        # FIX (PyFracVAL-2yb): Build candidate list ONCE and shuffle it.
+        # Previously _cca_pick_candidate_pair rebuilt the full list on every attempt
+        # → O((n1×n2)²) total work. Now O(n1×n2) to build once, O(1) per attempt.
+        _candidate_indices = np.argwhere(list_matrix > 0)
+        self._rng.shuffle(_candidate_indices)
+
         sticking_successful = False
         final_coords1 = None
         final_coords2 = None
-        max_candidate_attempts = n1 * n2  # Try up to all possible pairs
 
-        for attempt in range(max_candidate_attempts):
-            cand1_idx, cand2_idx = self._cca_pick_candidate_pair(
-                list_matrix, tried_pairs
-            )
-
-            if cand1_idx < 0:  # No more available pairs
-                # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): No more candidate pairs to try.")
-                break
-
-            tried_pairs.add((cand1_idx, cand2_idx))
-            # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): Trying pair ({cand1_idx}, {cand2_idx}). Attempt {attempt+1}/{max_candidate_attempts}")
+        for attempt, (cand1_idx, cand2_idx) in enumerate(_candidate_indices):
+            # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): Trying pair ({cand1_idx}, {cand2_idx}). Attempt {attempt+1}/{len(_candidate_indices)}")
 
             # Perform initial sticking placement
+            _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
             stick_results = self._cca_sticking_v1(
                 (coords1_in, radii1_in, cm1),
                 (coords2_in, radii2_in, cm2),
@@ -852,6 +864,8 @@ class CCAggregator:
                 gamma_pc,
                 gamma_real,
             )
+            if config.PROFILE_TIMING:
+                self._t_sticking_v1 += perf_counter() - _t0
             coords1_stick, coords2_stick, cm2_stick, theta_a, vec_0, i_vec, j_vec = (
                 stick_results
             )
@@ -865,6 +879,7 @@ class CCAggregator:
             #     coords1_stick, radii1_in, coords2_stick, radii2_in
             # )
             # Phase 3B: Auto-dispatch to parallel overlap for large N
+            _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
             cov_max = utils.calculate_max_overlap_cca_auto(
                 coords1_stick,
                 radii1_in,
@@ -872,7 +887,9 @@ class CCAggregator:
                 radii2_in,
                 tolerance=self.tol_ov,
             )
-            # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Initial overlap = {cov_max:.4e}")
+            if config.PROFILE_TIMING:
+                self._t_overlap_check += perf_counter() - _t0
+                self._n_overlap_calls += 1
 
             # Rotation attempts
             intento = 0
@@ -967,6 +984,7 @@ class CCAggregator:
                 # Phase 3B: Auto-dispatch to parallel overlap for large N
                 while cov_max > self.tol_ov and intento < max_rotations:
                     intento += 1
+                    _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
                     coords2_rotated, theta_a_new = self._cca_reintento(
                         current_coords2,
                         cm2_stick,
@@ -976,6 +994,10 @@ class CCAggregator:
                         j_vec,
                         attempt=intento,
                     )
+                    if config.PROFILE_TIMING:
+                        self._t_rotation += perf_counter() - _t0
+                        self._n_rotation_calls += 1
+                    _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
                     cov_max = utils.calculate_max_overlap_cca_auto(
                         coords1_stick,
                         radii1_in,
@@ -983,6 +1005,9 @@ class CCAggregator:
                         radii2_in,
                         tolerance=self.tol_ov,
                     )
+                    if config.PROFILE_TIMING:
+                        self._t_overlap_check += perf_counter() - _t0
+                        self._n_overlap_calls += 1
 
                     # Update coords for next potential rotation
                     current_coords2 = coords2_rotated
@@ -1221,6 +1246,23 @@ class CCAggregator:
             return None
 
         logger.info("CCA aggregation completed successfully.")
+        if config.PROFILE_TIMING:
+            t_total = (
+                self._t_cluster_props
+                + self._t_select_candidates
+                + self._t_sticking_v1
+                + self._t_overlap_check
+                + self._t_rotation
+            )
+            print(
+                f"\n[PROFILE] CCA timing summary (N={self.N}):\n"
+                f"  cluster_props   : {self._t_cluster_props:7.3f}s\n"
+                f"  select_cands    : {self._t_select_candidates:7.3f}s\n"
+                f"  sticking_v1     : {self._t_sticking_v1:7.3f}s\n"
+                f"  overlap_check   : {self._t_overlap_check:7.3f}s  ({self._n_overlap_calls} calls)\n"
+                f"  rotation        : {self._t_rotation:7.3f}s  ({self._n_rotation_calls} calls)\n"
+                f"  accounted total : {t_total:7.3f}s"
+            )
         # Return only the valid part of the arrays corresponding to the final cluster
         final_count = self.i_orden[0, 2]
         return self.coords[:final_count, :], self.radii[:final_count]

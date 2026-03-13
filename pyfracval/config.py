@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tomllib
+from math import sqrt
 from pathlib import Path
 from typing import Any
 
@@ -163,9 +164,11 @@ USE_BATCH_ROTATION: bool = (
 ROTATION_BATCH_SIZE: int = (
     32  # Number of rotation angles to evaluate in parallel (if enabled)
 )
+PROFILE_TIMING: bool = False  # Print per-phase timing summary after each run_cca
 
 # --- Constants ---
 PI: float = np.pi
+GOLDEN_RATIO: float = (1.0 + sqrt(5.0)) / 2.0  # Fibonacci spiral constant
 
 # --- Derived Parameters (can be calculated later if needed) ---
 # N_SUBCL: int = ... # Calculated in pca_subclusters.py

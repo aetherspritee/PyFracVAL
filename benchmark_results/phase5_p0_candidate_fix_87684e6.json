@@ -1,0 +1,56 @@
+{
+  "commit": "87684e6",
+  "timestamp": "2026-03-13T02:19:09",
+  "optimization": "P0 fix: O(n1xn2) candidate pair rebuild + PROFILE_TIMING",
+  "description": "Steps 1+2: timing instrumentation + pre-shuffled candidate list eliminates O((n1xn2)^2) rebuild",
+  "results": {
+    "N=128, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 0.4267490659064303,
+      "std_runtime": 0.253481233975406,
+      "min_runtime": 0.14621259784325957,
+      "max_runtime": 0.6393167020287365,
+      "all_runtimes": [
+        0.4947178978472948,
+        0.14621259784325957,
+        0.6393167020287365
+      ]
+    },
+    "N=256, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 1.1609600341568391,
+      "std_runtime": 0.378381483993755,
+      "min_runtime": 0.8946153467986733,
+      "max_runtime": 1.5940789198502898,
+      "all_runtimes": [
+        1.5940789198502898,
+        0.9941858358215541,
+        0.8946153467986733
+      ]
+    },
+    "N=512, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 1.5427760064291458,
+      "std_runtime": 0.6495661795269354,
+      "min_runtime": 0.8244697721675038,
+      "max_runtime": 2.0889139811042696,
+      "all_runtimes": [
+        1.7149442660156637,
+        2.0889139811042696,
+        0.8244697721675038
+      ]
+    }
+  },
+  "comparison_vs_phase4a": {
+    "N=128": {
+      "before_avg": 1.012,
+      "after_avg": 0.4267490659064303,
+      "speedup": 2.37141702431258
+    },
+    "N=512": {
+      "before_avg": 3.219,
+      "after_avg": 1.5427760064291458,
+      "speedup": 2.0864986145659485
+    }
+  }
+}
