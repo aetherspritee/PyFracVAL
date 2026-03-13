@@ -19,7 +19,7 @@
 #   uv run python benchmarks/stability_sweep.py --config configs/stability_n_sweep.toml
 
 sizes     = [64, 128, 256, 512, 1024]
-sigmas    = [1.0, 1.5, 2.0, 2.5]
+sigmas    = [1.0, 1.5, 2.0, 2.5, 3.0]
 
 # Explicit Df/kf grid — focused on the corridor that was stable at N=64/128.
 # Anchors at Df=1.6 and Df=2.4 help characterise the boundary.

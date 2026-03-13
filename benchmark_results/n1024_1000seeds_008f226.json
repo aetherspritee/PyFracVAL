@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-03-13 16:22:39",
+  "config": {
+    "sizes": [
+      1024
+    ],
+    "sigmas": [
+      1.5
+    ],
+    "df_values": [
+      1.8
+    ],
+    "kf_values": [
+      1.0
+    ],
+    "df_min": 1.4,
+    "df_max": 2.6,
+    "df_step": 0.2,
+    "kf_min": 0.6,
+    "kf_max": 1.6,
+    "kf_step": 0.2,
+    "trials": 1000,
+    "save_raw": false,
+    "output_dir": "benchmark_results/n1024_1000seeds",
+    "dask": {
+      "enable": false,
+      "scheduler_address": null,
+      "workers": null
+    },
+    "simulation": {
+      "rp_g": 100.0,
+      "tol_ov": 1e-06,
+      "n_subcl_percentage": 0.1,
+      "ext_case": 0,
+      "trial_timeout": null
+    }
+  },
+  "total_combinations": 1,
+  "trials_per_combo": 1000,
+  "sizes": [
+    1024
+  ],
+  "sigmas": [
+    1.5
+  ],
+  "df_values": [
+    1.8
+  ],
+  "kf_values": [
+    1.0
+  ],
+  "total_runtime_s": 1467.6966104507446,
+  "results": [
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 1000,
+      "successes": 1000,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.4675283892154694,
+      "median_runtime_s": 1.3824973106384277,
+      "failure_stage_counts": {}
+    }
+  ]
+}
