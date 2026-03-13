@@ -703,89 +703,31 @@ class CCAggregator:
         j_vec: np.ndarray,
         attempt: int = 0,
     ) -> Tuple[np.ndarray, float]:
-        """
-        Rotates cluster 2 to a new point on the intersection circle.
-        Corresponds to CCA_Sticking_process_v1_reintento.
+        """Thin wrapper — delegates to JIT kernel (PyFracVAL-dsa).
 
-        Uses Fibonacci spiral sampling for optimal angular coverage.
-
-        Args:
-            coords2_in: Coordinates of cluster 2
-            cm2: Center of mass of cluster 2
-            cand2_idx: Index of candidate particle in cluster 2
-            vec_0: [x0, y0, z0, r0] - center and radius of intersection circle
-            i_vec: First basis vector for the circle plane
-            j_vec: Second basis vector for the circle plane
-            attempt: Rotation attempt number (0-indexed) for Fibonacci spiral
-
-        Returns:
-            tuple: (coords2_rotated, theta_a_new)
+        Rotates cluster 2 to the next Fibonacci-spiral position on the
+        intersection circle.  The heavy lifting is done by
+        ``utils._cca_reintento_kernel`` which is @njit-compiled to eliminate
+        Python dispatch overhead and numpy scalar overhead for every step.
         """
         x0, y0, z0, r0 = vec_0
-
-        # New angle using Fibonacci spiral for optimal coverage
-        # FIX (PyFracVAL-2d6): use module-level constant instead of recomputing sqrt(5)
-        theta_a_new = 2.0 * config.PI * attempt / config.GOLDEN_RATIO
-        _cos = np.cos(theta_a_new)
-        _sin = np.sin(theta_a_new)
-        target_p2 = np.array(
-            [
-                x0 + r0 * _cos * i_vec[0] + r0 * _sin * j_vec[0],
-                y0 + r0 * _cos * i_vec[1] + r0 * _sin * j_vec[1],
-                z0 + r0 * _cos * i_vec[2] + r0 * _sin * j_vec[2],
-            ]
+        coords2_out = utils._cca_reintento_kernel(
+            coords2_in,
+            cm2,
+            cand2_idx,
+            float(x0),
+            float(y0),
+            float(z0),
+            float(r0),
+            float(i_vec[0]),
+            float(i_vec[1]),
+            float(i_vec[2]),
+            float(j_vec[0]),
+            float(j_vec[1]),
+            float(j_vec[2]),
+            int(attempt),
         )
-
-        # Rotate cluster 2 to align cand2_idx with target_p2
-        current_p2 = coords2_in[cand2_idx]
-        v1_rot = current_p2 - cm2
-        v2_rot = target_p2 - cm2
-
-        norm_v1 = np.linalg.norm(v1_rot)
-        norm_v2 = np.linalg.norm(v2_rot)
-
-        rot_axis = np.zeros(3)
-        rot_angle = 0.0
-        perform_rot = True
-
-        if norm_v1 > 1e-9 and norm_v2 > 1e-9:
-            v1_u = v1_rot / norm_v1
-            v2_u = v2_rot / norm_v2
-            dot_prod = np.dot(v1_u, v2_u)
-            if abs(dot_prod) > 1.0 - 1e-9:
-                if dot_prod < 0:
-                    rot_angle = np.pi
-                    if abs(v1_u[0]) < 1e-9 and abs(v1_u[1]) < 1e-9:
-                        rot_axis = np.array([1.0, 0.0, 0.0])
-                    else:
-                        rot_axis = np.array([-v1_u[1], v1_u[0], 0.0])
-                else:
-                    perform_rot = False
-            else:
-                # Clamp dot_prod before acos due to potential precision issues
-                dot_prod_clamped = np.clip(dot_prod, -1.0, 1.0)
-                rot_angle = np.arccos(dot_prod_clamped)
-                rot_axis = np.cross(v1_u, v2_u)
-        else:
-            perform_rot = False
-
-        if perform_rot and np.linalg.norm(rot_axis) > 1e-9 and abs(rot_angle) > 1e-9:
-            # FIX (PyFracVAL-2d6): only allocate when rotation is actually performed
-            # FIX (PyFracVAL-31m): call JIT-compiled 2D kernel directly (skip Python
-            # dispatch overhead and redundant axis-norm check in rodrigues_rotation)
-            _rot_axis_norm = rot_axis / np.linalg.norm(rot_axis)
-            coords2_rel_rotated = utils._rodrigues_rotation_2d(
-                coords2_in - cm2,
-                _rot_axis_norm,
-                np.cos(rot_angle),
-                np.sin(rot_angle),
-            )
-            coords2 = coords2_rel_rotated + cm2
-            # CM doesn't change
-        else:
-            coords2 = coords2_in  # No rotation: return input as-is (no copy)
-
-        return coords2, theta_a_new
+        return coords2_out, 0.0  # theta_a_new no longer needed by caller
 
     def _perform_cca_sticking(
         self,
