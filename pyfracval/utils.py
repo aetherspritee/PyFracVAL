@@ -357,9 +357,8 @@ def rodrigues_rotation(
         dot_kv = np.dot(axis, vectors)
         cross_kv = np.cross(axis, vectors)
     elif vectors.ndim == 2:
-        axis = axis[np.newaxis, :]
-        dot_kv = np.sum(axis * vectors, axis=1)[:, np.newaxis]
-        cross_kv = np.cross(axis, vectors, axis=1)
+        # FIX (PyFracVAL-31m): delegate to JIT-compiled fast path
+        return _rodrigues_rotation_2d(vectors, axis, cos_a, sin_a)
 
     # elif vectors.ndim > 2:
     else:
@@ -367,6 +366,51 @@ def rodrigues_rotation(
     v_rot = vectors * cos_a + cross_kv * sin_a + axis * dot_kv * (1.0 - cos_a)
 
     return v_rot
+
+
+@jit(nopython=True, fastmath=True, cache=True)
+def _rodrigues_rotation_2d(
+    vectors: np.ndarray, axis: np.ndarray, cos_a: float, sin_a: float
+) -> np.ndarray:
+    """JIT-compiled Rodrigues rotation for Nx3 arrays (PyFracVAL-31m).
+
+    axis must already be normalised before calling.
+    cos_a and sin_a must be pre-computed by the caller.
+
+    Parameters
+    ----------
+    vectors : np.ndarray
+        Shape (N, 3) array of vectors to rotate.
+    axis : np.ndarray
+        Shape (3,) normalised rotation axis.
+    cos_a : float
+        cos(angle)
+    sin_a : float
+        sin(angle)
+
+    Returns
+    -------
+    np.ndarray
+        Shape (N, 3) rotated vectors.
+    """
+    n = vectors.shape[0]
+    result = np.empty((n, 3), dtype=vectors.dtype)
+    kx, ky, kz = axis[0], axis[1], axis[2]
+    one_minus_cos = 1.0 - cos_a
+    for i in range(n):
+        vx = vectors[i, 0]
+        vy = vectors[i, 1]
+        vz = vectors[i, 2]
+        # dot(k, v)
+        kdv = kx * vx + ky * vy + kz * vz
+        # cross(k, v)
+        cx = ky * vz - kz * vy
+        cy = kz * vx - kx * vz
+        cz = kx * vy - ky * vx
+        result[i, 0] = vx * cos_a + cx * sin_a + kx * kdv * one_minus_cos
+        result[i, 1] = vy * cos_a + cy * sin_a + ky * kdv * one_minus_cos
+        result[i, 2] = vz * cos_a + cz * sin_a + kz * kdv * one_minus_cos
+    return result
 
 
 @jit(parallel=True, fastmath=True, cache=True, nopython=True)

@@ -771,8 +771,14 @@ class CCAggregator:
 
         if perform_rot and np.linalg.norm(rot_axis) > 1e-9 and abs(rot_angle) > 1e-9:
             # FIX (PyFracVAL-2d6): only allocate when rotation is actually performed
-            coords2_rel_rotated = utils.rodrigues_rotation(
-                coords2_in - cm2, rot_axis, rot_angle
+            # FIX (PyFracVAL-31m): call JIT-compiled 2D kernel directly (skip Python
+            # dispatch overhead and redundant axis-norm check in rodrigues_rotation)
+            _rot_axis_norm = rot_axis / np.linalg.norm(rot_axis)
+            coords2_rel_rotated = utils._rodrigues_rotation_2d(
+                coords2_in - cm2,
+                _rot_axis_norm,
+                np.cos(rot_angle),
+                np.sin(rot_angle),
             )
             coords2 = coords2_rel_rotated + cm2
             # CM doesn't change
