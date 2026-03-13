@@ -361,7 +361,7 @@ class CCAggregator:
             )
 
         logger.debug("Pair generation completed.")
-        return id_agglomerated
+        return id_agglomerated, cluster_props
 
     # --------------------------------------------------------------------------
     # CCA Sticking Logic (Methods corresponding to CCA subroutine and its calls)
@@ -721,32 +721,23 @@ class CCAggregator:
         Returns:
             tuple: (coords2_rotated, theta_a_new)
         """
-        coords2 = coords2_in.copy()  # Work with copy
-        n2 = coords2.shape[0]
         x0, y0, z0, r0 = vec_0
 
         # New angle using Fibonacci spiral for optimal coverage
-        golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
-        theta_a_new = 2.0 * config.PI * attempt / golden_ratio
-        target_p2 = np.zeros(3)
-        target_p2[0] = (
-            x0
-            + r0 * np.cos(theta_a_new) * i_vec[0]
-            + r0 * np.sin(theta_a_new) * j_vec[0]
-        )
-        target_p2[1] = (
-            y0
-            + r0 * np.cos(theta_a_new) * i_vec[1]
-            + r0 * np.sin(theta_a_new) * j_vec[1]
-        )
-        target_p2[2] = (
-            z0
-            + r0 * np.cos(theta_a_new) * i_vec[2]
-            + r0 * np.sin(theta_a_new) * j_vec[2]
+        # FIX (PyFracVAL-2d6): use module-level constant instead of recomputing sqrt(5)
+        theta_a_new = 2.0 * config.PI * attempt / config.GOLDEN_RATIO
+        _cos = np.cos(theta_a_new)
+        _sin = np.sin(theta_a_new)
+        target_p2 = np.array(
+            [
+                x0 + r0 * _cos * i_vec[0] + r0 * _sin * j_vec[0],
+                y0 + r0 * _cos * i_vec[1] + r0 * _sin * j_vec[1],
+                z0 + r0 * _cos * i_vec[2] + r0 * _sin * j_vec[2],
+            ]
         )
 
         # Rotate cluster 2 to align cand2_idx with target_p2
-        current_p2 = coords2[cand2_idx]
+        current_p2 = coords2_in[cand2_idx]
         v1_rot = current_p2 - cm2
         v2_rot = target_p2 - cm2
 
@@ -779,21 +770,32 @@ class CCAggregator:
             perform_rot = False
 
         if perform_rot and np.linalg.norm(rot_axis) > 1e-9 and abs(rot_angle) > 1e-9:
-            coords2_rel = coords2 - cm2
+            # FIX (PyFracVAL-2d6): only allocate when rotation is actually performed
             coords2_rel_rotated = utils.rodrigues_rotation(
-                coords2_rel, rot_axis, rot_angle
+                coords2_in - cm2, rot_axis, rot_angle
             )
             coords2 = coords2_rel_rotated + cm2
             # CM doesn't change
+        else:
+            coords2 = coords2_in  # No rotation: return input as-is (no copy)
 
         return coords2, theta_a_new
 
     def _perform_cca_sticking(
-        self, cluster_idx1: int, cluster_idx2: int
+        self,
+        cluster_idx1: int,
+        cluster_idx2: int,
+        cluster_props_cache: dict | None = None,
     ) -> Tuple[np.ndarray, np.ndarray] | None:
         """
         Manages the process of sticking two clusters (idx1, idx2).
         Corresponds to the Fortran CCA subroutine.
+
+        Args:
+            cluster_idx1, cluster_idx2: Cluster indices to stick.
+            cluster_props_cache: Optional dict from _generate_pairs mapping cluster
+                index to (m, rg, cm, r_max, radii) tuples. When provided, avoids
+                redundant calculate_cluster_properties calls (PyFracVAL-58z).
 
         Returns:
             Tuple(combined_coords, combined_radii) or None if sticking fails.
@@ -811,13 +813,24 @@ class CCAggregator:
             return None  # Cannot stick empty clusters
 
         # --- Calculate Properties and Gamma ---
+        # FIX (PyFracVAL-58z): use cached props from _generate_pairs when available
         _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
-        m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
-            coords1_in, radii1_in, self.df, self.kf
-        )
-        m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
-            coords2_in, radii2_in, self.df, self.kf
-        )
+        if (
+            cluster_props_cache is not None
+            and cluster_idx1 in cluster_props_cache
+            and cluster_idx2 in cluster_props_cache
+        ):
+            _p1 = cluster_props_cache[cluster_idx1]
+            _p2 = cluster_props_cache[cluster_idx2]
+            m1, rg1, cm1, r_max1 = _p1[0], _p1[1], _p1[2], _p1[3]
+            m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
+        else:
+            m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
+                coords1_in, radii1_in, self.df, self.kf
+            )
+            m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
+                coords2_in, radii2_in, self.df, self.kf
+            )
         if config.PROFILE_TIMING:
             self._t_cluster_props += perf_counter() - _t0
         props1 = (m1, rg1, cm1, r_max1, radii1_in)
@@ -997,6 +1010,7 @@ class CCAggregator:
                     if config.PROFILE_TIMING:
                         self._t_rotation += perf_counter() - _t0
                         self._n_rotation_calls += 1
+
                     _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
                     cov_max = utils.calculate_max_overlap_cca_auto(
                         coords1_stick,
@@ -1065,11 +1079,12 @@ class CCAggregator:
         # self.i_orden = utils.sort_clusters(self.i_orden) # Sorts by count
 
         # Generate pairs
-        id_agglomerated = self._generate_pairs()
-        if id_agglomerated is None or self.not_able_cca:
+        gen_result = self._generate_pairs()
+        if gen_result is None or self.not_able_cca:
             logger.error("Failed to generate valid pairs.")
             self.not_able_cca = True
             return False  # Cannot continue
+        id_agglomerated, cluster_props_cache = gen_result
 
         # Identify monomers
         id_monomers = self._identify_monomers()
@@ -1138,7 +1153,7 @@ class CCAggregator:
                 considered[k] = 1
             else:  # Handle a pair (k, other)
                 # logger.info(f"Attempting to stick pair ({k}, {other})")
-                stick_result = self._perform_cca_sticking(k, other)
+                stick_result = self._perform_cca_sticking(k, other, cluster_props_cache)
 
                 if stick_result is None:
                     logger.info(
