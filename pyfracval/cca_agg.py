@@ -999,12 +999,13 @@ class CCAggregator:
                     if intento >= max_rotations and cov_max > self.tol_ov:
                         break  # Exit rotation loop for this pair
             else:
-                # Sequential rotation (Phase 1 - optimal for N<1000)
-                # Phase 3B: Auto-dispatch to parallel overlap for large N
+                # Sequential rotation with Fibonacci spiral (original algorithm).
+                # Each step rotates from the previous position to the next Fibonacci
+                # target angle, threading current_coords2 through the loop.
                 while cov_max > self.tol_ov and intento < max_rotations:
                     intento += 1
                     _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
-                    coords2_rotated, theta_a_new = self._cca_reintento(
+                    coords2_rotated, _ = self._cca_reintento(
                         current_coords2,
                         cm2_stick,
                         cand2_idx,
@@ -1029,20 +1030,17 @@ class CCAggregator:
                         self._t_overlap_check += perf_counter() - _t0
                         self._n_overlap_calls += 1
 
-                    # Update coords for next potential rotation
                     current_coords2 = coords2_rotated
-                    logger.trace(f"    Rotation {intento}: Overlap = {cov_max:.4e}")  # pyright: ignore
+                    logger.trace(  # pyright: ignore
+                        f"    Rotation {intento}: Overlap = {cov_max:.4e}"
+                    )
 
-                    # Adaptive tolerance: relax constraint after many attempts
                     if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
                         logger.info(
-                            f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting relaxed tolerance "
-                            f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                            f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting "
+                            f"relaxed tol (overlap={cov_max:.4e}) after {intento} rotations."
                         )
                         used_adaptive_tol = True
-                        break
-
-                    if intento >= max_rotations and cov_max > self.tol_ov:
                         break
 
             # Check if overlap is acceptable
