@@ -165,6 +165,12 @@ ROTATION_BATCH_SIZE: int = (
     32  # Number of rotation angles to evaluate in parallel (if enabled)
 )
 PROFILE_TIMING: bool = False  # Print per-phase timing summary after each run_cca
+PARALLEL_SUBCLUSTERS: bool = (
+    True  # Build independent PCA subclusters in parallel (multiprocessing.Pool)
+)
+PARALLEL_SUBCLUSTERS_MIN_COUNT: int = (
+    4  # Only parallelise when number_clusters >= this threshold
+)
 
 # --- Constants ---
 PI: float = np.pi

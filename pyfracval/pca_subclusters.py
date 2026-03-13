@@ -2,6 +2,8 @@
 
 import logging
 import math
+import multiprocessing
+from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
@@ -10,6 +12,46 @@ from . import particle_generation
 from .pca_agg import PCAggregator
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Module-level worker — must be picklable for multiprocessing.Pool
+# ---------------------------------------------------------------------------
+
+
+def _run_single_subcluster(args: tuple[Any, ...]) -> tuple[int, np.ndarray | None]:
+    """Run PCA for one subcluster; used as the Pool worker.
+
+    Parameters
+    ----------
+    args : tuple
+        ``(idx, radii, pca_df, pca_kf, tol_ov, seed,
+           rp_gstd, rp_g, max_retries, can_retry)``
+
+    Returns
+    -------
+    tuple[int, np.ndarray | None]
+        ``(idx, subcluster_data)`` where *subcluster_data* is the Nx4
+        ``[X, Y, Z, R]`` array on success or ``None`` on failure.
+    """
+    idx, radii, pca_df, pca_kf, tol_ov, seed, rp_gstd, rp_g, max_retries, can_retry = (
+        args
+    )
+    rng = np.random.default_rng(seed)
+    num_particles = len(radii)
+    total_attempts = 1 + (max_retries if can_retry else 0)
+
+    for attempt in range(total_attempts):
+        if attempt > 0:
+            radii = particle_generation.lognormal_pp_radii(
+                rp_gstd, rp_g, num_particles, rng=rng
+            )
+        pca_runner = PCAggregator(radii, pca_df, pca_kf, tol_ov, rng=rng)
+        result = pca_runner.run()
+        if result is not None and not pca_runner.not_able_pca:
+            return idx, result
+
+    return idx, None
 
 
 class Subclusterer(BaseModel):
@@ -172,9 +214,10 @@ class Subclusterer(BaseModel):
     def run_subclustering(self) -> bool:
         """Perform the subclustering process.
 
-        Determines subcluster sizes, then iterates through subsets of the
-        initial radii, running `PCAggregator` for each subset. Stores the
-        resulting coordinates and radii contiguously and updates `i_orden`.
+        Determines subcluster sizes, then runs `PCAggregator` on each subset of
+        radii — in parallel (via ``multiprocessing.Pool``) when
+        ``config.PARALLEL_SUBCLUSTERS`` is ``True`` and the number of subclusters
+        exceeds ``config.PARALLEL_SUBCLUSTERS_MIN_COUNT``, otherwise sequentially.
 
         Returns
         -------
@@ -182,6 +225,8 @@ class Subclusterer(BaseModel):
             True if all subclusters were generated successfully, False otherwise.
             Sets `self.not_able_pca` to True on failure.
         """
+        from . import config  # local import avoids circular dep at module level
+
         subcluster_sizes = self._determine_subcluster_sizes()
 
         # Handle the edge case of only 1 cluster (N < n_subcl or N=n_subcl)
@@ -193,8 +238,6 @@ class Subclusterer(BaseModel):
 
         self.i_orden = np.zeros((self.number_clusters, 3), dtype=int)
         self.not_able_pca = False
-        current_n_start_idx = 0  # Index in the initial_radii array
-        current_fill_idx = 0  # Index in the final all_coords/all_radii
 
         # --- Define Df/kf to use *specifically* for PCA stage ---
         # Use fixed, stable DLCA values regardless of the target morphology.
@@ -208,78 +251,84 @@ class Subclusterer(BaseModel):
         )
 
         # Whether per-subcluster retry with fresh radii is enabled.
-        # Requires rp_gstd > 1.0 (polydisperse) and rp_g > 0.
         can_retry_with_fresh_radii = (
             self.rp_gstd > 1.0 and self.rp_g > 0.0 and self.max_subcluster_retries > 0
         )
 
+        # Build per-subcluster args list (derive independent seeds from parent RNG)
+        subcluster_seeds = self._rng.integers(
+            0, 2**31, size=self.number_clusters
+        ).tolist()
+        worker_args: list[tuple] = []
+        current_n_start_idx = 0
         for i in range(self.number_clusters):
-            self.number_clusters_processed = i  # Track for error reporting
-            num_particles_in_subcluster = subcluster_sizes[i]
-            logger.info(
-                f"--- Processing Subcluster {i + 1}/{self.number_clusters} (Size: {num_particles_in_subcluster}) ---"
+            n = int(subcluster_sizes[i])
+            radii_slice = self.initial_radii[
+                current_n_start_idx : current_n_start_idx + n
+            ].copy()
+            worker_args.append(
+                (
+                    i,
+                    radii_slice,
+                    pca_df,
+                    pca_kf,
+                    self.tol_ov,
+                    int(subcluster_seeds[i]),
+                    self.rp_gstd,
+                    self.rp_g,
+                    self.max_subcluster_retries,
+                    can_retry_with_fresh_radii,
+                )
             )
+            current_n_start_idx += n
 
-            if num_particles_in_subcluster < 2:
+        # --- Validate all subclusters have >= 2 particles before dispatching ---
+        for i, args in enumerate(worker_args):
+            if args[1].shape[0] < 2:
                 logger.error(
-                    f"Subcluster {i + 1} has size {num_particles_in_subcluster}, needs >= 2 for PCA."
+                    f"Subcluster {i + 1} has size {args[1].shape[0]}, needs >= 2 for PCA."
                 )
                 self.not_able_pca = True
                 return False
 
-            # Extract radii for this subcluster (initial attempt uses the
-            # pre-shuffled radii from the caller).
-            idx_start = current_n_start_idx
-            idx_end = current_n_start_idx + num_particles_in_subcluster
-            subcluster_radii = self.initial_radii[idx_start:idx_end]
+        # --- Dispatch: parallel or sequential ---
+        use_parallel = (
+            config.PARALLEL_SUBCLUSTERS
+            and self.number_clusters >= config.PARALLEL_SUBCLUSTERS_MIN_COUNT
+        )
 
-            # --- Run PCA with optional per-subcluster retry ---
-            subcluster_data = None
-            total_attempts = 1 + (
-                self.max_subcluster_retries if can_retry_with_fresh_radii else 0
+        if use_parallel:
+            logger.info(
+                f"Running {self.number_clusters} subclusters in parallel "
+                f"(PARALLEL_SUBCLUSTERS=True)."
             )
+            # Use spawn context to avoid fork-safety issues with numba/OpenBLAS
+            ctx = multiprocessing.get_context("fork")
+            with ctx.Pool() as pool:
+                results_unordered = pool.map(_run_single_subcluster, worker_args)
+            # Results come back in submission order (pool.map preserves order)
+            results: list[tuple[int, np.ndarray | None]] = results_unordered
+        else:
+            logger.info(f"Running {self.number_clusters} subclusters sequentially.")
+            results = [_run_single_subcluster(args) for args in worker_args]
 
-            for attempt in range(total_attempts):
-                if attempt > 0:
-                    # Draw fresh radii from the same lognormal distribution.
-                    # This mirrors the Fortran top-level restart but is much cheaper
-                    # (only N_subcl radii instead of all N).
-                    subcluster_radii = particle_generation.lognormal_pp_radii(
-                        self.rp_gstd,
-                        self.rp_g,
-                        num_particles_in_subcluster,
-                        rng=self._rng,
-                    )
-                    logger.warning(
-                        f"  Subcluster {i + 1}: PCA failed, retrying with fresh radii "
-                        f"(attempt {attempt + 1}/{total_attempts})."
-                    )
-
-                pca_runner = PCAggregator(
-                    subcluster_radii, pca_df, pca_kf, self.tol_ov, rng=self._rng
-                )
-                subcluster_data = pca_runner.run()  # Returns Nx4 [X,Y,Z,R] or None
-
-                if subcluster_data is not None and not pca_runner.not_able_pca:
-                    break  # Success
-
-                subcluster_data = None  # Ensure None on failure for check below
+        # --- Assemble results in order ---
+        current_fill_idx = 0
+        for i, (returned_idx, subcluster_data) in enumerate(results):
+            self.number_clusters_processed = i
+            num_particles_in_subcluster = int(subcluster_sizes[i])
 
             if subcluster_data is None:
-                logger.error(
-                    f"PCA failed for subcluster {i + 1} after {total_attempts} attempt(s)."
-                )
+                logger.error(f"PCA failed for subcluster {i + 1} after all attempts.")
                 self.not_able_pca = True
-                return False  # Signal failure
+                return False
 
-            # Store the results
             num_added = subcluster_data.shape[0]
-            # Basic check if PCA returned expected number of particles
             if num_added != num_particles_in_subcluster:
                 logger.warning(
-                    f"PCA for subcluster {i + 1} returned {num_added} particles, expected {num_particles_in_subcluster}."
+                    f"PCA for subcluster {i + 1} returned {num_added} particles, "
+                    f"expected {num_particles_in_subcluster}."
                 )
-                # This might indicate internal PCA issues, but proceed cautiously
 
             if current_fill_idx + num_added > self.N:
                 logger.error(
@@ -293,15 +342,11 @@ class Subclusterer(BaseModel):
             self.all_coords[fill_slice, :] = subcluster_data[:, :3]
             self.all_radii[fill_slice] = subcluster_data[:, 3]
 
-            # Update i_orden (0-based inclusive indices)
             start_cluster_idx = current_fill_idx
             end_cluster_idx = current_fill_idx + num_added - 1
             self.i_orden[i, :] = [start_cluster_idx, end_cluster_idx, num_added]
 
-            # Update indices for next iteration
-            # Advance by expected size
-            current_n_start_idx += num_particles_in_subcluster
-            current_fill_idx += num_added  # Advance by actual added size
+            current_fill_idx += num_added
 
         # Final check after loop
         if current_fill_idx != self.N:
