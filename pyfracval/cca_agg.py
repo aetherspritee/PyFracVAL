@@ -13,6 +13,16 @@ from .logs import TRACE_LEVEL_NUM
 logger = logging.getLogger(__name__)
 
 
+def _pair_key(i: int, j: int, n2: int) -> int:
+    """Pack pair indices (i,j) into a single integer key."""
+    return i * n2 + j
+
+
+def _pair_unpack(key: int, n2: int) -> tuple[int, int]:
+    """Unpack integer pair key into (i,j)."""
+    return key // n2, key % n2
+
+
 class CCAggregator:
     """Performs Cluster-Cluster Aggregation (CCA).
 
@@ -112,6 +122,33 @@ class CCAggregator:
         self._t_rotation: float = 0.0
         self._n_overlap_calls: int = 0
         self._n_rotation_calls: int = 0
+
+        # Incremental overlap telemetry (active-set + full-check)
+        self._active_calls: int = 0
+        self._full_calls: int = 0
+        self._active_pairs_checked: int = 0
+        self._full_pairs_checked: int = 0
+        self._active_nonempty_hits: int = 0
+        self._full_periodic_syncs: int = 0
+        self._full_final_validations: int = 0
+
+        # Candidate statistics by leaf class (LL/LN/NN)
+        self._cand_attempts_ll: int = 0
+        self._cand_attempts_ln: int = 0
+        self._cand_attempts_nn: int = 0
+        self._cand_success_ll: int = 0
+        self._cand_success_ln: int = 0
+        self._cand_success_nn: int = 0
+
+        # Candidate score telemetry
+        self._cand_score_attempt_sum: float = 0.0
+        self._cand_score_attempt_count: int = 0
+        self._cand_score_success_sum: float = 0.0
+        self._cand_score_success_count: int = 0
+        self._cand_score_attempt_high: int = 0
+        self._cand_score_attempt_low: int = 0
+        self._cand_score_success_high: int = 0
+        self._cand_score_success_low: int = 0
 
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
@@ -729,6 +766,164 @@ class CCAggregator:
         )
         return coords2_out, 0.0  # theta_a_new no longer needed by caller
 
+    @staticmethod
+    def _pair_overlap(
+        coords1: np.ndarray,
+        radii1: np.ndarray,
+        coords2: np.ndarray,
+        radii2: np.ndarray,
+        i: int,
+        j: int,
+    ) -> float:
+        """Compute overlap for a single pair (i,j)."""
+        dx = coords1[i, 0] - coords2[j, 0]
+        dy = coords1[i, 1] - coords2[j, 1]
+        dz = coords1[i, 2] - coords2[j, 2]
+        d_sq = dx * dx + dy * dy + dz * dz
+        radius_sum = radii1[i] + radii2[j]
+        r_sq = radius_sum * radius_sum
+        if d_sq > r_sq:
+            return -np.inf
+        dist = math.sqrt(d_sq)
+        return 1.0 - dist / radius_sum
+
+    @staticmethod
+    def _leaf_mask_for_cluster(coords: np.ndarray, radii: np.ndarray) -> np.ndarray:
+        """Return bool mask of leaf-like monomers (degree <= 1) within a cluster."""
+        n = coords.shape[0]
+        if n == 0:
+            return np.zeros(0, dtype=bool)
+        if n == 1:
+            return np.ones(1, dtype=bool)
+
+        diffs = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
+        d_sq = np.sum(diffs * diffs, axis=2)
+        r_sum = radii[:, np.newaxis] + radii[np.newaxis, :]
+        thr_sq = (r_sum + 1.0e-9) * (r_sum + 1.0e-9)
+        contact = d_sq <= thr_sq
+        np.fill_diagonal(contact, False)
+        degree = np.sum(contact, axis=1)
+        return degree <= 1
+
+    def _record_candidate_attempt(self, leaf1: bool, leaf2: bool) -> str:
+        if leaf1 and leaf2:
+            self._cand_attempts_ll += 1
+            return "LL"
+        if leaf1 or leaf2:
+            self._cand_attempts_ln += 1
+            return "LN"
+        self._cand_attempts_nn += 1
+        return "NN"
+
+    def _record_candidate_success(self, cls: str) -> None:
+        if cls == "LL":
+            self._cand_success_ll += 1
+        elif cls == "LN":
+            self._cand_success_ln += 1
+        else:
+            self._cand_success_nn += 1
+
+    @staticmethod
+    def _candidate_leaf_class(leaf1: bool, leaf2: bool) -> str:
+        if leaf1 and leaf2:
+            return "LL"
+        if leaf1 or leaf2:
+            return "LN"
+        return "NN"
+
+    @staticmethod
+    def _candidate_score(
+        coords1: np.ndarray,
+        radii1: np.ndarray,
+        cm1: np.ndarray,
+        cand1_idx: int,
+        coords2: np.ndarray,
+        radii2: np.ndarray,
+        cm2: np.ndarray,
+        cand2_idx: int,
+        gamma_pc: float,
+        leaf_cls: str,
+    ) -> float:
+        """Heuristic candidate score in [0,1], larger means more promising."""
+        d1 = float(np.linalg.norm(coords1[cand1_idx] - cm1))
+        d2 = float(np.linalg.norm(coords2[cand2_idx] - cm2))
+        s1 = d1 + float(radii1[cand1_idx])
+        s2 = d2 + float(radii2[cand2_idx])
+
+        # Radial compatibility against gamma shell relation.
+        err = abs((s1 + s2) - gamma_pc) / max(gamma_pc, 1.0e-12)
+        tau_r = 0.08
+        radial = math.exp(-err / tau_r)
+
+        # Class prior from observed empirical success tendency.
+        if leaf_cls == "LL":
+            leaf_prior = 1.0
+        elif leaf_cls == "LN":
+            leaf_prior = 0.45
+        else:
+            leaf_prior = 0.10
+
+        score = 0.5 * leaf_prior + 0.5 * radial
+        return max(0.0, min(1.0, score))
+
+    def _record_candidate_score_attempt(self, score: float) -> None:
+        self._cand_score_attempt_sum += score
+        self._cand_score_attempt_count += 1
+        if score >= 0.70:
+            self._cand_score_attempt_high += 1
+        if score < 0.40:
+            self._cand_score_attempt_low += 1
+
+    def _record_candidate_score_success(self, score: float) -> None:
+        self._cand_score_success_sum += score
+        self._cand_score_success_count += 1
+        if score >= 0.70:
+            self._cand_score_success_high += 1
+        if score < 0.40:
+            self._cand_score_success_low += 1
+
+    def _scan_active_collisions(
+        self,
+        coords1: np.ndarray,
+        radii1: np.ndarray,
+        coords2: np.ndarray,
+        radii2: np.ndarray,
+        pair_keys: set[int],
+        n2: int,
+    ) -> tuple[float, set[int]]:
+        """Check overlap only for currently active collision pairs."""
+        max_overlap = 0.0
+        active: set[int] = set()
+        if not pair_keys:
+            return max_overlap, active
+
+        for key in pair_keys:
+            i, j = _pair_unpack(key, n2)
+            overlap = self._pair_overlap(coords1, radii1, coords2, radii2, i, j)
+            if overlap > max_overlap:
+                max_overlap = overlap
+            if overlap > self.tol_ov:
+                active.add(key)
+
+        return max_overlap, active
+
+    def _full_overlap_check(
+        self,
+        coords1: np.ndarray,
+        radii1: np.ndarray,
+        coords2: np.ndarray,
+        radii2: np.ndarray,
+    ) -> float:
+        """Run global overlap check using fast early-termination kernel."""
+        self._full_calls += 1
+        return utils.calculate_max_overlap_cca_auto(
+            coords1,
+            radii1,
+            coords2,
+            radii2,
+            tolerance=self.tol_ov,
+        )
+
     def _perform_cca_sticking(
         self,
         cluster_idx1: int,
@@ -790,6 +985,9 @@ class CCAggregator:
         list_matrix = self._cca_select_candidates(
             coords1_in, radii1_in, cm1, coords2_in, radii2_in, cm2, gamma_pc, gamma_real
         )
+
+        leaf_mask_1 = self._leaf_mask_for_cluster(coords1_in, radii1_in)
+        leaf_mask_2 = self._leaf_mask_for_cluster(coords2_in, radii2_in)
         if config.PROFILE_TIMING:
             self._t_select_candidates += perf_counter() - _t0
 
@@ -808,11 +1006,111 @@ class CCAggregator:
         _candidate_indices = np.argwhere(list_matrix > 0)
         self._rng.shuffle(_candidate_indices)
 
+        candidate_policy = str(config.CCA_CANDIDATE_POLICY).lower()
+
+        # Optional soft leaf-priority policy: LL first, then LN, then NN.
+        if candidate_policy == "leaf_soft":
+            ll: list[np.ndarray] = []
+            ln: list[np.ndarray] = []
+            nn: list[np.ndarray] = []
+            for pair in _candidate_indices:
+                i = int(pair[0])
+                j = int(pair[1])
+                cls = self._candidate_leaf_class(
+                    bool(leaf_mask_1[i]), bool(leaf_mask_2[j])
+                )
+                if cls == "LL":
+                    ll.append(pair)
+                elif cls == "LN":
+                    ln.append(pair)
+                else:
+                    nn.append(pair)
+            _candidate_indices = np.array(ll + ln + nn, dtype=int)
+        elif candidate_policy in {"leaf_score", "leaf_hybrid"}:
+            ll: list[np.ndarray] = []
+            ln: list[np.ndarray] = []
+            nn: list[np.ndarray] = []
+            for pair in _candidate_indices:
+                i = int(pair[0])
+                j = int(pair[1])
+                cls = self._candidate_leaf_class(
+                    bool(leaf_mask_1[i]), bool(leaf_mask_2[j])
+                )
+                if cls == "LL":
+                    ll.append(pair)
+                elif cls == "LN":
+                    ln.append(pair)
+                else:
+                    nn.append(pair)
+
+            topk = int(getattr(config, "CCA_SCORE_TOPK_PER_CLASS", 0))
+
+            def _score_and_sort(pairs: list[np.ndarray], cls: str) -> list[np.ndarray]:
+                if not pairs:
+                    return []
+                n_score = len(pairs) if topk <= 0 else min(topk, len(pairs))
+                scored: list[tuple[float, np.ndarray]] = []
+                for pair in pairs[:n_score]:
+                    i = int(pair[0])
+                    j = int(pair[1])
+                    score = self._candidate_score(
+                        coords1_in,
+                        radii1_in,
+                        cm1,
+                        i,
+                        coords2_in,
+                        radii2_in,
+                        cm2,
+                        j,
+                        float(gamma_pc),
+                        cls,
+                    )
+                    scored.append((score, pair))
+                scored.sort(key=lambda x: x[0], reverse=True)
+                scored_pairs = [p for _, p in scored]
+                return scored_pairs + pairs[n_score:]
+
+            if candidate_policy == "leaf_score":
+                # Score order globally, optionally only top-k per class for speed.
+                merged = (
+                    _score_and_sort(ll, "LL")
+                    + _score_and_sort(ln, "LN")
+                    + _score_and_sort(nn, "NN")
+                )
+                _candidate_indices = np.array(merged, dtype=int)
+            else:
+                # Hybrid: keep leaf priority class order, score only within each class.
+                merged = (
+                    _score_and_sort(ll, "LL")
+                    + _score_and_sort(ln, "LN")
+                    + _score_and_sort(nn, "NN")
+                )
+                _candidate_indices = np.array(merged, dtype=int)
+
         sticking_successful = False
         final_coords1 = None
         final_coords2 = None
 
+        attempts_tried = 0
         for attempt, (cand1_idx, cand2_idx) in enumerate(_candidate_indices):
+            attempts_tried = attempt + 1
+            leaf1 = bool(leaf_mask_1[cand1_idx])
+            leaf2 = bool(leaf_mask_2[cand2_idx])
+            cand_cls = self._candidate_leaf_class(leaf1, leaf2)
+            self._record_candidate_attempt(leaf1, leaf2)
+            cand_score = self._candidate_score(
+                coords1_in,
+                radii1_in,
+                cm1,
+                int(cand1_idx),
+                coords2_in,
+                radii2_in,
+                cm2,
+                int(cand2_idx),
+                float(gamma_pc),
+                cand_cls,
+            )
+            self._record_candidate_score_attempt(cand_score)
             # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): Trying pair ({cand1_idx}, {cand2_idx}). Attempt {attempt+1}/{len(_candidate_indices)}")
 
             # Perform initial sticking placement
@@ -831,7 +1129,9 @@ class CCAggregator:
                 stick_results
             )
 
-            if coords1_stick is None:  # Initial sticking failed for this pair
+            if (
+                coords1_stick is None or coords2_stick is None or cm2_stick is None
+            ):  # Initial sticking failed for this pair
                 # logger.info(f"    Initial sticking failed for pair ({cand1_idx}, {cand2_idx}).")
                 continue  # Try next pair
 
@@ -840,14 +1140,28 @@ class CCAggregator:
             #     coords1_stick, radii1_in, coords2_stick, radii2_in
             # )
             # Phase 3B: Auto-dispatch to parallel overlap for large N
-            _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
-            cov_max = utils.calculate_max_overlap_cca_auto(
-                coords1_stick,
-                radii1_in,
-                coords2_stick,
-                radii2_in,
-                tolerance=self.tol_ov,
+            use_incremental = (
+                config.USE_CCA_INCREMENTAL_OVERLAP and not config.USE_BATCH_ROTATION
             )
+            full_sync_period = max(config.CCA_INCREMENTAL_FULL_SYNC_PERIOD, 1)
+
+            active_collisions: set[int] = set()
+            n2_local = radii2_in.shape[0]
+
+            _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+            if use_incremental:
+                cov_max = self._full_overlap_check(
+                    coords1_stick, radii1_in, coords2_stick, radii2_in
+                )
+                active_collisions = set()
+            else:
+                cov_max = utils.calculate_max_overlap_cca_auto(
+                    coords1_stick,
+                    radii1_in,
+                    coords2_stick,
+                    radii2_in,
+                    tolerance=self.tol_ov,
+                )
             if config.PROFILE_TIMING:
                 self._t_overlap_check += perf_counter() - _t0
                 self._n_overlap_calls += 1
@@ -961,13 +1275,37 @@ class CCAggregator:
                         self._n_rotation_calls += 1
 
                     _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
-                    cov_max = utils.calculate_max_overlap_cca_auto(
-                        coords1_stick,
-                        radii1_in,
-                        coords2_rotated,
-                        radii2_in,
-                        tolerance=self.tol_ov,
-                    )
+                    if use_incremental:
+                        self._active_calls += 1
+                        self._active_pairs_checked += len(active_collisions)
+                        cov_l1, active_new = self._scan_active_collisions(
+                            coords1_stick,
+                            radii1_in,
+                            coords2_rotated,
+                            radii2_in,
+                            active_collisions,
+                            n2_local,
+                        )
+                        active_collisions = active_new
+                        if active_collisions:
+                            self._active_nonempty_hits += 1
+                        cov_max = cov_l1
+
+                        if intento % full_sync_period == 0:
+                            self._full_periodic_syncs += 1
+                            cov_max = self._full_overlap_check(
+                                coords1_stick, radii1_in, coords2_rotated, radii2_in
+                            )
+                            active_collisions = set()
+                    else:
+                        cov_max = utils.calculate_max_overlap_cca_auto(
+                            coords1_stick,
+                            radii1_in,
+                            coords2_rotated,
+                            radii2_in,
+                            tolerance=self.tol_ov,
+                        )
+
                     if config.PROFILE_TIMING:
                         self._t_overlap_check += perf_counter() - _t0
                         self._n_overlap_calls += 1
@@ -987,8 +1325,22 @@ class CCAggregator:
 
             # Check if overlap is acceptable
             if cov_max <= self.tol_ov or used_adaptive_tol:
+                if use_incremental:
+                    # Strict final validation with full overlap check before accept.
+                    self._full_final_validations += 1
+                    final_cov = utils.calculate_max_overlap_cca_auto(
+                        coords1_stick,
+                        radii1_in,
+                        current_coords2,
+                        radii2_in,
+                        tolerance=self.tol_ov,
+                    )
+                    if final_cov > self.tol_ov and not used_adaptive_tol:
+                        continue
                 # logger.info(f"    Pair ({cand1_idx}, {cand2_idx}): Success! Overlap = {cov_max:.4e} after {intento} rotations.")
                 sticking_successful = True
+                self._record_candidate_success(cand_cls)
+                self._record_candidate_score_success(cand_score)
                 final_coords1 = coords1_stick  # Cluster 1 might have rotated
                 final_coords2 = (
                     current_coords2  # Use the final rotated coords for cluster 2
@@ -1009,7 +1361,7 @@ class CCAggregator:
             return combined_coords, combined_radii
         else:
             logger.warning(
-                f"CCA sticking failed for clusters {cluster_idx1} and {cluster_idx2} after trying {attempt + 1} pairs."
+                f"CCA sticking failed for clusters {cluster_idx1} and {cluster_idx2} after trying {attempts_tried} pairs."
             )
             return None  # Failed to find non-overlapping configuration
 
@@ -1224,6 +1576,77 @@ class CCAggregator:
                 f"  rotation        : {self._t_rotation:7.3f}s  ({self._n_rotation_calls} calls)\n"
                 f"  accounted total : {t_total:7.3f}s"
             )
+            if self._active_calls + self._full_calls > 0:
+                total_calls = self._active_calls + self._full_calls
+                total_pairs = self._active_pairs_checked + self._full_pairs_checked
+                active_avg_pairs = (
+                    self._active_pairs_checked / self._active_calls
+                    if self._active_calls
+                    else 0.0
+                )
+                full_avg_pairs = (
+                    self._full_pairs_checked / self._full_calls
+                    if self._full_calls
+                    else 0.0
+                )
+                print(
+                    f"\n[PROFILE] CCA overlap checks:\n"
+                    f"  active checks   : {self._active_calls:7d}  ({100.0 * self._active_calls / total_calls:5.1f}%)  avg_pairs={active_avg_pairs:8.1f}\n"
+                    f"  full checks     : {self._full_calls:7d}  ({100.0 * self._full_calls / total_calls:5.1f}%)  avg_pairs={full_avg_pairs:8.1f}\n"
+                    f"  total pairs chk : {total_pairs:7d}\n"
+                    f"  active nonempty : {self._active_nonempty_hits:7d}\n"
+                    f"  periodic full   : {self._full_periodic_syncs:7d}\n"
+                    f"  final full val  : {self._full_final_validations:7d}"
+                )
+            if config.PROFILE_CCA_LEAF_STATS:
+                attempts_total = (
+                    self._cand_attempts_ll
+                    + self._cand_attempts_ln
+                    + self._cand_attempts_nn
+                )
+                success_total = (
+                    self._cand_success_ll
+                    + self._cand_success_ln
+                    + self._cand_success_nn
+                )
+
+                def _pct(part: int, whole: int) -> float:
+                    return 100.0 * part / whole if whole > 0 else 0.0
+
+                def _rate(success: int, attempts: int) -> float:
+                    return 100.0 * success / attempts if attempts > 0 else 0.0
+
+                print(
+                    f"\n[PROFILE] CCA candidate leaf-class stats:\n"
+                    f"  attempts total  : {attempts_total:7d}\n"
+                    f"    LL attempts   : {self._cand_attempts_ll:7d} ({_pct(self._cand_attempts_ll, attempts_total):5.1f}%)\n"
+                    f"    LN attempts   : {self._cand_attempts_ln:7d} ({_pct(self._cand_attempts_ln, attempts_total):5.1f}%)\n"
+                    f"    NN attempts   : {self._cand_attempts_nn:7d} ({_pct(self._cand_attempts_nn, attempts_total):5.1f}%)\n"
+                    f"  success total   : {success_total:7d}\n"
+                    f"    LL success    : {self._cand_success_ll:7d} (rate={_rate(self._cand_success_ll, self._cand_attempts_ll):5.1f}%)\n"
+                    f"    LN success    : {self._cand_success_ln:7d} (rate={_rate(self._cand_success_ln, self._cand_attempts_ln):5.1f}%)\n"
+                    f"    NN success    : {self._cand_success_nn:7d} (rate={_rate(self._cand_success_nn, self._cand_attempts_nn):5.1f}%)"
+                )
+            if config.PROFILE_CCA_CANDIDATE_SCORE:
+                att_n = self._cand_score_attempt_count
+                suc_n = self._cand_score_success_count
+                att_mean = self._cand_score_attempt_sum / att_n if att_n else 0.0
+                suc_mean = self._cand_score_success_sum / suc_n if suc_n else 0.0
+                high_att = self._cand_score_attempt_high
+                low_att = self._cand_score_attempt_low
+                high_suc = self._cand_score_success_high
+                low_suc = self._cand_score_success_low
+
+                def _rate(success: int, attempts: int) -> float:
+                    return 100.0 * success / attempts if attempts > 0 else 0.0
+
+                print(
+                    f"\n[PROFILE] CCA candidate score stats:\n"
+                    f"  attempts scored : {att_n:7d}  mean_score={att_mean:7.4f}\n"
+                    f"  success scored  : {suc_n:7d}  mean_score={suc_mean:7.4f}\n"
+                    f"  high-score (>=0.70): attempts={high_att:7d}, success={high_suc:7d}, rate={_rate(high_suc, high_att):5.1f}%\n"
+                    f"  low-score  (<0.40): attempts={low_att:7d}, success={low_suc:7d}, rate={_rate(low_suc, low_att):5.1f}%"
+                )
         # Return only the valid part of the arrays corresponding to the final cluster
         final_count = self.i_orden[0, 2]
         return self.coords[:final_count, :], self.radii[:final_count]

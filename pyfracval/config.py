@@ -165,6 +165,27 @@ ROTATION_BATCH_SIZE: int = (
     32  # Number of rotation angles to evaluate in parallel (if enabled)
 )
 PROFILE_TIMING: bool = False  # Print per-phase timing summary after each run_cca
+USE_CCA_INCREMENTAL_OVERLAP: bool = (
+    True  # Enable active-set + periodic full-check overlap path in CCA retries
+)
+CCA_INCREMENTAL_FRONTIER_DELTA: float = (
+    1.0e-4  # Reserved for tuning compatibility (currently unused)
+)
+CCA_INCREMENTAL_FULL_SYNC_PERIOD: int = (
+    20  # Force full overlap sync every N retry rotations
+)
+PROFILE_CCA_LEAF_STATS: bool = (
+    False  # Print CCA candidate success/attempt stats by leaf class
+)
+PROFILE_CCA_CANDIDATE_SCORE: bool = (
+    False  # Print candidate quality score statistics and success correlation
+)
+CCA_CANDIDATE_POLICY: str = (
+    "baseline"  # Candidate order: baseline|leaf_soft|leaf_score|leaf_hybrid
+)
+CCA_SCORE_TOPK_PER_CLASS: int = (
+    0  # Optional cap for scored items per class in scored policies (0 = score all)
+)
 PARALLEL_SUBCLUSTERS: bool = (
     True  # Build independent PCA subclusters in parallel (multiprocessing.Pool)
 )
