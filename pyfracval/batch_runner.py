@@ -11,6 +11,7 @@ any machine that is part of the Dask cluster.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Any
 
@@ -88,6 +89,13 @@ def generate_aggregates_parallel(
         n_workers=n_workers,
         install_package=scheduler_address is not None,
     ) as client:
+        # Avoid nested process pools inside Dask workers.
+        client.run(
+            lambda: os.environ.__setitem__(
+                "PYFRACVAL_DISABLE_PARALLEL_SUBCLUSTERS", "1"
+            )
+        )
+
         # Deterministic seeds: abs(hash((N, Df, kf, sigma, trial_index))) % 2**31
         n_val = config.get("N", 0)
         df_val = config.get("Df", 0.0)

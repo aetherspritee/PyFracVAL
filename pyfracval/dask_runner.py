@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
+import os
 import subprocess
 import sys
+import tempfile
+import tomllib
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -33,6 +37,98 @@ def _build_wheel() -> Path:
     return wheel
 
 
+def _project_version() -> str:
+    """Read project version from pyproject.toml."""
+    pyproject = _PROJECT_ROOT / "pyproject.toml"
+    with open(pyproject, "rb") as fh:
+        data = tomllib.load(fh)
+    return str(data["project"]["version"])
+
+
+def _install_wheel_bytes(
+    wheel_bytes: bytes,
+    wheel_filename: str,
+    expected_version: str,
+) -> dict[str, str]:
+    """Install wheel bytes into current interpreter process.
+
+    This function is designed to run in the scheduler/worker process via
+    ``client.run_on_scheduler`` and ``client.run``.
+    """
+    tmp_dir = tempfile.mkdtemp(prefix="pyfracval_wheel_")
+    wheel_path = os.path.join(tmp_dir, wheel_filename)
+    with open(wheel_path, "wb") as fh:
+        fh.write(wheel_bytes)
+
+    install_cmds = [
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--force-reinstall",
+            wheel_path,
+        ],
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--force-reinstall",
+            wheel_path,
+        ],
+    ]
+    last_exc: Exception | None = None
+    for cmd in install_cmds:
+        try:
+            subprocess.check_call(cmd)
+            last_exc = None
+            break
+        except Exception as exc:  # pragma: no cover - environment-specific
+            last_exc = exc
+    if last_exc is not None:
+        raise RuntimeError(
+            "Failed to install wheel on scheduler/worker using pip and uv pip"
+        ) from last_exc
+
+    importlib.invalidate_caches()
+    for mod_name in list(sys.modules):
+        if mod_name == "pyfracval" or mod_name.startswith("pyfracval."):
+            sys.modules.pop(mod_name, None)
+
+    os.environ["PYFRACVAL_INSTALLED_WHEEL"] = wheel_filename
+    os.environ["PYFRACVAL_EXPECTED_VERSION"] = expected_version
+
+    return {
+        "python": sys.executable,
+        "pid": str(os.getpid()),
+        "installed_wheel": wheel_filename,
+        "expected_version": expected_version,
+    }
+
+
+def _worker_fingerprint() -> dict[str, str]:
+    """Return runtime package fingerprint for verification."""
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as pkg_version
+
+    import pyfracval
+
+    try:
+        runtime_version = pkg_version("PyFracVAL")
+    except PackageNotFoundError:
+        runtime_version = "unknown"
+
+    return {
+        "version": str(runtime_version),
+        "module_file": str(getattr(pyfracval, "__file__", "unknown")),
+        "pid": str(os.getpid()),
+        "installed_wheel_env": os.environ.get("PYFRACVAL_INSTALLED_WHEEL", ""),
+        "expected_version_env": os.environ.get("PYFRACVAL_EXPECTED_VERSION", ""),
+    }
+
+
 def _register_package(client) -> None:
     """Build a wheel and install it on all workers via client.run().
 
@@ -44,49 +140,117 @@ def _register_package(client) -> None:
     would fail on the scheduler/workers before pyfracval is installed.
     """
 
-    def _install(wheel_bytes: bytes, wheel_filename: str) -> str:
-        import os
-        import subprocess
-        import sys
-        import tempfile
-
-        tmp_dir = tempfile.mkdtemp()
-        wheel_path = os.path.join(tmp_dir, wheel_filename)
-        with open(wheel_path, "wb") as fh:
-            fh.write(wheel_bytes)
-        subprocess.check_call(
-            [
-                "uv",
-                "pip",
-                "install",
-                "--python",
-                sys.executable,
-                "--reinstall",
-                wheel_path,
-            ]
-        )
-        return f"installed {wheel_filename} on worker (python {sys.version})"
-
     wheel_path = _build_wheel()
+    expected_version = _project_version()
     wheel_bytes = wheel_path.read_bytes()
     wheel_filename = wheel_path.name
     logger.info(
         f"Installing {wheel_filename} ({len(wheel_bytes) // 1024} KB) "
         f"on scheduler and all workers…"
     )
-    # Install on the scheduler first — it deserialises the task graph (including
-    # pyfracval functions) before routing tasks to workers, so it needs the
-    # package too.
-    sched_msg = client.run_on_scheduler(_install, wheel_bytes, wheel_filename)
+
+    def _install_wheel_bytes_embedded(
+        wheel_bytes: bytes,
+        wheel_filename: str,
+        expected_version: str,
+    ) -> dict[str, str]:
+        import importlib
+        import os
+        import subprocess
+        import sys
+        import tempfile
+
+        tmp_dir = tempfile.mkdtemp(prefix="pyfracval_wheel_")
+        wheel_path = os.path.join(tmp_dir, wheel_filename)
+        with open(wheel_path, "wb") as fh:
+            fh.write(wheel_bytes)
+
+        install_cmds = [
+            [
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                sys.executable,
+                "--force-reinstall",
+                wheel_path,
+            ],
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--force-reinstall",
+                wheel_path,
+            ],
+        ]
+        last_exc: Exception | None = None
+        for cmd in install_cmds:
+            try:
+                subprocess.check_call(cmd)
+                last_exc = None
+                break
+            except Exception as exc:  # pragma: no cover - env-specific
+                last_exc = exc
+        if last_exc is not None:
+            raise RuntimeError(
+                "Failed to install wheel on scheduler/worker using pip and uv pip"
+            ) from last_exc
+
+        importlib.invalidate_caches()
+        for mod_name in list(sys.modules):
+            if mod_name == "pyfracval" or mod_name.startswith("pyfracval."):
+                sys.modules.pop(mod_name, None)
+
+        os.environ["PYFRACVAL_INSTALLED_WHEEL"] = wheel_filename
+        os.environ["PYFRACVAL_EXPECTED_VERSION"] = expected_version
+
+        return {
+            "python": sys.executable,
+            "pid": str(os.getpid()),
+            "installed_wheel": wheel_filename,
+            "expected_version": expected_version,
+        }
+
+    # Install on the scheduler first using an embedded function in this scope
+    # (cloudpickle serialises it by value).
+    sched_msg = client.run_on_scheduler(
+        _install_wheel_bytes_embedded,
+        wheel_bytes,
+        wheel_filename,
+        expected_version,
+    )
     logger.info(f"  scheduler: {sched_msg}")
     # Install on all workers.
     worker_addresses = list(client.scheduler_info()["workers"].keys())
     results = client.run(
-        _install, wheel_bytes, wheel_filename, workers=worker_addresses
+        _install_wheel_bytes_embedded,
+        wheel_bytes,
+        wheel_filename,
+        expected_version,
+        workers=worker_addresses,
     )
     for worker_addr, msg in results.items():
         logger.info(f"  {worker_addr}: {msg}")
-    logger.info("Scheduler and all workers have pyfracval installed.")
+
+    fingerprints = client.run(_worker_fingerprint, workers=worker_addresses)
+    for worker_addr, fp in fingerprints.items():
+        logger.info(
+            "  %s version=%s file=%s pid=%s",
+            worker_addr,
+            fp.get("version"),
+            fp.get("module_file"),
+            fp.get("pid"),
+        )
+        if fp.get("version") != expected_version:
+            raise RuntimeError(
+                f"Worker {worker_addr} version mismatch: "
+                f"expected {expected_version}, got {fp.get('version')}"
+            )
+
+    logger.info(
+        "Scheduler and all workers have pyfracval installed and verified at runtime."
+    )
 
 
 def get_client(

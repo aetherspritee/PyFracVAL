@@ -3,6 +3,7 @@
 import logging
 import math
 import multiprocessing
+import os
 from typing import Any
 
 import numpy as np
@@ -295,6 +296,7 @@ class Subclusterer(BaseModel):
         use_parallel = (
             config.PARALLEL_SUBCLUSTERS
             and self.number_clusters >= config.PARALLEL_SUBCLUSTERS_MIN_COUNT
+            and os.environ.get("PYFRACVAL_DISABLE_PARALLEL_SUBCLUSTERS") != "1"
         )
 
         if use_parallel:
