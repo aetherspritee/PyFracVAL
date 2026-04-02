@@ -18,7 +18,7 @@ dependencies = [
   "pandas>=2.2.3",
   "scipy>=1.14.1",
   "tqdm>=4.66.5",
-  "dask[distributed]>=2024.1.0",
+  "dask[distributed]==2026.3.0",
   "pyvista>=0.44.1",
   "stpyvista>=0.1.4",
   "streamlit>=1.41.1",
@@ -42,9 +42,16 @@ test = ["py-spy>=0.4.0", "pytest>=8.3.3"]
 [project.scripts]
 pyfracval = "pyfracval.cli:cli"
 
+# [build-system]
+# requires = ["hatchling"]
+# build-backend = "hatchling.build"
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build >= 0.8.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pyfracval"
+module-root = ""
 
 [tool.semantic_release]
 version_variable = ["pyfracval/__init__.py:__version__"]
