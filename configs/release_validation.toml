@@ -1,0 +1,38 @@
+# Release validation preset focused on larger-N behavior
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/release_validation"
+n_values = [256, 512, 1024]
+repeats = 3
+n_aggregates = 24
+warmup_tasks = 2
+seed_start = 1431354440
+trial_timeout = 600
+local_workers = 4
+profile = true
+
+[defaults.simulation]
+Df = 1.8
+kf = 1.0
+rp_g = 100.0
+rp_gstd = 1.5
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+
+[[runs]]
+name = "local_release_baseline"
+scheduler = "local"
+profile = false
+
+[[runs]]
+name = "marvin_release"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+profile = true

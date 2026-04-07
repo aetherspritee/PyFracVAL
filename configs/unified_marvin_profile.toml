@@ -1,0 +1,33 @@
+# Marvin profiling preset for local-vs-remote comparisons
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/marvin_profile"
+n_values = [128, 256, 512]
+repeats = 5
+n_aggregates = 48
+warmup_tasks = 4
+seed_start = 1431354440
+trial_timeout = 300
+local_workers = 4
+profile = true
+
+[defaults.simulation]
+Df = 1.8
+kf = 1.0
+rp_g = 100.0
+rp_gstd = 1.5
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+
+[[runs]]
+name = "marvin_profile"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+profile = true

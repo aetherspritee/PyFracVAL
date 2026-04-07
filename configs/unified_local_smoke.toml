@@ -1,0 +1,32 @@
+# Local smoke preset for quick orchestrator validation
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/local_smoke"
+n_values = [128]
+repeats = 1
+n_aggregates = 4
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 120
+local_workers = 2
+profile = false
+
+[defaults.simulation]
+Df = 1.8
+kf = 1.0
+rp_g = 100.0
+rp_gstd = 1.5
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+
+[[runs]]
+name = "local_smoke"
+scheduler = "local"

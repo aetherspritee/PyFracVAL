@@ -1,0 +1,44 @@
+# Example orchestrator config for benchmarks/unified_local_remote_benchmark.py
+
+[defaults]
+execution_mode = "sequential" # sequential | parallel
+output_root = "benchmark_results/profiles"
+
+# Optional defaults that each run can override.
+n_values = [128, 256]
+repeats = 1
+n_aggregates = 12
+warmup_tasks = 2
+seed_start = 1431354440
+trial_timeout = 180
+local_workers = 4
+profile = true
+
+[defaults.simulation]
+Df = 1.8
+kf = 1.0
+rp_g = 100.0
+rp_gstd = 1.5
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+
+[[runs]]
+name = "local_baseline"
+scheduler = "local"
+n_values = [128]
+repeats = 1
+profile = false
+
+[[runs]]
+name = "marvin_remote"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+n_values = [128, 256]
+repeats = 2
+profile = true

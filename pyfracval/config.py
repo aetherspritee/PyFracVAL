@@ -135,6 +135,126 @@ class SweepConfig(BaseModel):
         return SweepConfig.model_validate(top)
 
 
+class OrchestratorSimulationConfig(BaseModel):
+    Df: float = 1.8
+    kf: float = 1.0
+    rp_g: float = 100.0
+    rp_gstd: float = 1.5
+    tol_ov: float = 1e-6
+    n_subcl_percentage: float = 0.1
+    ext_case: int = 0
+
+
+class OrchestratorAlgorithmConfig(BaseModel):
+    use_cca_incremental_overlap: bool = True
+    cca_incremental_full_sync_period: int = 20
+    cca_candidate_policy: str = "leaf_hybrid"
+    cca_score_topk_per_class: int = 32
+
+
+class OrchestratorDefaultsConfig(BaseModel):
+    execution_mode: str = "sequential"
+    output_root: str = "benchmark_results/profiles"
+    n_values: list[int] = Field(default_factory=lambda: [256])
+    repeats: int = 1
+    n_aggregates: int = 12
+    warmup_tasks: int = 2
+    seed_start: int = 1431354440
+    trial_timeout: float | None = None
+    local_workers: int | None = None
+    scheduler: str | None = None
+    profile: bool = True
+    simulation: OrchestratorSimulationConfig = Field(
+        default_factory=OrchestratorSimulationConfig
+    )
+    algorithm: OrchestratorAlgorithmConfig = Field(
+        default_factory=OrchestratorAlgorithmConfig
+    )
+
+    @model_validator(mode="after")
+    def _validate_defaults(self) -> "OrchestratorDefaultsConfig":
+        if self.execution_mode not in {"sequential", "parallel"}:
+            raise ValueError(
+                "defaults.execution_mode must be 'sequential' or 'parallel'"
+            )
+        if self.repeats < 1:
+            raise ValueError("defaults.repeats must be >= 1")
+        if self.n_aggregates < 1:
+            raise ValueError("defaults.n_aggregates must be >= 1")
+        if self.warmup_tasks < 0:
+            raise ValueError("defaults.warmup_tasks must be >= 0")
+        if not self.n_values or any(n <= 0 for n in self.n_values):
+            raise ValueError("defaults.n_values must contain positive integers")
+        if self.local_workers is not None and self.local_workers < 1:
+            raise ValueError("defaults.local_workers must be >= 1 when provided")
+        if (
+            self.scheduler is not None
+            and self.scheduler != "local"
+            and not self.scheduler.startswith("tcp://")
+        ):
+            raise ValueError("defaults.scheduler must be 'local' or start with tcp://")
+        return self
+
+
+class OrchestratorRunConfig(BaseModel):
+    name: str
+    scheduler: str
+    workers: int | None = None
+    local_workers: int | None = None
+    n_values: list[int] | None = None
+    repeats: int | None = None
+    n_aggregates: int | None = None
+    warmup_tasks: int | None = None
+    seed_start: int | None = None
+    trial_timeout: float | None = None
+    profile: bool | None = None
+    simulation: OrchestratorSimulationConfig | None = None
+    algorithm: OrchestratorAlgorithmConfig | None = None
+
+    @model_validator(mode="after")
+    def _validate_run(self) -> "OrchestratorRunConfig":
+        if not self.name.strip():
+            raise ValueError("runs[].name must be non-empty")
+        if self.scheduler != "local" and not self.scheduler.startswith("tcp://"):
+            raise ValueError("runs[].scheduler must be 'local' or start with tcp://")
+        if self.workers is not None and self.workers < 1:
+            raise ValueError("runs[].workers must be >= 1 when provided")
+        if self.local_workers is not None and self.local_workers < 1:
+            raise ValueError("runs[].local_workers must be >= 1 when provided")
+        if self.n_values is not None:
+            if not self.n_values or any(n <= 0 for n in self.n_values):
+                raise ValueError("runs[].n_values must contain positive integers")
+        if self.repeats is not None and self.repeats < 1:
+            raise ValueError("runs[].repeats must be >= 1")
+        if self.n_aggregates is not None and self.n_aggregates < 1:
+            raise ValueError("runs[].n_aggregates must be >= 1")
+        if self.warmup_tasks is not None and self.warmup_tasks < 0:
+            raise ValueError("runs[].warmup_tasks must be >= 0")
+        return self
+
+
+class OrchestratorConfig(BaseModel):
+    defaults: OrchestratorDefaultsConfig = Field(
+        default_factory=OrchestratorDefaultsConfig
+    )
+    runs: list[OrchestratorRunConfig]
+
+    @model_validator(mode="after")
+    def _validate_runs(self) -> "OrchestratorConfig":
+        if not self.runs:
+            raise ValueError("Config must define at least one [[runs]] entry")
+        names = [run.name for run in self.runs]
+        if len(names) != len(set(names)):
+            raise ValueError("run names must be unique")
+        return self
+
+    @classmethod
+    def from_toml(cls, path: str | Path) -> "OrchestratorConfig":
+        with open(path, "rb") as fh:
+            data = tomllib.load(fh)
+        return cls.model_validate(data)
+
+
 # ---------------------------------------------------------------------------
 # Legacy module-level constants (kept for backward compatibility)
 # ---------------------------------------------------------------------------
