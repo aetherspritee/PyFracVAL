@@ -1,194 +1,59 @@
-# PyFracVAL Sticking Benchmark Suite
+# Benchmarks
 
-Comprehensive testing infrastructure for analyzing the sticking process convergence across various Df/kf parameter combinations.
+Config-first benchmark workflows for PyFracVAL.
 
-## Quick Start
+## Single Entrypoint
+
+Use `benchmarks/run.py` for benchmark execution.
 
 ```bash
-# Run quick test (3 trials of stable cases)
-python benchmarks/sticking_benchmark.py
+# Unified local/remote benchmark
+uv run python benchmarks/run.py unified --config configs/unified_local_smoke.toml
 
-# Run specific category (10 trials each)
-python -c "from benchmarks.sticking_benchmark import StickingBenchmark; \
-           StickingBenchmark().run_suite('low_df', n_trials=10)"
+# Stability sweep
+uv run python benchmarks/run.py stability --config configs/stability_n_sweep.toml
 
-# Run full benchmark (all categories, 10 trials - takes hours!)
-python -c "from benchmarks.sticking_benchmark import StickingBenchmark; \
-           StickingBenchmark().run_all(n_trials=10)"
+# Sticking benchmark (quick)
+uv run python benchmarks/run.py sticking --suite stable --trials 3
 ```
 
-## Benchmark Categories
+## Recommended Config Presets
 
-### 1. **Stable** (Baseline)
-Known stable parameter combinations for validating the benchmark infrastructure.
-- 3 test cases
-- Expected success rate: >95%
+- `configs/unified_local_smoke.toml` - fast local smoke validation
+- `configs/unified_marvin_profile.toml` - local/remote profiling against Marvin
+- `configs/release_validation.toml` - larger-N release checks
+- `configs/stability_n_sweep.toml` - stability sweep grid
 
-### 2. **Low Df** (Known Problematic)
-Tests convergence for low fractal dimensions (Df < 1.7).
-- 5 test cases
-- Current estimated success: 20-60%
-- Target after optimization: 80-90%
+## Unified Benchmark Notes
 
-### 3. **High Df** (Dense Packing)
-Tests convergence for high fractal dimensions (Df > 2.2).
-- 5 test cases
-- Current estimated success: 40-70%
-- Target after optimization: 85-95%
+The unified runner is config-first:
+- `--config` points to orchestrator TOML
+- if omitted, it auto-discovers `benchmark_orchestrator.toml` or `configs/benchmark_orchestrator.toml`
+- CLI flags act as overrides
 
-### 4. **Extreme kf** (Prefactor Limits)
-Tests unusual fractal prefactor values.
-- 4 test cases
-- Tests kf ∈ [0.5, 2.0]
+Execution behavior:
+- default: `execution_mode = "sequential"`
+- optional: `execution_mode = "parallel"` (prints reproducibility warning)
 
-### 5. **Polydisperse** (Size Distribution)
-Tests various polydispersity levels (rp_gstd).
-- 4 test cases
-- Includes monodisperse (1.0) to very polydisperse (2.0)
+## Analysis Tools
 
-### 6. **Scaling** (Particle Count)
-Tests performance scaling with N.
-- 4 test cases
-- N ∈ [64, 512]
+Analysis scripts remain separate and can be called directly or through the entrypoint:
 
-### 7. **Corner** (Combined Extremes)
-Stress tests combining multiple extreme parameters.
-- 4 test cases
-- Most challenging scenarios
-
-## Output Structure
-
-```
-benchmark_results/
-├── BENCHMARK_REPORT.md           # Human-readable summary
-├── stable_summary.json            # Per-category JSON summaries
-├── low_df_summary.json
-├── ...
-├── stable_Original_paper_example.json  # Per-test-case detailed results
-├── low_df_Lower_bound.json
-├── ...
-└── aggregates/                    # Generated aggregate files
-    ├── stable/
-    ├── low_df/
-    └── ...
-```
-
-## Interpreting Results
-
-### Success Rate
-- **>90%**: Excellent, algorithm handles these parameters well
-- **70-90%**: Good, occasional failures expected
-- **50-70%**: Moderate, needs investigation
-- **<50%**: Poor, optimization urgently needed
-
-### Runtime
-- N=128: typically 1-5 seconds
-- N=256: typically 3-15 seconds
-- N=512: typically 10-60 seconds
-
-Unusually long runtimes indicate rotation struggles.
-
-### Failure Stages
-- **PCA**: Particle-cluster aggregation failed (subcluster creation)
-- **CCA**: Cluster-cluster aggregation failed (merging subclusters)
-- **EXCEPTION**: Unexpected error (check logs)
-- **UNKNOWN**: Generic failure (requires log analysis)
-
-## Example Report Section
-
-```markdown
-### LOW_DF
-
-**Lower bound**
-- Parameters: N=128, Df=1.5, kf=1.0, rp_gstd=1.5
-- Success: 4/10 (40.0%)
-- Avg Runtime: 8.34s
-- Failures: ['PCA', 'PCA', 'PCA', 'PCA', 'PCA', 'PCA']
-```
-
-**Interpretation:** Low success rate with all failures in PCA stage suggests gamma calculation or candidate selection issues at low Df.
-
-## Adding Custom Test Cases
-
-Edit `sticking_benchmark.py`:
-
-```python
-def _define_custom_cases(self) -> List[Dict]:
-    return [
-        {'N': 256, 'Df': 1.75, 'kf': 1.1, 'rp_gstd': 1.4,
-         'description': 'My custom test'},
-    ]
-
-# In __init__:
-self.test_suites = {
-    ...
-    'custom': self._define_custom_cases(),
-}
-```
-
-## Integration with Optimization Workflow
-
-1. **Baseline**: Run full benchmark with current implementation
-2. **Implement fix**: Modify PCA/CCA code
-3. **Re-benchmark**: Run same suite with optimized code
-4. **Compare**: Diff the JSON summaries or reports
-
-Example comparison:
 ```bash
-# Before optimization
-Success rate: stable=96%, low_df=35%, high_df=58%
+# Dask profile analysis
+uv run python benchmarks/run.py analyze dask-profiles   "benchmark_results/profiles/<run>/remote/unified_N128_rep*.json"   "benchmark_results/profiles/<run>/remote/unified_N256_rep*.json"   "benchmark_results/profiles/<run>/remote/unified_N512_rep*.json"   --output-json benchmark_results/profiles/<run>/analysis.json
 
-# After Fibonacci spiral rotation
-Success rate: stable=99%, low_df=72%, high_df=81%
+# Stability analysis
+uv run python benchmarks/run.py analyze stability --help
 ```
 
-## Benchmark Metrics
+## Shell Helpers
 
-Each `BenchmarkResult` contains:
+Existing helper scripts in `benchmarks/scripts/` now call the unified entrypoint:
+- `profile_pilot.sh`
+- `profile_batch_5reps.sh`
+- `profile_analyze.sh`
 
-**Always Available:**
-- `success`: bool
-- `runtime_seconds`: float
-- `failure_stage`: str | None
-- `failure_reason`: str | None
-- All input parameters (N, Df, kf, etc.)
+## Scope Change
 
-**If Successful:**
-- `final_N`: int (should equal input N)
-- `final_Rg`: float (radius of gyration)
-
-**Future Instrumentation:**
-- `total_rotations_pca`: Total rotation attempts in PCA
-- `total_rotations_cca`: Total rotation attempts in CCA
-- `gamma_failures`: Count of gamma calculation failures
-- `candidate_failures`: Count of empty candidate list occurrences
-
-## Performance Notes
-
-- Each trial is deterministic (seeded by category + description + trial_num)
-- Aggregates are saved to disk (can be large for N=512)
-- Full benchmark (7 categories × ~4 cases × 10 trials = 280 runs) takes 2-6 hours
-- Use `n_trials=3` for rapid iteration during development
-
-## Related Documentation
-
-- `../STICKING_ANALYSIS.md`: Full analysis of sticking issues
-- `../pyfracval/pca_agg.py`: PCA implementation
-- `../pyfracval/cca_agg.py`: CCA implementation
-- `../docs/FracVAL/`: Original Fortran code for comparison
-
-## Citation
-
-If you use these benchmarks in research, please cite:
-
-```bibtex
-@software{pyfracval_benchmarks,
-  title={PyFracVAL Sticking Benchmark Suite},
-  author={Your Name},
-  year={2026},
-  url={https://github.com/yourusername/pyfracval}
-}
-```
-
-Also cite the original FracVAL paper:
-- Moran et al. (2019). "FracVAL: A General Tool for Generating Fractal Aggregates"
+Legacy one-off benchmark runner scripts were removed in favor of the unified entrypoint and config presets.

@@ -36,7 +36,7 @@ run_one() {
 
 	for attempt in $(seq 1 "${MAX_RETRIES}"); do
 		echo "Running N=${n}, rep=${rep}, attempt=${attempt}/${MAX_RETRIES}"
-		if uv run python benchmarks/unified_local_remote_benchmark.py \
+		if uv run python benchmarks/run.py unified \
 			--n "${n}" \
 			--profile-dir "${OUT_BASE}" \
 			"${COMMON_ARGS[@]}" \

@@ -17,14 +17,14 @@ COMMON_ARGS=(
 echo "Run ID: ${RUN_ID}"
 echo "Scheduler: ${SCHEDULER_ADDRESS}"
 
-uv run python benchmarks/unified_local_remote_benchmark.py \
+uv run python benchmarks/run.py unified \
 	--n 128 \
 	--scheduler-address "${SCHEDULER_ADDRESS}" \
 	--profile-dir "${OUT_BASE}" \
 	"${COMMON_ARGS[@]}" \
 	--output-json "${OUT_BASE}/remote/unified_N128_rep1.json"
 
-uv run python benchmarks/unified_local_remote_benchmark.py \
+uv run python benchmarks/run.py unified \
 	--n 256 \
 	--scheduler-address "${SCHEDULER_ADDRESS}" \
 	--profile-dir "${OUT_BASE}" \
