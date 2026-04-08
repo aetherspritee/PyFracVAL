@@ -1,0 +1,22 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/retry_mode_matrix_coarse_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 12,
+  "outputs": [
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/single/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/single/unified_N256_rep2.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/single/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/single/unified_N512_rep2.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/alternate/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/alternate/unified_N256_rep2.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/alternate/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/alternate/unified_N512_rep2.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/coarse_grid/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/coarse_grid/unified_N256_rep2.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/coarse_grid/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_coarse_v1/coarse_grid/unified_N512_rep2.json"
+  ],
+  "started_at": "2026-04-08 14:49:18",
+  "commit": "df52af7"
+}

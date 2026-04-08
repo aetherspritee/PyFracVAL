@@ -347,6 +347,16 @@ def _apply_algorithm_settings(algorithm_cfg: dict[str, Any]) -> None:
         "cca_incremental_full_sync_period": "CCA_INCREMENTAL_FULL_SYNC_PERIOD",
         "cca_candidate_policy": "CCA_CANDIDATE_POLICY",
         "cca_score_topk_per_class": "CCA_SCORE_TOPK_PER_CLASS",
+        "cca_retry_rotation_mode": "CCA_RETRY_ROTATION_MODE",
+        "cca_retry_escalate_after": "CCA_RETRY_ESCALATE_AFTER",
+        "cca_dual_jitter_interval": "CCA_DUAL_JITTER_INTERVAL",
+        "cca_dual_jitter_deg": "CCA_DUAL_JITTER_DEG",
+        "cca_coarse_sweep_steps": "CCA_COARSE_SWEEP_STEPS",
+        "cca_coarse_spin_anchor_steps": "CCA_COARSE_SPIN_ANCHOR_STEPS",
+        "cca_coarse_spin_moving_steps": "CCA_COARSE_SPIN_MOVING_STEPS",
+        "cca_coarse_fine_coarse_fraction": "CCA_COARSE_FINE_COARSE_FRACTION",
+        "cca_coarse_fine_spin_deg": "CCA_COARSE_FINE_SPIN_DEG",
+        "profile_cca_retry_modes": "PROFILE_CCA_RETRY_MODES",
     }
     for key, attr in mapping.items():
         if key in algorithm_cfg and hasattr(runtime_config, attr):
@@ -453,7 +463,10 @@ def _run_one_case(case: RunCase) -> Path:
 
 
 def _load_orchestrator_config(path: Path) -> dict[str, Any]:
-    return OrchestratorConfig.from_toml(path).model_dump(exclude_none=True)
+    return OrchestratorConfig.from_toml(path).model_dump(
+        exclude_none=True,
+        exclude_unset=True,
+    )
 
 
 def _discover_orchestrator_config() -> Path | None:

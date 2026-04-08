@@ -4,14 +4,20 @@ This file documents repository conventions for humans and coding agents.
 
 ## Environment / Running
 
-- Use `uv` for running Python code.
-  - Examples: `uv run pytest`, `uv run python pyfracval/main_runner.py`
-- The main entry point is `pyfracval/main_runner.py` with `run_simulation()` function.
+**CRITICAL EXECUTION RULE:** This project uses `devenv` (Nix) and `uv`. You must NEVER call binaries directly. Doing so could invoke the global system environment and causes fatal errors.
+
+1. **For Python Scripts & Dependencies (`uv`):**
+   - Always wrap the command using: `devenv shell -- uv run <command>`
+   - Examples: `devenv shell -- uv run pytest`, `devenv shell -- uv run python pyfracval/main_runner.py`
+2. **For Non-Python System Tools (like `bd`):**
+   - Always wrap the command using ONLY `devenv shell --`:
+   - Example: `devenv shell -- bd ready`
+
 - Use `devenv` for local development environment (see `devenv.nix`).
 
 ## Tests
 
-- Run tests with: `uv run pytest`
+- Run tests with: `devenv shell -- uv run pytest`
 - Test coverage should include:
   - PCA (Particle-Cluster Aggregation) edge cases
   - CCA (Cluster-Cluster Aggregation) pairing logic
@@ -22,7 +28,7 @@ This file documents repository conventions for humans and coding agents.
 ## Benchmarks
 
 - Benchmarks are located in `benchmarks/` directory.
-- Run sticking benchmarks: `uv run python benchmarks/sticking_benchmark.py`
+- Run sticking benchmarks: `devenv shell -- uv run python benchmarks/sticking_benchmark.py`
 - Benchmarks must be reproducible:
   - Use deterministic seeding for RNG
   - Set thread-related env vars for NumPy/SciPy reproducibility:
@@ -62,64 +68,65 @@ This file documents repository conventions for humans and coding agents.
 ## Issue Tracking
 
 We use bd (beads) for issue tracking instead of Markdown TODOs or external tools.
+_Always remember to wrap `bd` commands with `devenv shell --`._
 
 ### Quick Reference
 
 ```bash
 # Find ready work (no blockers)
-bd ready --json
+devenv shell -- bd ready --json
 
 # Find ready work including future deferred issues
-bd ready --include-deferred --json
+devenv shell -- bd ready --include-deferred --json
 
 # Create new issue
-bd create "Issue title" -t bug|feature|task -p 0-4 -d "Description" --json
+devenv shell -- bd create "Issue title" -t bug|feature|task -p 0-4 -d "Description" --json
 
 # Create issue with due date and defer (GH#820)
-bd create "Task" --due=+6h              # Due in 6 hours
-bd create "Task" --defer=tomorrow       # Hidden from bd ready until tomorrow
-bd create "Task" --due="next monday" --defer=+1h  # Both
+devenv shell -- bd create "Task" --due=+6h              # Due in 6 hours
+devenv shell -- bd create "Task" --defer=tomorrow       # Hidden from bd ready until tomorrow
+devenv shell -- bd create "Task" --due="next monday" --defer=+1h  # Both
 
 # Update issue status
-bd update <id> --status in_progress --json
+devenv shell -- bd update <id> --status in_progress --json
 
 # Update issue with due/defer dates
-bd update <id> --due=+2d                # Set due date
-bd update <id> --defer=""               # Clear defer (show immediately)
+devenv shell -- bd update <id> --due=+2d                # Set due date
+devenv shell -- bd update <id> --defer=""               # Clear defer (show immediately)
 
 # Link discovered work
-bd dep add <discovered-id> <parent-id> --type discovered-from
+devenv shell -- bd dep add <discovered-id> <parent-id> --type discovered-from
 
 # Complete work
-bd close <id> --reason "Done" --json
+devenv shell -- bd close <id> --reason "Done" --json
 
 # Show dependency tree
-bd dep tree <id>
+devenv shell -- bd dep tree <id>
 
 # Get issue details
-bd show <id> --json
+devenv shell -- bd show <id> --json
 
 # Query issues by time-based scheduling (GH#820)
-bd list --deferred              # Show issues with defer_until set
-bd list --defer-before=tomorrow # Deferred before tomorrow
-bd list --defer-after=+1w       # Deferred after one week from now
-bd list --due-before=+2d        # Due within 2 days
-bd list --due-after="next monday" # Due after next Monday
-bd list --overdue               # Due date in past (not closed)
+devenv shell -- bd list --deferred              # Show issues with defer_until set
+devenv shell -- bd list --defer-before=tomorrow # Deferred before tomorrow
+devenv shell -- bd list --defer-after=+1w       # Deferred after one week from now
+devenv shell -- bd list --due-before=+2d        # Due within 2 days
+devenv shell -- bd list --due-after="next monday" # Due after next Monday
+devenv shell -- bd list --overdue               # Due date in past (not closed)
 ```
 
 ### Workflow
 
-1. **Check for ready work**: Run `bd ready` to see what's unblocked
-2. **Claim your task**: `bd update <id> --status in_progress`
+1. **Check for ready work**: Run `devenv shell -- bd ready` to see what's unblocked
+2. **Claim your task**: `devenv shell -- bd update <id> --status in_progress`
 3. **Work on it**: Implement, test, document
 4. **Discover new work**: If you find bugs or TODOs, create issues:
-   - `bd create "Found bug in auth" -t bug -p 1 --json`
-   - Link it: `bd dep add <new-id> <current-id> --type discovered-from`
-5. **Complete**: `bd close <id> --reason "Implemented"`
+   - `devenv shell -- bd create "Found bug in auth" -t bug -p 1 --json`
+   - Link it: `devenv shell -- bd dep add <new-id> <current-id> --type discovered-from`
+5. **Complete**: `devenv shell -- bd close <id> --reason "Implemented"`
 6. **Persist**: Ensure `.beads/issues.jsonl` is updated before committing.
    - With auto-flush enabled, it should update automatically after edits.
-   - Otherwise run: `bd export -o .beads/issues.jsonl`
+   - Otherwise run: `devenv shell -- bd export -o .beads/issues.jsonl`
 7. **Git**: `.beads/issues.jsonl` is meant to be committed; `.beads/beads.db` is local-only.
    - If `bd init` added `.beads/issues.jsonl` to `.git/info/exclude`, remove that line (or `git add -f .beads/issues.jsonl` once).
 
@@ -160,7 +167,7 @@ Only `blocks` dependencies affect the ready work queue.
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
+   devenv shell -- bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -169,6 +176,7 @@ Only `blocks` dependencies affect the ready work queue.
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push

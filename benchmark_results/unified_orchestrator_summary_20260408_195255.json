@@ -1,0 +1,18 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/retry_mode_matrix_hard_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 8,
+  "outputs": [
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/single/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/single/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/alternate/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/alternate/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/coarse_grid/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/coarse_grid/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/coarse_to_fine/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix_hard_v1/coarse_to_fine/unified_N512_rep1.json"
+  ],
+  "started_at": "2026-04-08 19:35:48",
+  "commit": "df52af7"
+}

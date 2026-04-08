@@ -150,6 +150,16 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_incremental_full_sync_period: int = 20
     cca_candidate_policy: str = "leaf_hybrid"
     cca_score_topk_per_class: int = 32
+    cca_retry_rotation_mode: str = "single"
+    cca_coarse_fine_coarse_fraction: float = 0.67
+    cca_coarse_fine_spin_deg: float = 12.0
+    cca_retry_escalate_after: int = 120
+    cca_dual_jitter_interval: int = 5
+    cca_dual_jitter_deg: float = 8.0
+    cca_coarse_sweep_steps: int = 10
+    cca_coarse_spin_anchor_steps: int = 6
+    cca_coarse_spin_moving_steps: int = 6
+    profile_cca_retry_modes: bool = False
 
 
 class OrchestratorDefaultsConfig(BaseModel):
@@ -306,6 +316,30 @@ CCA_CANDIDATE_POLICY: str = (
 CCA_SCORE_TOPK_PER_CLASS: int = (
     0  # Optional cap for scored items per class in scored policies (0 = score all)
 )
+CCA_RETRY_ROTATION_MODE: str = "single"  # Retry rotation mode: single|alternate|dual_jitter|coarse_grid|coarse_to_fine
+CCA_RETRY_ESCALATE_AFTER: int = (
+    120  # Escalate from single to configured mode after this many retries
+)
+CCA_DUAL_JITTER_INTERVAL: int = (
+    5  # In dual_jitter mode, apply anchor jitter every N retries
+)
+CCA_DUAL_JITTER_DEG: float = 8.0  # Anchor-cluster jitter amplitude in degrees
+CCA_COARSE_SWEEP_STEPS: int = (
+    10  # Coarse-grid sweep positions for moving cluster (retry mode coarse_grid)
+)
+CCA_COARSE_SPIN_ANCHOR_STEPS: int = (
+    6  # Coarse-grid spin positions for anchor cluster around CM->cand axis
+)
+CCA_COARSE_SPIN_MOVING_STEPS: int = (
+    6  # Coarse-grid spin positions for moving cluster around CM->cand axis
+)
+CCA_COARSE_FINE_COARSE_FRACTION: float = (
+    0.67  # Fraction of retry budget used for coarse stage in coarse_to_fine mode
+)
+CCA_COARSE_FINE_SPIN_DEG: float = (
+    12.0  # Local spin refinement amplitude in degrees for coarse_to_fine mode
+)
+PROFILE_CCA_RETRY_MODES: bool = False  # Print retry-mode usage and success counters
 PARALLEL_SUBCLUSTERS: bool = (
     True  # Build independent PCA subclusters in parallel (multiprocessing.Pool)
 )

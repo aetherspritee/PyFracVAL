@@ -150,6 +150,11 @@ class CCAggregator:
         self._cand_score_success_high: int = 0
         self._cand_score_success_low: int = 0
 
+        # Retry-mode telemetry
+        self._retry_mode_counts: dict[str, int] = {}
+        self._retry_mode_success_counts: dict[str, int] = {}
+        self._retry_mode_success_attempt_sum: dict[str, int] = {}
+
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
     # --------------------------------------------------------------------------
@@ -767,6 +772,271 @@ class CCAggregator:
         return coords2_out, 0.0  # theta_a_new no longer needed by caller
 
     @staticmethod
+    def _rotate_cluster_about_cm(
+        coords_in: np.ndarray,
+        cm: np.ndarray,
+        axis: np.ndarray,
+        angle_rad: float,
+    ) -> np.ndarray:
+        """Rotate a full cluster around its center of mass."""
+        if np.linalg.norm(axis) <= 1.0e-12 or abs(float(angle_rad)) <= 1.0e-12:
+            return coords_in
+        coords_rel = coords_in - cm
+        coords_rel_rot = utils.rodrigues_rotation(coords_rel, axis, float(angle_rad))
+        return coords_rel_rot + cm
+
+    @staticmethod
+    def _normalize_axis(
+        axis: np.ndarray, fallback: np.ndarray | None = None
+    ) -> np.ndarray:
+        axis_out = np.array(axis, dtype=float)
+        axis_norm = float(np.linalg.norm(axis_out))
+        if axis_norm > 1.0e-12:
+            return axis_out / axis_norm
+        if fallback is not None:
+            fb = np.array(fallback, dtype=float)
+            fb_norm = float(np.linalg.norm(fb))
+            if fb_norm > 1.0e-12:
+                return fb / fb_norm
+        return np.array([1.0, 0.0, 0.0], dtype=float)
+
+    def _apply_retry_rotation_mode(
+        self,
+        coords1_stick: np.ndarray,
+        coords2_current: np.ndarray,
+        coords1_base: np.ndarray,
+        coords2_base: np.ndarray,
+        cm1: np.ndarray,
+        cm2_stick: np.ndarray,
+        cand1_idx: int,
+        cand2_idx: int,
+        vec_0: np.ndarray,
+        i_vec: np.ndarray,
+        j_vec: np.ndarray,
+        axis_anchor: np.ndarray,
+        axis_moving: np.ndarray,
+        intento: int,
+    ) -> tuple[np.ndarray, np.ndarray, str]:
+        """Generate next retry pose according to configured retry mode."""
+        mode_cfg = str(getattr(config, "CCA_RETRY_ROTATION_MODE", "single")).lower()
+        if mode_cfg not in {
+            "single",
+            "alternate",
+            "dual_jitter",
+            "coarse_grid",
+            "coarse_to_fine",
+        }:
+            mode_cfg = "single"
+
+        if mode_cfg == "coarse_grid":
+            sweep_steps = int(max(1, getattr(config, "CCA_COARSE_SWEEP_STEPS", 10)))
+            spin_anchor_steps = int(
+                max(1, getattr(config, "CCA_COARSE_SPIN_ANCHOR_STEPS", 6))
+            )
+            spin_moving_steps = int(
+                max(1, getattr(config, "CCA_COARSE_SPIN_MOVING_STEPS", 6))
+            )
+            total = sweep_steps * spin_anchor_steps * spin_moving_steps
+            idx = (int(intento) - 1) % total
+            block = spin_anchor_steps * spin_moving_steps
+            sweep_idx = idx // block
+            rem = idx % block
+            anchor_idx = rem // spin_moving_steps
+            moving_idx = rem % spin_moving_steps
+
+            sweep_attempt = int(
+                round((float(sweep_idx + 1) / float(sweep_steps)) * 360.0)
+            )
+            sweep_attempt = max(1, min(360, sweep_attempt))
+            coords2_swept, _ = self._cca_reintento(
+                coords2_base,
+                cm2_stick,
+                cand2_idx,
+                vec_0,
+                i_vec,
+                j_vec,
+                attempt=sweep_attempt,
+            )
+
+            anchor_angle = (2.0 * config.PI * float(anchor_idx)) / float(
+                spin_anchor_steps
+            )
+            moving_angle = (2.0 * config.PI * float(moving_idx)) / float(
+                spin_moving_steps
+            )
+
+            coords1_next = self._rotate_cluster_about_cm(
+                coords1_base,
+                cm1,
+                axis_anchor,
+                anchor_angle,
+            )
+            coords2_next = self._rotate_cluster_about_cm(
+                coords2_swept,
+                cm2_stick,
+                axis_moving,
+                moving_angle,
+            )
+            return coords1_next, coords2_next, "coarse_grid"
+
+        if mode_cfg == "coarse_to_fine":
+            sweep_steps = int(max(1, getattr(config, "CCA_COARSE_SWEEP_STEPS", 10)))
+            spin_anchor_steps = int(
+                max(1, getattr(config, "CCA_COARSE_SPIN_ANCHOR_STEPS", 6))
+            )
+            spin_moving_steps = int(
+                max(1, getattr(config, "CCA_COARSE_SPIN_MOVING_STEPS", 6))
+            )
+            total = sweep_steps * spin_anchor_steps * spin_moving_steps
+            coarse_fraction = float(
+                getattr(config, "CCA_COARSE_FINE_COARSE_FRACTION", 0.67)
+            )
+            coarse_fraction = min(max(coarse_fraction, 0.05), 0.95)
+            coarse_budget = max(1, min(total - 1, int(round(total * coarse_fraction))))
+
+            if int(intento) <= coarse_budget:
+                if coarse_budget == 1:
+                    idx = 0
+                else:
+                    idx = int(
+                        round(
+                            ((int(intento) - 1) * (total - 1))
+                            / float(coarse_budget - 1)
+                        )
+                    )
+                block = spin_anchor_steps * spin_moving_steps
+                sweep_idx = idx // block
+                rem = idx % block
+                anchor_idx = rem // spin_moving_steps
+                moving_idx = rem % spin_moving_steps
+
+                sweep_attempt = int(
+                    round((float(sweep_idx + 1) / float(sweep_steps)) * 360.0)
+                )
+                sweep_attempt = max(1, min(360, sweep_attempt))
+                coords2_swept, _ = self._cca_reintento(
+                    coords2_base,
+                    cm2_stick,
+                    cand2_idx,
+                    vec_0,
+                    i_vec,
+                    j_vec,
+                    attempt=sweep_attempt,
+                )
+
+                anchor_angle = (2.0 * config.PI * float(anchor_idx)) / float(
+                    spin_anchor_steps
+                )
+                moving_angle = (2.0 * config.PI * float(moving_idx)) / float(
+                    spin_moving_steps
+                )
+                coords1_next = self._rotate_cluster_about_cm(
+                    coords1_base,
+                    cm1,
+                    axis_anchor,
+                    anchor_angle,
+                )
+                coords2_next = self._rotate_cluster_about_cm(
+                    coords2_swept,
+                    cm2_stick,
+                    axis_moving,
+                    moving_angle,
+                )
+                return coords1_next, coords2_next, "coarse_to_fine_coarse"
+
+            refine_idx = int(intento) - coarse_budget
+            refine_deg = float(
+                max(0.0, getattr(config, "CCA_COARSE_FINE_SPIN_DEG", 12.0))
+            )
+            refine_rad = np.deg2rad(refine_deg)
+            phi = 2.0 * config.PI * float(refine_idx) / float(config.GOLDEN_RATIO)
+            angle_anchor = refine_rad * float(np.sin(phi))
+            angle_moving = refine_rad * float(np.cos(phi))
+            coords1_next = self._rotate_cluster_about_cm(
+                coords1_stick,
+                cm1,
+                axis_anchor,
+                angle_anchor,
+            )
+            coords2_next = self._rotate_cluster_about_cm(
+                coords2_current,
+                cm2_stick,
+                axis_moving,
+                angle_moving,
+            )
+            return coords1_next, coords2_next, "coarse_to_fine_refine"
+
+        escalate_after = int(max(0, getattr(config, "CCA_RETRY_ESCALATE_AFTER", 0)))
+        use_mode = mode_cfg if intento > escalate_after else "single"
+
+        coords1_next = coords1_stick
+        coords2_next = coords2_current
+
+        if use_mode == "single":
+            coords2_next, _ = self._cca_reintento(
+                coords2_current,
+                cm2_stick,
+                cand2_idx,
+                vec_0,
+                i_vec,
+                j_vec,
+                attempt=intento,
+            )
+            return coords1_next, coords2_next, "single"
+
+        if use_mode == "alternate":
+            if intento % 2 == 0:
+                phi = 2.0 * config.PI * float(intento) / float(config.GOLDEN_RATIO)
+                axis = np.array([i_vec[0], i_vec[1], i_vec[2]], dtype=float)
+                axis = self._normalize_axis(axis, fallback=np.array([1.0, 0.0, 0.0]))
+                coords1_next = self._rotate_cluster_about_cm(
+                    coords1_stick,
+                    cm1,
+                    axis,
+                    -phi,
+                )
+                return coords1_next, coords2_next, "alternate_anchor"
+
+            coords2_next, _ = self._cca_reintento(
+                coords2_current,
+                cm2_stick,
+                cand2_idx,
+                vec_0,
+                i_vec,
+                j_vec,
+                attempt=intento,
+            )
+            return coords1_next, coords2_next, "alternate_moving"
+
+        coords2_next, _ = self._cca_reintento(
+            coords2_current,
+            cm2_stick,
+            cand2_idx,
+            vec_0,
+            i_vec,
+            j_vec,
+            attempt=intento,
+        )
+        jitter_interval = int(max(1, getattr(config, "CCA_DUAL_JITTER_INTERVAL", 5)))
+        if intento % jitter_interval == 0:
+            jitter_deg = float(max(0.0, getattr(config, "CCA_DUAL_JITTER_DEG", 8.0)))
+            jitter_rad = np.deg2rad(jitter_deg)
+            if jitter_rad > 0.0:
+                axis = self._rng.normal(size=3)
+                axis_norm = float(np.linalg.norm(axis))
+                if axis_norm > 1.0e-12:
+                    axis = axis / axis_norm
+                    angle = float(self._rng.uniform(-jitter_rad, jitter_rad))
+                    coords1_next = self._rotate_cluster_about_cm(
+                        coords1_stick,
+                        cm1,
+                        axis,
+                        angle,
+                    )
+                    return coords1_next, coords2_next, "dual_jitter"
+        return coords1_next, coords2_next, "dual_moving"
+
+    @staticmethod
     def _pair_overlap(
         coords1: np.ndarray,
         radii1: np.ndarray,
@@ -1168,11 +1438,34 @@ class CCAggregator:
 
             # Rotation attempts
             intento = 0
-            max_rotations = 360  # From Fortran
+            retry_mode_cfg = str(
+                getattr(config, "CCA_RETRY_ROTATION_MODE", "single")
+            ).lower()
+            if retry_mode_cfg in {"coarse_grid", "coarse_to_fine"}:
+                max_rotations = int(
+                    max(1, getattr(config, "CCA_COARSE_SWEEP_STEPS", 10))
+                    * max(1, getattr(config, "CCA_COARSE_SPIN_ANCHOR_STEPS", 6))
+                    * max(1, getattr(config, "CCA_COARSE_SPIN_MOVING_STEPS", 6))
+                )
+            else:
+                max_rotations = 360  # From Fortran
             current_coords2 = coords2_stick.copy()  # Keep track of rotated coords2
-            adaptive_tol_threshold = 180  # Relax tolerance after this many attempts
+            coords1_base = coords1_stick.copy()
+            coords2_base = coords2_stick.copy()
+            axis_anchor = self._normalize_axis(
+                coords1_base[int(cand1_idx)] - cm1,
+                fallback=np.array([i_vec[0], i_vec[1], i_vec[2]], dtype=float),
+            )
+            axis_moving = self._normalize_axis(
+                coords2_base[int(cand2_idx)] - cm2_stick,
+                fallback=np.array([i_vec[0], i_vec[1], i_vec[2]], dtype=float),
+            )
+            adaptive_tol_threshold = min(
+                180, max_rotations
+            )  # Relax tolerance after this many attempts
             relaxed_tol = 1.0e-5  # Relaxed tolerance (10x more lenient)
             used_adaptive_tol = False
+            last_retry_mode = "single"
 
             # Choose rotation strategy based on configuration
             if config.USE_BATCH_ROTATION:
@@ -1261,15 +1554,28 @@ class CCAggregator:
                 while cov_max > self.tol_ov and intento < max_rotations:
                     intento += 1
                     _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
-                    coords2_rotated, _ = self._cca_reintento(
-                        current_coords2,
-                        cm2_stick,
-                        cand2_idx,
-                        vec_0,
-                        i_vec,
-                        j_vec,
-                        attempt=intento,
+                    coords1_rotated, coords2_rotated, retry_mode = (
+                        self._apply_retry_rotation_mode(
+                            coords1_stick,
+                            current_coords2,
+                            coords1_base,
+                            coords2_base,
+                            cm1,
+                            cm2_stick,
+                            int(cand1_idx),
+                            int(cand2_idx),
+                            vec_0,
+                            i_vec,
+                            j_vec,
+                            axis_anchor,
+                            axis_moving,
+                            int(intento),
+                        )
                     )
+                    self._retry_mode_counts[retry_mode] = (
+                        self._retry_mode_counts.get(retry_mode, 0) + 1
+                    )
+                    last_retry_mode = retry_mode
                     if config.PROFILE_TIMING:
                         self._t_rotation += perf_counter() - _t0
                         self._n_rotation_calls += 1
@@ -1279,7 +1585,7 @@ class CCAggregator:
                         self._active_calls += 1
                         self._active_pairs_checked += len(active_collisions)
                         cov_l1, active_new = self._scan_active_collisions(
-                            coords1_stick,
+                            coords1_rotated,
                             radii1_in,
                             coords2_rotated,
                             radii2_in,
@@ -1294,12 +1600,15 @@ class CCAggregator:
                         if intento % full_sync_period == 0:
                             self._full_periodic_syncs += 1
                             cov_max = self._full_overlap_check(
-                                coords1_stick, radii1_in, coords2_rotated, radii2_in
+                                coords1_rotated,
+                                radii1_in,
+                                coords2_rotated,
+                                radii2_in,
                             )
                             active_collisions = set()
                     else:
                         cov_max = utils.calculate_max_overlap_cca_auto(
-                            coords1_stick,
+                            coords1_rotated,
                             radii1_in,
                             coords2_rotated,
                             radii2_in,
@@ -1310,9 +1619,10 @@ class CCAggregator:
                         self._t_overlap_check += perf_counter() - _t0
                         self._n_overlap_calls += 1
 
+                    coords1_stick = coords1_rotated
                     current_coords2 = coords2_rotated
                     logger.trace(  # pyright: ignore
-                        f"    Rotation {intento}: Overlap = {cov_max:.4e}"
+                        f"    Rotation {intento} [{retry_mode}]: Overlap = {cov_max:.4e}"
                     )
 
                     if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
@@ -1341,6 +1651,14 @@ class CCAggregator:
                 sticking_successful = True
                 self._record_candidate_success(cand_cls)
                 self._record_candidate_score_success(cand_score)
+                if intento > 0:
+                    self._retry_mode_success_counts[last_retry_mode] = (
+                        self._retry_mode_success_counts.get(last_retry_mode, 0) + 1
+                    )
+                    self._retry_mode_success_attempt_sum[last_retry_mode] = (
+                        self._retry_mode_success_attempt_sum.get(last_retry_mode, 0)
+                        + int(intento)
+                    )
                 final_coords1 = coords1_stick  # Cluster 1 might have rotated
                 final_coords2 = (
                     current_coords2  # Use the final rotated coords for cluster 2
@@ -1647,6 +1965,26 @@ class CCAggregator:
                     f"  high-score (>=0.70): attempts={high_att:7d}, success={high_suc:7d}, rate={_rate(high_suc, high_att):5.1f}%\n"
                     f"  low-score  (<0.40): attempts={low_att:7d}, success={low_suc:7d}, rate={_rate(low_suc, low_att):5.1f}%"
                 )
+            if config.PROFILE_CCA_RETRY_MODES and self._retry_mode_counts:
+                mode_items = sorted(
+                    self._retry_mode_counts.items(), key=lambda item: item[0]
+                )
+                lines = []
+                for mode, attempts in mode_items:
+                    success = self._retry_mode_success_counts.get(mode, 0)
+                    rate = 100.0 * success / attempts if attempts > 0 else 0.0
+                    success_attempt_sum = self._retry_mode_success_attempt_sum.get(
+                        mode, 0
+                    )
+                    mean_success_attempt = (
+                        float(success_attempt_sum) / float(success)
+                        if success > 0
+                        else 0.0
+                    )
+                    lines.append(
+                        f"    {mode:16s} attempts={attempts:7d} success={success:7d} rate={rate:5.1f}% mean_success_attempt={mean_success_attempt:7.2f}"
+                    )
+                print("\n[PROFILE] CCA retry-mode stats:\n" + "\n".join(lines))
         # Return only the valid part of the arrays corresponding to the final cluster
         final_count = self.i_orden[0, 2]
         return self.coords[:final_count, :], self.radii[:final_count]
