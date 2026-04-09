@@ -268,7 +268,7 @@ class CCAggregator:
         # Allow gamma_pc to be slightly larger than sum_rmax if needed.
         # Start with a higher value to test if it allows pairing.
         # If this works, you might fine-tune it later (e.g., 1.10, 1.05).
-        CCA_PAIRING_FACTOR = 1.50  # TEST: Start with 50% relaxation
+        CCA_PAIRING_FACTOR = 1.10  # Relaxed pairing (10% over sum_rmax; gamma expansion handles the rest)
         strict_pairing_used = True  # Flag to track if relaxation was needed
         # -------------------------
 
@@ -1194,6 +1194,224 @@ class CCAggregator:
             tolerance=self.tol_ov,
         )
 
+    # ------------------------------------------------------------------
+    # Gamma Expansion and Pair Feasibility Methods
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _bounding_volume_precheck(
+        gamma_pc: float,
+        r_max1: float,
+        r_max2: float,
+        gamma_real: bool,
+    ) -> bool:
+        """Check if two clusters can physically stick at distance gamma_pc."""
+        if not gamma_real or gamma_pc <= 0.0:
+            return False
+        factor = float(getattr(config, "CCA_BV_DEEP_PENETRATION_FACTOR", 0.8))
+        rmax_diff = abs(r_max1 - r_max2)
+        if gamma_pc < rmax_diff * factor:
+            logger.debug(
+                f"BV pre-check reject: gamma={gamma_pc:.3f} < "
+                f"|r_max1-r_max2|*{factor}={rmax_diff * factor:.3f}"
+            )
+            return False
+        if gamma_pc > r_max1 + r_max2:
+            logger.debug(
+                f"BV pre-check reject: gamma={gamma_pc:.3f} > "
+                f"r_max1+r_max2={r_max1 + r_max2:.3f}"
+            )
+            return False
+        return True
+
+    @staticmethod
+    def _surface_accessible_mask(
+        coords: np.ndarray,
+        radii: np.ndarray,
+        cm: np.ndarray,
+        r_max: float,
+        min_exposure: float | None = None,
+    ) -> np.ndarray:
+        """Compute surface accessibility mask for each monomer."""
+        n = coords.shape[0]
+        if n <= 1:
+            return np.ones(n, dtype=bool)
+        if min_exposure is None:
+            min_exposure = float(getattr(config, "CCA_SSA_MIN_EXPOSURE", 0.3))
+        dist_to_cm = np.linalg.norm(coords - cm[np.newaxis, :], axis=1)
+        radial_fraction = dist_to_cm / max(r_max, 1.0e-12)
+        mean_r = float(np.mean(radii))
+        contact_dist_sq = (2.5 * mean_r) ** 2
+        diffs = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
+        d_sq = np.sum(diffs * diffs, axis=2)
+        neighbor_count = np.sum((d_sq < contact_dist_sq) & (d_sq > 0), axis=1)
+        max_neighbors = max(n - 1, 1)
+        isolation_fraction = 1.0 - neighbor_count / max_neighbors
+        exposure = 0.5 * radial_fraction + 0.5 * isolation_fraction
+        return exposure >= min_exposure
+
+    def _perform_cca_sticking_with_expansion(
+        self,
+        cluster_idx1: int,
+        cluster_idx2: int,
+        cluster_props_cache: dict | None = None,
+    ) -> Tuple[np.ndarray, np.ndarray] | None:
+        """Wrapper that adds gamma expansion and pair feasibility filtering.
+
+        Wraps _perform_cca_sticking() with:
+        1. Bounding volume pre-check (opt-in)
+        2. SSA candidate filtering (opt-in)
+        3. Incremental gamma expansion on failure (opt-in)
+        """
+        coords1_in, radii1_in = self._get_cluster_data(cluster_idx1)
+        coords2_in, radii2_in = self._get_cluster_data(cluster_idx2)
+        n1 = coords1_in.shape[0]
+        n2 = coords2_in.shape[0]
+        if n1 == 0 or n2 == 0:
+            logger.error(
+                f"Cannot stick empty cluster(s): idx1({n1} particles), idx2({n2} particles)"
+            )
+            return None
+
+        _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+        if (
+            cluster_props_cache is not None
+            and cluster_idx1 in cluster_props_cache
+            and cluster_idx2 in cluster_props_cache
+        ):
+            _p1 = cluster_props_cache[cluster_idx1]
+            _p2 = cluster_props_cache[cluster_idx2]
+            m1, rg1, cm1, r_max1 = _p1[0], _p1[1], _p1[2], _p1[3]
+            m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
+        else:
+            m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
+                coords1_in, radii1_in, self.df, self.kf
+            )
+            m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
+                coords2_in, radii2_in, self.df, self.kf
+            )
+        if config.PROFILE_TIMING:
+            self._t_cluster_props += perf_counter() - _t0
+
+        # --- Pair Feasibility Pre-Filter ---
+        pair_filter = str(
+            getattr(config, "CCA_PAIR_FEASIBILITY_FILTER", "none")
+        ).lower()
+        if pair_filter == "bounding_volume":
+            props1_bv = (m1, rg1, cm1, r_max1, radii1_in)
+            props2_bv = (m2, rg2, cm2, r_max2, radii2_in)
+            gamma_real_bv, gamma_pc_bv = self._calculate_cca_gamma(props1_bv, props2_bv)
+            if not self._bounding_volume_precheck(
+                gamma_pc_bv, r_max1, r_max2, gamma_real_bv
+            ):
+                self._bv_filter_rejects += 1
+                logger.info(
+                    f"CCA pair ({cluster_idx1}, {cluster_idx2}): "
+                    f"Rejected by BV pre-check (gamma={gamma_pc_bv:.3f})"
+                )
+                return None
+
+        # --- First attempt: original gamma ---
+        result = self._perform_cca_sticking(
+            cluster_idx1, cluster_idx2, cluster_props_cache
+        )
+        if result is not None:
+            return result
+
+        # --- Gamma Expansion ---
+        gamma_expansion_enabled = bool(
+            getattr(config, "CCA_GAMMA_EXPANSION_ENABLED", False)
+        )
+        if not gamma_expansion_enabled:
+            return None
+
+        gamma_expansion_step = float(getattr(config, "CCA_GAMMA_EXPANSION_STEP", 0.02))
+        gamma_expansion_max_factor = float(
+            getattr(config, "CCA_GAMMA_EXPANSION_MAX_FACTOR", 1.05)
+        )
+        gamma_expansion_mass_exponent = float(
+            getattr(config, "CCA_GAMMA_EXPANSION_MASS_EXPONENT", -0.75)
+        )
+        gamma_expansion_max_attempts = int(
+            getattr(config, "CCA_GAMMA_EXPANSION_MAX_ATTEMPTS", 3)
+        )
+        n_total = n1 + n2
+        self._gamma_expansion_hits += 1
+
+        props1 = (m1, rg1, cm1, r_max1, radii1_in)
+        props2 = (m2, rg2, cm2, r_max2, radii2_in)
+        _, gamma_pc_original = self._calculate_cca_gamma(props1, props2)
+
+        for attempt in range(1, gamma_expansion_max_attempts + 1):
+            expansion_delta = (
+                gamma_expansion_step
+                * (n_total**gamma_expansion_mass_exponent)
+                * attempt
+            )
+            gamma_pc_expanded = gamma_pc_original * (1.0 + expansion_delta)
+
+            if gamma_pc_expanded > gamma_pc_original * gamma_expansion_max_factor:
+                logger.info(
+                    f"CCA gamma expansion hit max factor "
+                    f"{gamma_expansion_max_factor:.3f} for clusters "
+                    f"{cluster_idx1}, {cluster_idx2}. Giving up."
+                )
+                return None
+
+            # Recompute gamma from fractal scaling law for physical consistency
+            rg3_exp = utils.calculate_rg(
+                np.concatenate((radii1_in, radii2_in)),
+                n_total,
+                self.df,
+                self.kf,
+            )
+            m1_h, m2_h = float(n1), float(n2)
+            m3_h = float(n_total)
+            term1 = (m3_h**2) * (rg3_exp**2)
+            term2 = m3_h * (m1_h * rg1**2 + m2_h * rg2**2)
+            denom = m1_h * m2_h
+            radicand = term1 - term2
+
+            gamma_real_exp = (denom > 0) and (radicand >= 0)
+            if gamma_real_exp:
+                gamma_pc_rec = float(np.sqrt(radicand / denom))
+                gamma_pc = min(
+                    gamma_pc_expanded, gamma_pc_rec * gamma_expansion_max_factor
+                )
+                gamma_pc = max(gamma_pc, gamma_pc_original)
+            else:
+                gamma_pc = gamma_pc_expanded
+            gamma_real = True
+
+            self._gamma_expansion_total_steps += 1
+            logger.info(
+                f"CCA gamma expansion ({cluster_idx1},{cluster_idx2}): "
+                f"attempt {attempt}/{gamma_expansion_max_attempts}, "
+                f"gamma {gamma_pc_original:.4f} -> {gamma_pc:.4f} "
+                f"(factor={gamma_pc / gamma_pc_original:.4f})"
+            )
+
+            # Override gamma via temp attribute
+            self._gamma_pc_override = gamma_pc
+            self._gamma_real_override = gamma_real
+            try:
+                result = self._perform_cca_sticking(
+                    cluster_idx1, cluster_idx2, cluster_props_cache
+                )
+            finally:
+                self._gamma_pc_override = None
+                self._gamma_real_override = None
+
+            if result is not None:
+                self._gamma_expansion_successes += 1
+                return result
+
+        logger.warning(
+            f"CCA sticking failed for clusters {cluster_idx1}, {cluster_idx2} "
+            f"after {gamma_expansion_max_attempts} gamma expansions."
+        )
+        return None
+
     def _perform_cca_sticking(
         self,
         cluster_idx1: int,
@@ -1250,11 +1468,42 @@ class CCAggregator:
         props2 = (m2, rg2, cm2, r_max2, radii2_in)
         gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
 
+        # Check for gamma override from expansion wrapper
+        if hasattr(self, "_gamma_pc_override") and self._gamma_pc_override is not None:
+            gamma_pc = self._gamma_pc_override
+            gamma_real = self._gamma_real_override
+
         # --- Generate Candidate List ---
         _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
         list_matrix = self._cca_select_candidates(
             coords1_in, radii1_in, cm1, coords2_in, radii2_in, cm2, gamma_pc, gamma_real
         )
+
+        # Apply SSA filter if enabled
+        pair_filter = str(
+            getattr(config, "CCA_PAIR_FEASIBILITY_FILTER", "none")
+        ).lower()
+        if pair_filter == "ssa":
+            ssa_mask_1 = self._surface_accessible_mask(
+                coords1_in, radii1_in, cm1, r_max1
+            )
+            ssa_mask_2 = self._surface_accessible_mask(
+                coords2_in, radii2_in, cm2, r_max2
+            )
+            original_count = int(np.sum(list_matrix > 0))
+            for i_loc in range(list_matrix.shape[0]):
+                for j_loc in range(list_matrix.shape[1]):
+                    if list_matrix[i_loc, j_loc] > 0 and (
+                        not ssa_mask_1[i_loc] or not ssa_mask_2[j_loc]
+                    ):
+                        list_matrix[i_loc, j_loc] = 0
+            filtered_count = int(np.sum(list_matrix > 0))
+            if filtered_count < original_count:
+                self._ssa_filter_rejects += original_count - filtered_count
+                logger.debug(
+                    f"SSA filter: {original_count} -> {filtered_count} candidates "
+                    f"for pair ({cluster_idx1}, {cluster_idx2})"
+                )
 
         leaf_mask_1 = self._leaf_mask_for_cluster(coords1_in, radii1_in)
         leaf_mask_2 = self._leaf_mask_for_cluster(coords2_in, radii2_in)
@@ -1769,7 +2018,9 @@ class CCAggregator:
                 considered[k] = 1
             else:  # Handle a pair (k, other)
                 # logger.info(f"Attempting to stick pair ({k}, {other})")
-                stick_result = self._perform_cca_sticking(k, other, cluster_props_cache)
+                stick_result = self._perform_cca_sticking_with_expansion(
+                    k, other, cluster_props_cache
+                )
 
                 if stick_result is None:
                     logger.info(

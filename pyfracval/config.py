@@ -159,6 +159,20 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_coarse_sweep_steps: int = 10
     cca_coarse_spin_anchor_steps: int = 6
     cca_coarse_spin_moving_steps: int = 6
+    cca_soft_accept_enabled: bool = False
+    cca_soft_accept_overlap: float = 5e-5
+    cca_repair_max_iters: int = 24
+    cca_repair_step_deg: float = 2.0
+    cca_repair_step_translation_frac: float = 0.02
+    cca_repair_patience: int = 6
+    cca_gamma_expansion_enabled: bool = False
+    cca_gamma_expansion_step: float = 0.02
+    cca_gamma_expansion_max_factor: float = 1.05
+    cca_gamma_expansion_mass_exponent: float = -0.75
+    cca_gamma_expansion_max_attempts: int = 3
+    cca_pair_feasibility_filter: str = "none"
+    cca_bv_deep_penetration_factor: float = 0.8
+    cca_ssa_min_exposure: float = 0.3
     profile_cca_retry_modes: bool = False
 
 
@@ -338,6 +352,42 @@ CCA_COARSE_FINE_COARSE_FRACTION: float = (
 )
 CCA_COARSE_FINE_SPIN_DEG: float = (
     12.0  # Local spin refinement amplitude in degrees for coarse_to_fine mode
+)
+CCA_SOFT_ACCEPT_ENABLED: bool = False  # Enable soft-overlap pre-accept before repair
+CCA_SOFT_ACCEPT_OVERLAP: float = (
+    5.0e-5  # Maximum overlap allowed to trigger rigid repair pass
+)
+CCA_REPAIR_MAX_ITERS: int = 24  # Max rigid repair iterations for soft-accepted poses
+CCA_REPAIR_STEP_DEG: float = (
+    2.0  # Base angular step (degrees) for rigid repair local search
+)
+CCA_REPAIR_STEP_TRANSLATION_FRAC: float = (
+    0.02  # Translation step as fraction of mean primary radius during repair
+)
+CCA_REPAIR_PATIENCE: int = 6  # Stop repair after this many non-improving iterations
+CCA_GAMMA_EXPANSION_ENABLED: bool = (
+    False  # Enable incremental gamma expansion when sticking fails
+)
+CCA_GAMMA_EXPANSION_STEP: float = (
+    0.02  # Base expansion step as fraction of original gamma_pc
+)
+CCA_GAMMA_EXPANSION_MAX_FACTOR: float = (
+    1.05  # Maximum gamma expansion factor (5% over original)
+)
+CCA_GAMMA_EXPANSION_MASS_EXPONENT: float = (
+    -0.75  # Inverse-mass scaling exponent for expansion step
+)
+CCA_GAMMA_EXPANSION_MAX_ATTEMPTS: int = (
+    3  # Maximum number of expansion increments per pair
+)
+CCA_PAIR_FEASIBILITY_FILTER: str = (
+    "none"  # Pair feasibility pre-filter: none|bounding_volume|ssa
+)
+CCA_BV_DEEP_PENETRATION_FACTOR: float = (
+    0.8  # Safety factor for deep-interpenetration bounding volume reject
+)
+CCA_SSA_MIN_EXPOSURE: float = (
+    0.3  # Minimum exposed fraction for SSA pair filter candidate
 )
 PROFILE_CCA_RETRY_MODES: bool = False  # Print retry-mode usage and success counters
 PARALLEL_SUBCLUSTERS: bool = (
