@@ -357,6 +357,12 @@ def _apply_algorithm_settings(algorithm_cfg: dict[str, Any]) -> None:
         "cca_coarse_fine_coarse_fraction": "CCA_COARSE_FINE_COARSE_FRACTION",
         "cca_coarse_fine_spin_deg": "CCA_COARSE_FINE_SPIN_DEG",
         "profile_cca_retry_modes": "PROFILE_CCA_RETRY_MODES",
+        "cca_sticking_method": "CCA_STICKING_METHOD",
+        "cca_fft_grid_size": "CCA_FFT_GRID_SIZE",
+        "cca_fft_num_rotations": "CCA_FFT_NUM_ROTATIONS",
+        "cca_fft_top_k_peaks": "CCA_FFT_TOP_K_PEAKS",
+        "cca_fft_gamma_tolerance": "CCA_FFT_GAMMA_TOLERANCE",
+        "cca_fft_min_peak_distance": "CCA_FFT_MIN_PEAK_DISTANCE",
     }
     for key, attr in mapping.items():
         if key in algorithm_cfg and hasattr(runtime_config, attr):

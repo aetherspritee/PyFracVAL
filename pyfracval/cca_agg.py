@@ -8,6 +8,7 @@ from typing import Set, Tuple
 import numpy as np
 
 from . import config, utils
+from .fft_docking import fft_dock_sticking
 from .logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
@@ -161,6 +162,10 @@ class CCAggregator:
         self._gamma_expansion_total_steps: int = 0
         self._bv_filter_rejects: int = 0
         self._ssa_filter_rejects: int = 0
+
+        # FFT docking telemetry
+        self._fft_docking_attempts: int = 0
+        self._fft_docking_successes: int = 0
 
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
@@ -1318,7 +1323,51 @@ class CCAggregator:
                 )
                 return None
 
-        # --- First attempt: original gamma ---
+        # --- FFT Docking Method (opt-in) ---
+        sticking_method = str(
+            getattr(config, "CCA_STICKING_METHOD", "fibonacci")
+        ).lower()
+        if sticking_method == "fft_docking":
+            props1_fft = (m1, rg1, cm1, r_max1, radii1_in)
+            props2_fft = (m2, rg2, cm2, r_max2, radii2_in)
+            gamma_real_fft, gamma_pc_fft = self._calculate_cca_gamma(
+                props1_fft, props2_fft
+            )
+            if (
+                hasattr(self, "_gamma_pc_override")
+                and self._gamma_pc_override is not None
+            ):
+                gamma_pc_fft = self._gamma_pc_override
+                gamma_real_fft = self._gamma_real_override
+            self._fft_docking_attempts += 1
+            fft_result = fft_dock_sticking(
+                coords1=coords1_in,
+                radii1=radii1_in,
+                coords2=coords2_in,
+                radii2=radii2_in,
+                cm1=cm1,
+                cm2=cm2,
+                gamma_pc=gamma_pc_fft,
+                gamma_real=gamma_real_fft,
+                tol_ov=self.tol_ov,
+                grid_size=int(getattr(config, "CCA_FFT_GRID_SIZE", 64)),
+                num_rotations=int(getattr(config, "CCA_FFT_NUM_ROTATIONS", 70)),
+                top_k_peaks=int(getattr(config, "CCA_FFT_TOP_K_PEAKS", 10)),
+                gamma_tolerance=float(getattr(config, "CCA_FFT_GAMMA_TOLERANCE", 0.10)),
+                min_peak_distance=int(getattr(config, "CCA_FFT_MIN_PEAK_DISTANCE", 3)),
+            )
+            if fft_result is not None:
+                self._fft_docking_successes += 1
+                logger.info(
+                    f"CCA FFT docking SUCCESS for pair ({cluster_idx1}, {cluster_idx2})"
+                )
+                return fft_result
+            logger.info(
+                f"CCA FFT docking FAILED for pair "
+                f"({cluster_idx1}, {cluster_idx2}), falling back to gamma expansion"
+            )
+
+        # --- First attempt: fibonacci method ---
         result = self._perform_cca_sticking(
             cluster_idx1, cluster_idx2, cluster_props_cache
         )

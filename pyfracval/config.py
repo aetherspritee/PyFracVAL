@@ -173,6 +173,12 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_pair_feasibility_filter: str = "none"
     cca_bv_deep_penetration_factor: float = 0.8
     cca_ssa_min_exposure: float = 0.3
+    cca_sticking_method: str = "fibonacci"
+    cca_fft_grid_size: int = 64
+    cca_fft_num_rotations: int = 70
+    cca_fft_top_k_peaks: int = 10
+    cca_fft_gamma_tolerance: float = 0.10
+    cca_fft_min_peak_distance: int = 3
     profile_cca_retry_modes: bool = False
 
 
@@ -388,6 +394,14 @@ CCA_BV_DEEP_PENETRATION_FACTOR: float = (
 )
 CCA_SSA_MIN_EXPOSURE: float = (
     0.3  # Minimum exposed fraction for SSA pair filter candidate
+)
+CCA_STICKING_METHOD: str = "fibonacci"  # "fibonacci" (original) or "fft_docking"
+CCA_FFT_GRID_SIZE: int = 64  # Side length of cubic voxel grid for FFT docking
+CCA_FFT_NUM_ROTATIONS: int = 70  # Number of SO(3) rotation samples for FFT docking
+CCA_FFT_TOP_K_PEAKS: int = 10  # Number of translation candidates per rotation
+CCA_FFT_GAMMA_TOLERANCE: float = 0.10  # Relative tolerance on gamma_pc distance check
+CCA_FFT_MIN_PEAK_DISTANCE: int = (
+    3  # Minimum grid-cell distance between correlation peaks
 )
 PROFILE_CCA_RETRY_MODES: bool = False  # Print retry-mode usage and success counters
 PARALLEL_SUBCLUSTERS: bool = (
