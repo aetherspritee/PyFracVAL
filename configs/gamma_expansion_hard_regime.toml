@@ -1,0 +1,104 @@
+# Hard-regime benchmark: Df=2.25, kf=0.95, σ=1.9
+# Tests gamma expansion, BV filter, SSA filter in the regime where
+# baseline success rates drop to ~12.5%
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/gamma_expansion_hard_regime"
+n_values = [128]
+repeats = 3
+n_aggregates = 10
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 180
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.25
+kf = 0.95
+rp_g = 100.0
+rp_gstd = 1.9
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_rotation_mode = "single"
+cca_retry_escalate_after = 120
+cca_dual_jitter_interval = 5
+cca_dual_jitter_deg = 8.0
+cca_coarse_sweep_steps = 10
+cca_coarse_spin_anchor_steps = 6
+cca_coarse_spin_moving_steps = 6
+cca_coarse_fine_coarse_fraction = 0.67
+cca_coarse_fine_spin_deg = 12.0
+cca_soft_accept_enabled = false
+profile_cca_retry_modes = true
+
+# Baseline: no expansion, no filter
+[[runs]]
+name = "baseline_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+
+# Gamma expansion: conservative
+[[runs]]
+name = "gamma_expand_conservative_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_gamma_expansion_enabled = true
+cca_gamma_expansion_step = 0.02
+cca_gamma_expansion_max_factor = 1.05
+cca_gamma_expansion_mass_exponent = -0.75
+cca_gamma_expansion_max_attempts = 3
+cca_pair_feasibility_filter = "none"
+
+# Gamma expansion: moderate
+[[runs]]
+name = "gamma_expand_moderate_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_gamma_expansion_enabled = true
+cca_gamma_expansion_step = 0.05
+cca_gamma_expansion_max_factor = 1.10
+cca_gamma_expansion_mass_exponent = -0.75
+cca_gamma_expansion_max_attempts = 5
+cca_pair_feasibility_filter = "none"
+
+# BV filter only
+[[runs]]
+name = "bv_filter_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "bounding_volume"
+cca_bv_deep_penetration_factor = 0.8
+
+# SSA filter only
+[[runs]]
+name = "ssa_filter_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "ssa"
+cca_ssa_min_exposure = 0.3
+
+# Gamma expansion + BV filter
+[[runs]]
+name = "gamma_expand_conservative_bv_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_gamma_expansion_enabled = true
+cca_gamma_expansion_step = 0.02
+cca_gamma_expansion_max_factor = 1.05
+cca_gamma_expansion_mass_exponent = -0.75
+cca_gamma_expansion_max_attempts = 3
+cca_pair_feasibility_filter = "bounding_volume"
+cca_bv_deep_penetration_factor = 0.8

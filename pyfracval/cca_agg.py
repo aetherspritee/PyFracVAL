@@ -155,6 +155,13 @@ class CCAggregator:
         self._retry_mode_success_counts: dict[str, int] = {}
         self._retry_mode_success_attempt_sum: dict[str, int] = {}
 
+        # Gamma expansion and pair feasibility telemetry
+        self._gamma_expansion_hits: int = 0
+        self._gamma_expansion_successes: int = 0
+        self._gamma_expansion_total_steps: int = 0
+        self._bv_filter_rejects: int = 0
+        self._ssa_filter_rejects: int = 0
+
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
     # --------------------------------------------------------------------------
