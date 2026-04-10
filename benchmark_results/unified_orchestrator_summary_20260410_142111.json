@@ -1,0 +1,12 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "/tmp/quick_soft_test.toml",
+  "execution_mode": "sequential",
+  "cases": 2,
+  "outputs": [
+    "benchmark_results/profiles/soft_quick_test/baseline/unified_N128_rep1.json",
+    "benchmark_results/profiles/soft_quick_test/soft_relaxation/unified_N128_rep1.json"
+  ],
+  "started_at": "2026-04-10 14:19:20",
+  "commit": "d241350"
+}

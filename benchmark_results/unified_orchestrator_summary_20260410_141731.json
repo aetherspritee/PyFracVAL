@@ -1,0 +1,19 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/method_comparison_hard_regime.toml",
+  "execution_mode": "sequential",
+  "cases": 9,
+  "outputs": [
+    "benchmark_results/profiles/method_comparison_hard_regime/baseline_fibonacci/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/gamma_expansion/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/bv_filter/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/ssa_filter/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/bv_gamma_combined/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/fft_docking_64/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/fft_docking_128/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/densify_radial_df20/unified_N128_rep1.json",
+    "benchmark_results/profiles/method_comparison_hard_regime/densify_radial_df18/unified_N128_rep1.json"
+  ],
+  "started_at": "2026-04-10 14:05:51",
+  "commit": "d241350"
+}

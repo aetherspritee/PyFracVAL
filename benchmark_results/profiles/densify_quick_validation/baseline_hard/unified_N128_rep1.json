@@ -1,0 +1,84 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "run_name": "baseline_hard_N128_rep1",
+  "commit": "6be173b",
+  "started_at": "2026-04-10 03:19:07",
+  "config": {
+    "N": 128,
+    "Df": 2.25,
+    "kf": 0.95,
+    "rp_g": 100.0,
+    "rp_gstd": 1.9,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0,
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32,
+    "cca_retry_rotation_mode": "single",
+    "cca_retry_escalate_after": 120,
+    "densify_enabled": false
+  },
+  "algorithm": {
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32,
+    "cca_retry_rotation_mode": "single",
+    "cca_retry_escalate_after": 120,
+    "densify_enabled": false
+  },
+  "n_aggregates": 5,
+  "warmup_tasks": 0,
+  "local": {
+    "environment": "local",
+    "workers": 2,
+    "total_threads": 16,
+    "effective_threads": 16.002246896783497,
+    "worker_threads": {
+      "tcp://127.0.0.1:37567": 8,
+      "tcp://127.0.0.1:42931": 8
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:37567": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.80-x86_64-with-glibc2.42",
+        "python": "3.13.12",
+        "pid": 561824,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:42931": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.80-x86_64-with-glibc2.42",
+        "python": "3.13.12",
+        "pid": 561827,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:42931": 0.33703112800139934,
+      "tcp://127.0.0.1:37567": 0.34511422899959143
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:37567": 0.9882892382884021,
+      "tcp://127.0.0.1:42931": 1.011991623809535
+    },
+    "n_aggregates": 5,
+    "successes": 2,
+    "success_rate": 0.4,
+    "total_wall_s": 16.718953133007744,
+    "throughput_agg_per_s": 0.2990617869565437,
+    "throughput_per_thread": 0.01869136168478398,
+    "throughput_per_effective_thread": 0.01868873720581427,
+    "task_wall_mean_s": 10.079688261798584,
+    "task_wall_median_s": 10.551290539995534,
+    "task_cpu_mean_s": 10.2981946428,
+    "task_cpu_median_s": 10.668482936,
+    "cpu_to_wall_ratio": 1.0216778907567552,
+    "thread_busy_fraction": 0.18840309897114885,
+    "profiling_artifacts": {}
+  },
+  "remote": null,
+  "comparison": {}
+}
