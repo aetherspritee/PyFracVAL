@@ -7,7 +7,8 @@ from typing import Any
 import numpy as np
 
 # Import necessary modules from your library
-from . import particle_generation, utils
+from . import config, particle_generation, utils
+from .densify import densify_aggregate
 from .cca_agg import CCAggregator
 from .pca_subclusters import Subclusterer
 from .schemas import AggregateProperties, GenerationInfo, Metadata, SimulationParameters
@@ -169,6 +170,19 @@ def run_simulation(
             continue
 
         # 4. Cluster-Cluster Aggregation
+        # When densify is enabled, generate at source Df/kf for easier CCA
+        densify_enabled_gen = bool(getattr(config, "DENSIFY_ENABLED", False))
+        if densify_enabled_gen:
+            cca_df = float(getattr(config, "DENSIFY_SOURCE_DF", 2.0))
+            cca_kf = float(getattr(config, "DENSIFY_SOURCE_KF", 1.0))
+            logger.info(
+                f"Densify: generating at source Df/kf={cca_df}/{cca_kf} "
+                f"(target: {sim_params.Df}/{sim_params.kf})"
+            )
+        else:
+            cca_df = sim_params.Df
+            cca_kf = sim_params.kf
+
         logger.info("--- Starting Cluster-Cluster Aggregation ---")
         cca_start_time = time.time()
         cca_runner = CCAggregator(
@@ -176,8 +190,8 @@ def run_simulation(
             initial_radii=pca_coords_radii[:, 3],
             initial_i_orden=pca_i_orden,
             n_total=sim_params.N,
-            df=sim_params.Df,
-            kf=sim_params.kf,
+            df=cca_df,
+            kf=cca_kf,
             tol_ov=sim_params.tol_ov,
             ext_case=sim_params.ext_case,
             rng=rng,
@@ -205,6 +219,46 @@ def run_simulation(
     # 5. Prepare Results (Only if CCA succeeded)
     final_coords, final_radii = cca_result
     n_actual = final_coords.shape[0]
+
+    # 5b. Post-aggregation densification (opt-in)
+    densify_enabled = bool(getattr(config, "DENSIFY_ENABLED", False))
+    if densify_enabled:
+        source_df = float(getattr(config, "DENSIFY_SOURCE_DF", 2.0))
+        source_kf = float(getattr(config, "DENSIFY_SOURCE_KF", 1.0))
+        densify_method = str(getattr(config, "DENSIFY_METHOD", "radial"))
+        densify_rtol = float(getattr(config, "DENSIFY_RTOL", 0.02))
+        densify_max_push = int(getattr(config, "DENSIFY_MAX_PUSH_ITERS", 50))
+        densify_max_iters = int(getattr(config, "DENSIFY_MAX_DENSIFY_ITERS", 20))
+        densify_push_frac = float(getattr(config, "DENSIFY_PUSH_FRACTION", 0.5))
+        densify_push_pat = int(getattr(config, "DENSIFY_PUSH_PATIENCE", 10))
+        logger.info(
+            f"Densification enabled: method={densify_method}, "
+            f"source Df/kf={source_df}/{source_kf} -> "
+            f"target Df/kf={sim_params.Df}/{sim_params.kf}"
+        )
+        densified_coords, densified_radii, densify_ok = densify_aggregate(
+            final_coords,
+            final_radii,
+            target_df=sim_params.Df,
+            target_kf=sim_params.kf,
+            tol_ov=sim_params.tol_ov,
+            max_push_iters=densify_max_push,
+            max_densify_iters=densify_max_iters,
+            push_fraction=densify_push_frac,
+            push_patience=densify_push_pat,
+            rg_rtol=densify_rtol,
+            method=densify_method,
+        )
+        if densify_ok:
+            logger.info("Densification succeeded, using densified coordinates.")
+            final_coords = densified_coords
+            final_radii = densified_radii
+            n_actual = final_coords.shape[0]
+        else:
+            logger.warning("Densification did not fully converge; using best result.")
+            final_coords = densified_coords
+            final_radii = densified_radii
+            n_actual = final_coords.shape[0]
 
     # Calculate final properties including Rg
     final_rg = 0.0

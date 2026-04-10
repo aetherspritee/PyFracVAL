@@ -179,6 +179,16 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_fft_top_k_peaks: int = 10
     cca_fft_gamma_tolerance: float = 0.10
     cca_fft_min_peak_distance: int = 3
+    densify_enabled: bool = False
+    densify_source_df: float = 2.0
+    densify_source_kf: float = 1.0
+    densify_max_push_iters: int = 50
+    densify_max_densify_iters: int = 20
+    densify_push_fraction: float = 0.5
+    densify_push_patience: int = 10
+    densify_rtol: float = 0.02
+    densify_method: str = "radial"
+    densify_rtol_multiplier: float = 2.0
     profile_cca_retry_modes: bool = False
 
 
@@ -403,6 +413,16 @@ CCA_FFT_GAMMA_TOLERANCE: float = 0.10  # Relative tolerance on gamma_pc distance
 CCA_FFT_MIN_PEAK_DISTANCE: int = (
     3  # Minimum grid-cell distance between correlation peaks
 )
+DENSIFY_ENABLED: bool = False
+DENSIFY_SOURCE_DF: float = 2.0
+DENSIFY_SOURCE_KF: float = 1.0
+DENSIFY_MAX_PUSH_ITERS: int = 50
+DENSIFY_MAX_DENSIFY_ITERS: int = 20
+DENSIFY_PUSH_FRACTION: float = 0.5
+DENSIFY_PUSH_PATIENCE: int = 10
+DENSIFY_RTOL: float = 0.02
+DENSIFY_METHOD: str = "radial"
+DENSIFY_RTOL_MULTIPLIER: float = 2.0
 PROFILE_CCA_RETRY_MODES: bool = False  # Print retry-mode usage and success counters
 PARALLEL_SUBCLUSTERS: bool = (
     True  # Build independent PCA subclusters in parallel (multiprocessing.Pool)
