@@ -10,7 +10,6 @@ from .logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
 
-FLOATING_POINT_ERROR = 1e-9  # Defined in utils, but maybe locally needed? Use utils.
 
 # Spatial indexing threshold: use k-d tree when aggregate has more than this many particles
 KDTREE_THRESHOLD = 50  # Empirically tuned: tree overhead < linear search benefit

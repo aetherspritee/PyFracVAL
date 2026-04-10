@@ -4,7 +4,7 @@ This file documents repository conventions for humans and coding agents.
 
 ## Opencode
 
-Currently Opencode has a problem with the `write` and `apply_patch` tool.
+Currently Opencode has a problem with the `write`, `edit`, and `apply_patch` tool.
 Refrain from using them and instead use the `bash` tool
 with appropriate an appropriate command to replace them!
 
@@ -187,3 +187,60 @@ Only `blocks` dependencies affect the ready work queue.
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+
+## Module Structure (Updated 2026-04-10)
+
+The codebase was refactored from monolithic files into domain-specific modules.
+`utils.py` and `cca_agg.py` remain as backward-compatible re-export shims.
+
+### Core Algorithm Modules
+- `pyfracval/pca_agg.py` - PCA (Particle-Cluster Aggregation) implementation
+- `pyfracval/cca_agg.py` - CCA (Cluster-Cluster Aggregation) orchestrator (delegates to sub-modules)
+- `pyfracval/pca_subclusters.py` - PCA subcluster generation with parallel support
+
+### Extracted from `utils.py` (backward-compatible shim still exists)
+- `pyfracval/geometry.py` - Rodrigues rotation, sphere intersection, `FLOATING_POINT_ERROR`
+- `pyfracval/fractal.py` - Fractal metrics (`calculate_rg`, `gamma_calculation`, `validate_fractal_structure`)
+- `pyfracval/overlap.py` - Overlap calculation dispatch (`calculate_max_overlap_*_auto`, `PARALLEL_OVERLAP_THRESHOLD`)
+- `pyfracval/cca_kernels.py` - CCA-specific JIT kernels (`_cca_reintento_kernel`, `batch_rotate_cluster_cca`, `_GOLDEN_RATIO`, `_TWO_PI`)
+- `pyfracval/pca_kernels.py` - PCA-specific JIT kernels (`batch_calculate_positions_pca`, `batch_check_overlaps_pca`)
+
+### Configuration & Environment
+- `pyfracval/config.py` - Pydantic models + legacy constants (deprecated in favor of config adapter)
+- `pyfracval/config_adapter.py` - `get_config()` returns `OrchestratorAlgorithmConfig`; `getattr_config()` drop-in for `getattr(config, "X", default)`
+- `pyfracval/environments.py` - `get_env_config()` for `PYFRACVAL_*` and thread control env vars
+- `pyfracval/schemas.py` - Pydantic schemas for simulation results
+
+### I/O & Runner
+- `pyfracval/main_runner.py` - Main simulation entry point
+- `pyfracval/cli.py` - Click CLI interface
+- `pyfracval/app.py` - Streamlit web app
+- `pyfracval/dask_runner.py` - Dask distributed execution
+- `pyfracval/batch_runner.py` - Batch simulation runner
+
+### Specialized Modules
+- `pyfracval/densify.py` - Aggregate densification
+- `pyfracval/fft_docking.py` - FFT-based docking for CCA sticking
+- `pyfracval/soft_relaxation.py` - Soft potential relaxation fallback
+- `pyfracval/particle_generation.py` - Lognormal particle radius generation
+- `pyfracval/visualization.py` - PyVista-based 3D visualization
+- `pyfracval/logs.py` - Custom logging setup
+
+### Import Conventions
+```python
+# Preferred (new modules):
+from pyfracval.geometry import rodrigues_rotation, FLOATING_POINT_ERROR
+from pyfracval.fractal import calculate_rg, validate_fractal_structure
+from pyfracval.overlap import calculate_max_overlap_cca_auto
+from pyfracval.config_adapter import get_config
+
+# Still works (backward compatible, deprecated):
+from pyfracval.utils import calculate_rg, rodrigues_rotation
+from pyfracval.config import CCA_STICKING_METHOD  # emits DeprecationWarning
+```
+
+### Key Constants
+- `FLOATING_POINT_ERROR = 1e-9` — defined in `geometry.py`, re-exported from `utils.py`
+- `_GOLDEN_RATIO`, `_TWO_PI` — defined in `cca_kernels.py`, used by JIT kernels
+- `PARALLEL_OVERLAP_THRESHOLD = 200` — defined in `overlap.py`
+- Legacy uppercase constants in `config.py` are deprecated; use `get_config()` from `config_adapter.py`

@@ -1,3 +1,9 @@
+"""Streamlit application for exploring saved PyFracVAL aggregate data.
+
+The module initializes the Streamlit UI, discovers ``.dat`` files under the
+user-provided paths, and renders aggregate particle data alongside metadata.
+"""
+
 import argparse
 import re
 import sys

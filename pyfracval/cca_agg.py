@@ -9,8 +9,8 @@ import numpy as np
 
 from . import config, utils
 from .fft_docking import fft_dock_sticking
-from .soft_relaxation import soft_sticking
 from .logs import TRACE_LEVEL_NUM
+from .soft_relaxation import soft_sticking
 
 logger = logging.getLogger(__name__)
 
@@ -2219,7 +2219,7 @@ class CCAggregator:
             # --- Update next iteration arrays ---
             num_added = combined_coords.shape[0]
             if fill_idx + num_added > self.N:
-                logger.error(f"Exceeding total particle count N during CCA iteration.")
+                logger.error("Exceeding total particle count N during CCA iteration.")
                 self.not_able_cca = True
                 return False
 

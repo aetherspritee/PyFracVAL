@@ -17,7 +17,7 @@ from typing import Tuple
 
 import numpy as np
 
-from . import config, utils
+from . import utils
 
 logger = logging.getLogger(__name__)
 

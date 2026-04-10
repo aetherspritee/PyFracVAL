@@ -3,11 +3,12 @@
 import logging
 import math
 import multiprocessing
-import os
 from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
+
+from pyfracval.environments import get_env_config
 
 from . import particle_generation
 from .pca_agg import PCAggregator
@@ -228,6 +229,7 @@ class Subclusterer(BaseModel):
         """
         from . import config  # local import avoids circular dep at module level
 
+        env_config = get_env_config()
         subcluster_sizes = self._determine_subcluster_sizes()
 
         # Handle the edge case of only 1 cluster (N < n_subcl or N=n_subcl)
@@ -296,7 +298,7 @@ class Subclusterer(BaseModel):
         use_parallel = (
             config.PARALLEL_SUBCLUSTERS
             and self.number_clusters >= config.PARALLEL_SUBCLUSTERS_MIN_COUNT
-            and os.environ.get("PYFRACVAL_DISABLE_PARALLEL_SUBCLUSTERS") != "1"
+            and not env_config.disable_parallel_subclusters
         )
 
         if use_parallel:

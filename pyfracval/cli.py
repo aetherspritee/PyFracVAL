@@ -9,6 +9,7 @@ import numpy as np
 from pyfracval import config as default_config
 from pyfracval.logs import TRACE_LEVEL_NUM, create_logger
 from pyfracval.main_runner import run_simulation
+from pyfracval.visualization import plot_particles
 
 # --- Default values from config (or override here) ---
 # These will be used if the user doesn't provide options
@@ -152,13 +153,26 @@ DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
 def cli(ctx, **kwargs) -> None:
     """Generate fractal particle clusters using the FracVAL algorithm.
 
-    This tool implements the Particle-Cluster Aggregation (PCA) followed
-    by Cluster-Cluster Aggregation (CCA) approach described by
-    Moran et al. (2019) to generate aggregates with tunable fractal
-    dimension (Df) and prefactor (kf) from polydisperse primary particles.
+    Parameters
+    ----------
+    ctx : click.Context
+        Click command context used to detect whether a subcommand was invoked.
+    **kwargs : dict
+        Parsed CLI options, including fractal parameters, particle size
+        distribution settings, output directory, logging controls, and
+        generation limits.
 
-    Allows specifying target Df, kf, and particle size distribution
-    (via geometric mean/std dev or estimated from arithmetic std dev).
+    Returns
+    -------
+    None
+        The command performs side effects only and exits through Click.
+
+    Notes
+    -----
+    This command implements the Particle-Cluster Aggregation (PCA) followed
+    by Cluster-Cluster Aggregation (CCA) approach described by Moran et al.
+    (2019). It validates the requested parameters, configures logging, and
+    runs one or more aggregate generation attempts.
     """
     if ctx.invoked_subcommand:
         return
@@ -362,8 +376,21 @@ def cli(ctx, **kwargs) -> None:
 def explore(path: str):
     """Launch the Streamlit dashboard to explore saved aggregate data.
 
-    Requires streamlit to be installed separately. Looks for `.dat` files
-    in the specified path.
+    Parameters
+    ----------
+    path : str
+        Directory searched for saved aggregate data files before launching
+        the Streamlit app.
+
+    Returns
+    -------
+    None
+        The function launches Streamlit or exits the process on error.
+
+    Notes
+    -----
+    Requires Streamlit to be installed separately. The app looks for ``.dat``
+    files in the provided directory and starts the dashboard with that path.
     """
     logger = create_logger(logging.INFO)
 

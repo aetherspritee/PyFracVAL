@@ -99,7 +99,23 @@ class SweepConfig(BaseModel):
 
     @classmethod
     def from_toml(cls, path: str | Path) -> "SweepConfig":
-        """Load a :class:`SweepConfig` from a TOML file."""
+        """Load a :class:`SweepConfig` from a TOML file.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Path to the TOML file containing sweep configuration values.
+
+        Returns
+        -------
+        SweepConfig
+            A validated configuration instance created from the file data.
+
+        Notes
+        -----
+        The TOML file is parsed with :mod:`tomllib` and validated through the
+        Pydantic model constructor.
+        """
         with open(path, "rb") as fh:
             data = tomllib.load(fh)
         return cls.model_validate(data)
@@ -109,12 +125,22 @@ class SweepConfig(BaseModel):
     def merged(self, overrides: dict[str, Any]) -> "SweepConfig":
         """Return a new :class:`SweepConfig` with *overrides* applied.
 
-        Only keys whose value is not ``None`` in *overrides* are applied.
-        Nested overrides for ``dask`` and ``simulation`` are handled via
-        dedicated sub-dicts (keys ``"dask"`` and ``"simulation"``).
+        Parameters
+        ----------
+        overrides : dict[str, Any]
+            Mapping of replacement values. ``None`` values are ignored, while
+            nested ``"dask"`` and ``"simulation"`` dictionaries are merged
+            into the corresponding sub-models.
 
-        This is designed to be called with a filtered dict built from
-        ``argparse.Namespace``, where unset flags are ``None``.
+        Returns
+        -------
+        SweepConfig
+            A new configuration instance with the requested overrides applied.
+
+        Notes
+        -----
+        This is intended for filtered CLI or argparse namespaces where unset
+        options are represented as ``None``.
         """
         top: dict[str, Any] = self.model_dump()
 
@@ -290,6 +316,23 @@ class OrchestratorConfig(BaseModel):
 
     @classmethod
     def from_toml(cls, path: str | Path) -> "OrchestratorConfig":
+        """Load an :class:`OrchestratorConfig` from a TOML file.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Path to the TOML file containing orchestrator defaults and run
+            definitions.
+
+        Returns
+        -------
+        OrchestratorConfig
+            A validated orchestrator configuration created from the file data.
+
+        Notes
+        -----
+        The TOML file is parsed with :mod:`tomllib` and validated by Pydantic.
+        """
         with open(path, "rb") as fh:
             data = tomllib.load(fh)
         return cls.model_validate(data)
@@ -304,7 +347,6 @@ N: int = 128  # Number of Primary Particles (PP)
 # N: int = 1024  # Number of Primary Particles (PP)
 DF: float = 2.0  # Target Fractal dimension
 KF: float = 1.0  # Target Fractal prefactor
-QUANTITY_AGGREGATES: int = 1  # Number of aggregates to generate
 
 # --- Primary Particle Properties ---
 RP_GEOMETRIC_MEAN: float = 100.0  # Geometric mean radius of PP
@@ -327,9 +369,6 @@ ROTATION_BATCH_SIZE: int = (
 PROFILE_TIMING: bool = False  # Print per-phase timing summary after each run_cca
 USE_CCA_INCREMENTAL_OVERLAP: bool = (
     True  # Enable active-set + periodic full-check overlap path in CCA retries
-)
-CCA_INCREMENTAL_FRONTIER_DELTA: float = (
-    1.0e-4  # Reserved for tuning compatibility (currently unused)
 )
 CCA_INCREMENTAL_FULL_SYNC_PERIOD: int = (
     20  # Force full overlap sync every N retry rotations
@@ -457,3 +496,99 @@ GOLDEN_RATIO: float = (1.0 + sqrt(5.0)) / 2.0  # Fibonacci spiral constant
 
 # --- Derived Parameters (can be calculated later if needed) ---
 # N_SUBCL: int = ... # Calculated in pca_subclusters.py
+
+
+# ---------------------------------------------------------------------------
+# Deprecation gateway — emit DeprecationWarning for legacy constant access
+# ---------------------------------------------------------------------------
+_LEGACY_DEPRECATED = {
+    "USE_CCA_INCREMENTAL_OVERLAP",
+    "CCA_INCREMENTAL_FULL_SYNC_PERIOD",
+    "CCA_CANDIDATE_POLICY",
+    "CCA_SCORE_TOPK_PER_CLASS",
+    "CCA_RETRY_ROTATION_MODE",
+    "CCA_COARSE_FINE_COARSE_FRACTION",
+    "CCA_COARSE_FINE_SPIN_DEG",
+    "CCA_RETRY_ESCALATE_AFTER",
+    "CCA_DUAL_JITTER_INTERVAL",
+    "CCA_DUAL_JITTER_DEG",
+    "CCA_COARSE_SWEEP_STEPS",
+    "CCA_COARSE_SPIN_ANCHOR_STEPS",
+    "CCA_COARSE_SPIN_MOVING_STEPS",
+    "CCA_SOFT_ACCEPT_ENABLED",
+    "CCA_SOFT_ACCEPT_OVERLAP",
+    "CCA_REPAIR_MAX_ITERS",
+    "CCA_REPAIR_STEP_DEG",
+    "CCA_REPAIR_STEP_TRANSLATION_FRAC",
+    "CCA_REPAIR_PATIENCE",
+    "CCA_GAMMA_EXPANSION_ENABLED",
+    "CCA_GAMMA_EXPANSION_STEP",
+    "CCA_GAMMA_EXPANSION_MAX_FACTOR",
+    "CAA_GAMMA_EXPANSION_MASS_EXPONENT",
+    "CCA_GAMMA_EXPANSION_MAX_ATTEMPTS",
+    "CCA_PAIR_FEASIBILITY_FILTER",
+    "CCA_BV_DEEP_PENETRATION_FACTOR",
+    "CCA_SSA_MIN_EXPOSURE",
+    "CCA_STICKING_METHOD",
+    "CCA_FFT_GRID_SIZE",
+    "CCA_FFT_NUM_ROTATIONS",
+    "CCA_FFT_TOP_K_PEAKS",
+    "CCA_FFT_GAMMA_TOLERANCE",
+    "CCA_FFT_MIN_PEAK_DISTANCE",
+    "DENSIFY_ENABLED",
+    "DENSIFY_SOURCE_DF",
+    "DENSIFY_SOURCE_KF",
+    "DENSIFY_MAX_PUSH_ITERS",
+    "DENSIFY_MAX_DENSIFY_ITERS",
+    "DENSIFY_PUSH_FRACTION",
+    "DENSIFY_PUSH_PATIENCE",
+    "DENSIFY_RTOL",
+    "DENSIFY_METHOD",
+    "DENSIFY_RTOL_MULTIPLIER",
+    "PROFILE_CCA_RETRY_MODES",
+    "USE_BATCH_ROTATION",
+    "ROTATION_BATCH_SIZE",
+    "PROFILE_TIMING",
+    "CCA_SOFT_RELAXATION_ENABLED",
+    "CCA_SOFT_RELAXATION_K_REPULSION",
+    "CCA_SOFT_RELAXATION_K_GAMMA",
+    "CCA_SOFT_RELAXATION_GAMMA_TOLERANCE",
+    "CCA_SOFT_RELAXATION_MAX_ITERS",
+    "CCA_SOFT_RELAXATION_LEARNING_RATE",
+    "CCA_SOFT_RELAXATION_FALLBACK_ONLY",
+    "PARALLEL_SUBCLUSTERS",
+    "PARALLEL_SUBCLUSTERS_MIN_COUNT",
+    "N",
+    "DF",
+    "KF",
+    "RP_GEOMETRIC_MEAN",
+    "RP_GEOMETRIC_STD",
+    "EXT_CASE",
+    "N_SUBCL_PERCENTAGE",
+    "TOL_OVERLAP",
+    "PROFILE_CCA_LEAF_STATS",
+    "PROFILE_CCA_CANDIDATE_SCORE",
+    "PI",
+    "GOLDEN_RATIO",
+}
+
+
+def __getattr__(name: str) -> object:
+    """Emit a deprecation warning when a legacy constant is accessed.
+
+    This hook intercepts ``config.UPPER_CASE`` attribute access so that
+    users and downstream code are nudged towards the Pydantic config models
+    or :func:`pyfracval.config_adapter.get_config`.
+    """
+    if name in _LEGACY_DEPRECATED:
+        import warnings
+
+        warnings.warn(
+            f"Accessing config.{name} is deprecated. "
+            f"Use pyfracval.config_adapter.get_config() or the "
+            f"OrchestratorAlgorithmConfig / OrchestratorSimulationConfig "
+            f"Pydantic models instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

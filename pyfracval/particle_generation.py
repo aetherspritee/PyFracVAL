@@ -9,10 +9,23 @@ logger = logging.getLogger(__name__)
 
 
 def random_normal_custom(rng: np.random.Generator | None = None) -> float:
-    """
-    Generates a normally distributed random number using the Ziggurat method
-    as implemented in numpy, which is generally preferred over custom
-    acceptance-rejection methods unless specific properties are needed.
+    """Draw a single standard normal variate.
+
+    Parameters
+    ----------
+    rng : numpy.random.Generator | None, optional
+        Random number generator to use. If ``None``, a fresh default generator
+        is created.
+
+    Returns
+    -------
+    float
+        A single sample from the standard normal distribution.
+
+    Notes
+    -----
+    This uses :meth:`numpy.random.Generator.standard_normal`, which relies on
+    NumPy's normal sampling implementation.
     """
     _rng = rng if rng is not None else np.random.default_rng()
     return float(_rng.standard_normal())

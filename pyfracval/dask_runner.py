@@ -11,6 +11,11 @@ import tempfile
 import tomllib
 from pathlib import Path
 
+from pyfracval.environments import (
+    PYFRACVAL_EXPECTED_VERSION,
+    PYFRACVAL_INSTALLED_WHEEL,
+)
+
 logger = logging.getLogger(__name__)
 
 # Project root: two levels up from this file (pyfracval/dask_runner.py → project root)
@@ -97,8 +102,8 @@ def _install_wheel_bytes(
         if mod_name == "pyfracval" or mod_name.startswith("pyfracval."):
             sys.modules.pop(mod_name, None)
 
-    os.environ["PYFRACVAL_INSTALLED_WHEEL"] = wheel_filename
-    os.environ["PYFRACVAL_EXPECTED_VERSION"] = expected_version
+    os.environ[PYFRACVAL_INSTALLED_WHEEL] = wheel_filename
+    os.environ[PYFRACVAL_EXPECTED_VERSION] = expected_version
 
     return {
         "python": sys.executable,
@@ -124,8 +129,8 @@ def _worker_fingerprint() -> dict[str, str]:
         "version": str(runtime_version),
         "module_file": str(getattr(pyfracval, "__file__", "unknown")),
         "pid": str(os.getpid()),
-        "installed_wheel_env": os.environ.get("PYFRACVAL_INSTALLED_WHEEL", ""),
-        "expected_version_env": os.environ.get("PYFRACVAL_EXPECTED_VERSION", ""),
+        "installed_wheel_env": os.environ.get(PYFRACVAL_INSTALLED_WHEEL, ""),
+        "expected_version_env": os.environ.get(PYFRACVAL_EXPECTED_VERSION, ""),
     }
 
 
@@ -202,8 +207,8 @@ def _register_package(client) -> None:
             if mod_name == "pyfracval" or mod_name.startswith("pyfracval."):
                 sys.modules.pop(mod_name, None)
 
-        os.environ["PYFRACVAL_INSTALLED_WHEEL"] = wheel_filename
-        os.environ["PYFRACVAL_EXPECTED_VERSION"] = expected_version
+        os.environ[PYFRACVAL_INSTALLED_WHEEL] = wheel_filename
+        os.environ[PYFRACVAL_EXPECTED_VERSION] = expected_version
 
         return {
             "python": sys.executable,

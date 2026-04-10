@@ -13,13 +13,10 @@ Reference: Katchalski-Katzir et al., PNAS 89(6):2195-2199, 1992.
 
 import logging
 import math
-from itertools import product
 from typing import Tuple
 
 import numpy as np
-from numba import jit, prange
-
-from . import utils
+from numba import jit
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +273,7 @@ def extract_top_k_peaks(
     Returns list of (score, dx, dy, dz) sorted by score descending,
     where (dx, dy, dz) is the translation offset in grid units.
     """
-    from scipy.ndimage import maximum_filter, label
+    from scipy.ndimage import label, maximum_filter
 
     neighbourhood_size = 2 * min_distance + 1
     local_max = maximum_filter(corr, size=neighbourhood_size)
