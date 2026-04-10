@@ -1,0 +1,43 @@
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/candidate_policy_probe_v1"
+n_values = [512]
+repeats = 1
+n_aggregates = 8
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 180
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.25
+kf = 0.95
+rp_g = 100.0
+rp_gstd = 1.9
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_rotation_mode = "single"
+cca_soft_accept_enabled = false
+profile_cca_retry_modes = false
+
+[[runs]]
+name = "leaf_hybrid"
+scheduler = "local"
+[runs.algorithm]
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+
+[[runs]]
+name = "leaf_score"
+scheduler = "local"
+[runs.algorithm]
+cca_candidate_policy = "leaf_score"
+cca_score_topk_per_class = 0

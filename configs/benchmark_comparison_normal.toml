@@ -1,0 +1,66 @@
+# Benchmark comparison config for normal regime
+# Tests all retry modes: single, alternate, coarse_grid, coarse_to_fine
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/comparison_current"
+n_values = [256, 512]
+repeats = 2
+n_aggregates = 10
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 120
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.2
+kf = 1.0
+rp_g = 100.0
+rp_gstd = 1.8
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_escalate_after = 120
+cca_dual_jitter_interval = 5
+cca_dual_jitter_deg = 8.0
+cca_coarse_sweep_steps = 10
+cca_coarse_spin_anchor_steps = 6
+cca_coarse_spin_moving_steps = 6
+cca_coarse_fine_coarse_fraction = 0.67
+cca_coarse_fine_spin_deg = 12.0
+profile_cca_retry_modes = true
+
+# Mode: single
+[[runs]]
+name = "single"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "single"
+
+# Mode: alternate
+[[runs]]
+name = "alternate"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "alternate"
+
+# Mode: coarse_grid
+[[runs]]
+name = "coarse_grid"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "coarse_grid"
+
+# Mode: coarse_to_fine
+[[runs]]
+name = "coarse_to_fine"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "coarse_to_fine"
