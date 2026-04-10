@@ -9,6 +9,7 @@ import numpy as np
 
 from . import config, utils
 from .fft_docking import fft_dock_sticking
+from .soft_relaxation import soft_sticking
 from .logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
@@ -166,6 +167,10 @@ class CCAggregator:
         # FFT docking telemetry
         self._fft_docking_attempts: int = 0
         self._fft_docking_successes: int = 0
+
+        # Soft relaxation telemetry
+        self._soft_relaxation_attempts: int = 0
+        self._soft_relaxation_successes: int = 0
 
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
@@ -1988,6 +1993,108 @@ class CCAggregator:
             )
             return None  # Failed to find non-overlapping configuration
 
+    def _try_soft_relaxation_sticking(
+        self,
+        cluster_idx1: int,
+        cluster_idx2: int,
+        cluster_props_cache: dict | None = None,
+    ) -> Tuple[np.ndarray, np.ndarray] | None:
+        """Attempt sticking using soft potential relaxation.
+
+        This is a fallback method when rigid-body docking fails.
+        Uses harmonic repulsion potentials and gradient descent to
+        find a valid configuration.
+
+        Returns:
+            Tuple(combined_coords, combined_radii) or None if failed.
+        """
+        from . import config
+
+        # Get cluster data
+        coords1_in, radii1_in = self._get_cluster_data(cluster_idx1)
+        coords2_in, radii2_in = self._get_cluster_data(cluster_idx2)
+        n1 = coords1_in.shape[0]
+        n2 = coords2_in.shape[0]
+
+        if n1 == 0 or n2 == 0:
+            return None
+
+        # Get cluster properties
+        if (
+            cluster_props_cache is not None
+            and cluster_idx1 in cluster_props_cache
+            and cluster_idx2 in cluster_props_cache
+        ):
+            _p1 = cluster_props_cache[cluster_idx1]
+            _p2 = cluster_props_cache[cluster_idx2]
+            m1, rg1, cm1, r_max1 = _p1[0], _p1[1], _p1[2], _p1[3]
+            m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
+        else:
+            m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
+                coords1_in, radii1_in, self.df, self.kf
+            )
+            m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
+                coords2_in, radii2_in, self.df, self.kf
+            )
+
+        # Calculate gamma
+        props1 = (m1, rg1, cm1, r_max1, radii1_in)
+        props2 = (m2, rg2, cm2, r_max2, radii2_in)
+        gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
+
+        # Get candidate particles (use first available or compute)
+        # For simplicity, use the particle closest to CM in each cluster
+        dists1 = np.linalg.norm(coords1_in - cm1, axis=1)
+        candidate_idx1 = int(np.argmin(dists1))
+        dists2 = np.linalg.norm(coords2_in - cm2, axis=1)
+        candidate_idx2 = int(np.argmin(dists2))
+
+        # Get config parameters
+        k_repulsion = float(getattr(config, "CCA_SOFT_RELAXATION_K_REPULSION", 10.0))
+        k_gamma = float(getattr(config, "CCA_SOFT_RELAXATION_K_GAMMA", 1.0))
+        gamma_tol = float(getattr(config, "CCA_SOFT_RELAXATION_GAMMA_TOLERANCE", 0.05))
+        max_iters = int(getattr(config, "CCA_SOFT_RELAXATION_MAX_ITERS", 100))
+        learning_rate = float(getattr(config, "CCA_SOFT_RELAXATION_LEARNING_RATE", 0.1))
+
+        try:
+            new_coords1, new_coords2, success, info = soft_sticking(
+                coords1_in,
+                radii1_in,
+                coords2_in,
+                radii2_in,
+                gamma_pc,
+                cm1,
+                cm2,
+                candidate_idx1,
+                candidate_idx2,
+                k_repulsion=k_repulsion,
+                k_gamma=k_gamma,
+                gamma_tolerance=gamma_tol,
+                max_iters=max_iters,
+                learning_rate=learning_rate,
+            )
+
+            if success:
+                combined_coords = np.vstack((new_coords1, new_coords2))
+                combined_radii = np.concatenate((radii1_in, radii2_in))
+                logger.debug(
+                    f"Soft relaxation converged: iters={info.get('iterations', 0)}, "
+                    f"E={info.get('final_energy', 0):.4e}, "
+                    f"gamma_err={info.get('gamma_error', 0):.4f}"
+                )
+                return combined_coords, combined_radii
+            else:
+                logger.debug(
+                    f"Soft relaxation did not converge: "
+                    f"max_ov={info.get('final_max_overlap', 1):.4e}, "
+                    f"gamma_err={info.get('gamma_error', 0):.4f}"
+                )
+                return None
+
+        except Exception as e:
+            logger.warning(f"Soft relaxation failed with exception: {e}")
+            return None
+
     # --------------------------------------------------------------------------
     # Main CCA Iteration Logic
     # --------------------------------------------------------------------------
@@ -2077,6 +2184,26 @@ class CCAggregator:
                 stick_result = self._perform_cca_sticking_with_expansion(
                     k, other, cluster_props_cache
                 )
+
+                # Try soft relaxation fallback if enabled and rigid sticking failed
+                if (
+                    stick_result is None
+                    and getattr(config, "CCA_SOFT_RELAXATION_ENABLED", False)
+                    and getattr(config, "CCA_SOFT_RELAXATION_FALLBACK_ONLY", True)
+                ):
+                    self._soft_relaxation_attempts += 1
+                    logger.info(
+                        f"Rigid sticking failed for pair ({k}, {other}), "
+                        f"trying soft relaxation fallback..."
+                    )
+                    stick_result = self._try_soft_relaxation_sticking(
+                        k, other, cluster_props_cache
+                    )
+                    if stick_result is not None:
+                        self._soft_relaxation_successes += 1
+                        logger.info(
+                            f"Soft relaxation succeeded for pair ({k}, {other})"
+                        )
 
                 if stick_result is None:
                     logger.info(

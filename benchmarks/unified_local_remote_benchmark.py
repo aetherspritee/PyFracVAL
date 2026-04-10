@@ -373,6 +373,13 @@ def _apply_algorithm_settings(algorithm_cfg: dict[str, Any]) -> None:
         "densify_rtol": "DENSIFY_RTOL",
         "densify_method": "DENSIFY_METHOD",
         "densify_rtol_multiplier": "DENSIFY_RTOL_MULTIPLIER",
+        "cca_soft_relaxation_enabled": "CCA_SOFT_RELAXATION_ENABLED",
+        "cca_soft_relaxation_k_repulsion": "CCA_SOFT_RELAXATION_K_REPULSION",
+        "cca_soft_relaxation_k_gamma": "CCA_SOFT_RELAXATION_K_GAMMA",
+        "cca_soft_relaxation_gamma_tolerance": "CCA_SOFT_RELAXATION_GAMMA_TOLERANCE",
+        "cca_soft_relaxation_max_iters": "CCA_SOFT_RELAXATION_MAX_ITERS",
+        "cca_soft_relaxation_learning_rate": "CCA_SOFT_RELAXATION_LEARNING_RATE",
+        "cca_soft_relaxation_fallback_only": "CCA_SOFT_RELAXATION_FALLBACK_ONLY",
     }
     for key, attr in mapping.items():
         if key in algorithm_cfg and hasattr(runtime_config, attr):
@@ -410,6 +417,13 @@ _ALGORITHM_CONFIG_KEYS = [
     "densify_rtol",
     "densify_method",
     "densify_rtol_multiplier",
+    "cca_soft_relaxation_enabled",
+    "cca_soft_relaxation_k_repulsion",
+    "cca_soft_relaxation_k_gamma",
+    "cca_soft_relaxation_gamma_tolerance",
+    "cca_soft_relaxation_max_iters",
+    "cca_soft_relaxation_learning_rate",
+    "cca_soft_relaxation_fallback_only",
 ]
 
 

@@ -413,6 +413,26 @@ CCA_FFT_GAMMA_TOLERANCE: float = 0.10  # Relative tolerance on gamma_pc distance
 CCA_FFT_MIN_PEAK_DISTANCE: int = (
     3  # Minimum grid-cell distance between correlation peaks
 )
+
+# Soft Potential Relaxation for hard regimes (alternative to rigid docking)
+CCA_SOFT_RELAXATION_ENABLED: bool = (
+    False  # Enable soft relaxation fallback when rigid docking fails
+)
+CCA_SOFT_RELAXATION_K_REPULSION: float = (
+    10.0  # Spring constant for harmonic repulsion (higher = stiffer)
+)
+CCA_SOFT_RELAXATION_K_GAMMA: float = (
+    1.0  # Spring constant for gamma_pc constraint (higher = stricter)
+)
+CCA_SOFT_RELAXATION_GAMMA_TOLERANCE: float = (
+    0.05  # Allowed fractional deviation from target gamma_pc (5%)
+)
+CCA_SOFT_RELAXATION_MAX_ITERS: int = 100  # Maximum gradient descent iterations
+CCA_SOFT_RELAXATION_LEARNING_RATE: float = 0.1  # Gradient descent step size
+CCA_SOFT_RELAXATION_FALLBACK_ONLY: bool = (
+    True  # Only use soft relaxation after rigid methods fail
+)
+
 DENSIFY_ENABLED: bool = False
 DENSIFY_SOURCE_DF: float = 2.0
 DENSIFY_SOURCE_KF: float = 1.0
