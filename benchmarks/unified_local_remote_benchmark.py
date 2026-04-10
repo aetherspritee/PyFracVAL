@@ -363,6 +363,16 @@ def _apply_algorithm_settings(algorithm_cfg: dict[str, Any]) -> None:
         "cca_fft_top_k_peaks": "CCA_FFT_TOP_K_PEAKS",
         "cca_fft_gamma_tolerance": "CCA_FFT_GAMMA_TOLERANCE",
         "cca_fft_min_peak_distance": "CCA_FFT_MIN_PEAK_DISTANCE",
+        "densify_enabled": "DENSIFY_ENABLED",
+        "densify_source_df": "DENSIFY_SOURCE_DF",
+        "densify_source_kf": "DENSIFY_SOURCE_KF",
+        "densify_max_push_iters": "DENSIFY_MAX_PUSH_ITERS",
+        "densify_max_densify_iters": "DENSIFY_MAX_DENSIFY_ITERS",
+        "densify_push_fraction": "DENSIFY_PUSH_FRACTION",
+        "densify_push_patience": "DENSIFY_PUSH_PATIENCE",
+        "densify_rtol": "DENSIFY_RTOL",
+        "densify_method": "DENSIFY_METHOD",
+        "densify_rtol_multiplier": "DENSIFY_RTOL_MULTIPLIER",
     }
     for key, attr in mapping.items():
         if key in algorithm_cfg and hasattr(runtime_config, attr):
