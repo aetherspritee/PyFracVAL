@@ -379,6 +379,56 @@ def _apply_algorithm_settings(algorithm_cfg: dict[str, Any]) -> None:
             setattr(runtime_config, attr, algorithm_cfg[key])
 
 
+_ALGORITHM_CONFIG_KEYS = [
+    "use_cca_incremental_overlap",
+    "cca_incremental_full_sync_period",
+    "cca_candidate_policy",
+    "cca_score_topk_per_class",
+    "cca_retry_rotation_mode",
+    "cca_retry_escalate_after",
+    "cca_dual_jitter_interval",
+    "cca_dual_jitter_deg",
+    "cca_coarse_sweep_steps",
+    "cca_coarse_spin_anchor_steps",
+    "cca_coarse_spin_moving_steps",
+    "cca_coarse_fine_coarse_fraction",
+    "cca_coarse_fine_spin_deg",
+    "profile_cca_retry_modes",
+    "cca_sticking_method",
+    "cca_fft_grid_size",
+    "cca_fft_num_rotations",
+    "cca_fft_top_k_peaks",
+    "cca_fft_gamma_tolerance",
+    "cca_fft_min_peak_distance",
+    "densify_enabled",
+    "densify_source_df",
+    "densify_source_kf",
+    "densify_max_push_iters",
+    "densify_max_densify_iters",
+    "densify_push_fraction",
+    "densify_push_patience",
+    "densify_rtol",
+    "densify_method",
+    "densify_rtol_multiplier",
+]
+
+
+def _merge_algorithm_into_config(
+    sim_config: dict[str, Any],
+    algorithm_cfg: dict[str, Any],
+) -> dict[str, Any]:
+    """Merge algorithm settings into sim_config dict for Dask worker propagation.
+
+    This ensures algorithm settings survive Dask serialization instead of
+    relying on module-level globals which are reset in worker processes.
+    """
+    merged = dict(sim_config)
+    for key in _ALGORITHM_CONFIG_KEYS:
+        if key in algorithm_cfg:
+            merged[key] = algorithm_cfg[key]
+    return merged
+
+
 @dataclass
 class RunCase:
     run_name: str
@@ -396,7 +446,7 @@ class RunCase:
 
 def _run_one_case(case: RunCase) -> Path:
     _apply_algorithm_settings(case.algorithm_cfg)
-    config = case.sim_config
+    config = _merge_algorithm_into_config(case.sim_config, case.algorithm_cfg)
 
     commit = _git_commit_short()
     started_at = time.strftime("%Y-%m-%d %H:%M:%S")

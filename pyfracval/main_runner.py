@@ -8,8 +8,8 @@ import numpy as np
 
 # Import necessary modules from your library
 from . import config, particle_generation, utils
-from .densify import densify_aggregate
 from .cca_agg import CCAggregator
+from .densify import densify_aggregate
 from .pca_subclusters import Subclusterer
 from .schemas import AggregateProperties, GenerationInfo, Metadata, SimulationParameters
 
@@ -171,10 +171,22 @@ def run_simulation(
 
         # 4. Cluster-Cluster Aggregation
         # When densify is enabled, generate at source Df/kf for easier CCA
-        densify_enabled_gen = bool(getattr(config, "DENSIFY_ENABLED", False))
+        densify_enabled_gen = bool(
+            sim_config_dict.get(
+                "densify_enabled", getattr(config, "DENSIFY_ENABLED", False)
+            )
+        )
         if densify_enabled_gen:
-            cca_df = float(getattr(config, "DENSIFY_SOURCE_DF", 2.0))
-            cca_kf = float(getattr(config, "DENSIFY_SOURCE_KF", 1.0))
+            cca_df = float(
+                sim_config_dict.get(
+                    "densify_source_df", getattr(config, "DENSIFY_SOURCE_DF", 2.0)
+                )
+            )
+            cca_kf = float(
+                sim_config_dict.get(
+                    "densify_source_kf", getattr(config, "DENSIFY_SOURCE_KF", 1.0)
+                )
+            )
             logger.info(
                 f"Densify: generating at source Df/kf={cca_df}/{cca_kf} "
                 f"(target: {sim_params.Df}/{sim_params.kf})"
@@ -221,16 +233,51 @@ def run_simulation(
     n_actual = final_coords.shape[0]
 
     # 5b. Post-aggregation densification (opt-in)
-    densify_enabled = bool(getattr(config, "DENSIFY_ENABLED", False))
+    densify_enabled = bool(
+        sim_config_dict.get(
+            "densify_enabled", getattr(config, "DENSIFY_ENABLED", False)
+        )
+    )
     if densify_enabled:
-        source_df = float(getattr(config, "DENSIFY_SOURCE_DF", 2.0))
-        source_kf = float(getattr(config, "DENSIFY_SOURCE_KF", 1.0))
-        densify_method = str(getattr(config, "DENSIFY_METHOD", "radial"))
-        densify_rtol = float(getattr(config, "DENSIFY_RTOL", 0.02))
-        densify_max_push = int(getattr(config, "DENSIFY_MAX_PUSH_ITERS", 50))
-        densify_max_iters = int(getattr(config, "DENSIFY_MAX_DENSIFY_ITERS", 20))
-        densify_push_frac = float(getattr(config, "DENSIFY_PUSH_FRACTION", 0.5))
-        densify_push_pat = int(getattr(config, "DENSIFY_PUSH_PATIENCE", 10))
+        source_df = float(
+            sim_config_dict.get(
+                "densify_source_df", getattr(config, "DENSIFY_SOURCE_DF", 2.0)
+            )
+        )
+        source_kf = float(
+            sim_config_dict.get(
+                "densify_source_kf", getattr(config, "DENSIFY_SOURCE_KF", 1.0)
+            )
+        )
+        densify_method = str(
+            sim_config_dict.get(
+                "densify_method", getattr(config, "DENSIFY_METHOD", "radial")
+            )
+        )
+        densify_rtol = float(
+            sim_config_dict.get("densify_rtol", getattr(config, "DENSIFY_RTOL", 0.02))
+        )
+        densify_max_push = int(
+            sim_config_dict.get(
+                "densify_max_push_iters", getattr(config, "DENSIFY_MAX_PUSH_ITERS", 50)
+            )
+        )
+        densify_max_iters = int(
+            sim_config_dict.get(
+                "densify_max_densify_iters",
+                getattr(config, "DENSIFY_MAX_DENSIFY_ITERS", 20),
+            )
+        )
+        densify_push_frac = float(
+            sim_config_dict.get(
+                "densify_push_fraction", getattr(config, "DENSIFY_PUSH_FRACTION", 0.5)
+            )
+        )
+        densify_push_pat = int(
+            sim_config_dict.get(
+                "densify_push_patience", getattr(config, "DENSIFY_PUSH_PATIENCE", 10)
+            )
+        )
         logger.info(
             f"Densification enabled: method={densify_method}, "
             f"source Df/kf={source_df}/{source_kf} -> "
