@@ -1,0 +1,124 @@
+# Head-to-head comparison of all CCA sticking methods in hard regime
+# Df=2.25, kf=0.95, sigma=1.9 — the regime where geometric frustration occurs
+# Each method is tested with 30 aggregates for statistical significance
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/method_comparison_hard_regime"
+n_values = [128]
+repeats = 1
+n_aggregates = 30
+warmup_tasks = 2
+seed_start = 1431354440
+trial_timeout = 600
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.25
+kf = 0.95
+rp_g = 100.0
+rp_gstd = 1.9
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_rotation_mode = "single"
+cca_retry_escalate_after = 120
+
+# 1. Baseline: standard fibonacci sticking (no enhancements)
+[[runs]]
+name = "baseline_fibonacci"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fibonacci"
+
+# 2. Gamma expansion: wider gamma search range
+[[runs]]
+name = "gamma_expansion"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fibonacci"
+cca_gamma_expansion_enabled = true
+cca_gamma_expansion_max_attempts = 3
+
+# 3. Bounding volume filter: pre-check pair feasibility before rotation search
+[[runs]]
+name = "bv_filter"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fibonacci"
+cca_pair_feasibility_filter = "bounding_volume"
+
+# 4. SSA filter: surface accessibility filter for pair selection
+[[runs]]
+name = "ssa_filter"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fibonacci"
+cca_pair_feasibility_filter = "ssa"
+
+# 5. BV + gamma expansion combined
+[[runs]]
+name = "bv_gamma_combined"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fibonacci"
+cca_pair_feasibility_filter = "bounding_volume"
+cca_gamma_expansion_enabled = true
+cca_gamma_expansion_max_attempts = 3
+
+# 6. FFT docking (small grid, fast)
+[[runs]]
+name = "fft_docking_64"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fft_docking"
+cca_fft_grid_size = 64
+cca_fft_num_rotations = 70
+cca_fft_top_k_peaks = 10
+
+# 7. FFT docking (medium grid)
+[[runs]]
+name = "fft_docking_128"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fft_docking"
+cca_fft_grid_size = 128
+cca_fft_num_rotations = 70
+cca_fft_top_k_peaks = 10
+
+# 8. Densify (radial): generate at Df=2.0 then compress to Df=2.25
+[[runs]]
+name = "densify_radial_df20"
+scheduler = "local"
+[runs.simulation]
+Df = 2.25
+kf = 0.95
+[runs.algorithm]
+densify_enabled = true
+densify_source_df = 2.0
+densify_source_kf = 1.0
+densify_method = "radial"
+densify_rtol = 0.05
+densify_max_push_iters = 50
+
+# 9. Densify (radial): generate at Df=1.8 then compress to Df=2.25
+[[runs]]
+name = "densify_radial_df18"
+scheduler = "local"
+[runs.simulation]
+Df = 2.25
+kf = 0.95
+[runs.algorithm]
+densify_enabled = true
+densify_source_df = 1.8
+densify_source_kf = 1.0
+densify_method = "radial"
+densify_rtol = 0.05
+densify_max_push_iters = 50

@@ -1543,3 +1543,215 @@ def calculate_max_overlap_cca_auto(
     # Always use sequential with early termination: CCA clusters are placed
     # touching so overlap is found immediately, making early exit dominant.
     return calculate_max_overlap_cca_fast(coords1, radii1, coords2, radii2, tolerance)
+
+
+def compute_empirical_rg(coords: np.ndarray, radii: np.ndarray) -> float:
+    """Compute empirical Rg directly from particle coordinates (mass-weighted).
+
+    Unlike ``calculate_rg`` which uses the fractal scaling law
+    Rg = a*(N/kf)^(1/Df), this function measures Rg from the actual
+    spatial distribution of particles.
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Nx3 array of particle center coordinates.
+    radii : np.ndarray
+        N array of particle radii. Mass is proportional to r^3.
+
+    Returns
+    -------
+    float
+        Empirical (mass-weighted) radius of gyration.
+    """
+    if coords.shape[0] == 0:
+        return 0.0
+    masses = radii**3
+    total_mass = np.sum(masses)
+    if total_mass < 1e-30:
+        return 0.0
+    cm = np.sum(coords * masses[:, np.newaxis], axis=0) / total_mass
+    dist_sq = np.sum((coords - cm[np.newaxis, :]) ** 2, axis=1)
+    return float(np.sqrt(np.sum(dist_sq * masses) / total_mass))
+
+
+def compute_pair_correlation_dimensions(
+    coords: np.ndarray,
+    radii: np.ndarray,
+    n_bins: int = 50,
+) -> dict[str, np.ndarray]:
+    """Estimate fractal dimension from pair-correlation (mass-radius) scaling.
+
+    Computes the cumulative mass M(r) as a function of radial distance
+    from the centre of mass. For a fractal aggregate,
+    M(r) ~ r^Df, so a log-log fit gives the empirical Df.
+
+    The fit uses raw (un-normalised) cumulative mass because normalised
+    mass fractions are in [0,1] whose logs are non-positive, breaking
+    the log-linear regression.
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Nx3 array of particle center coordinates.
+    radii : np.ndarray
+        N array of particle radii.
+    n_bins : int
+        Number of radial bins (default 50).
+
+    Returns
+    -------
+    dict with keys:
+        r_bins : np.ndarray — bin edge radii (n_bins+1,)
+        r_centers : np.ndarray — bin centre radii (n_bins,)
+        M_r : np.ndarray — cumulative normalised mass fraction within each radius (n_bins+1,)
+        empirical_Df : float — slope of log(M) vs log(r) fit
+        fit_r_squared : float — R^2 of the linear fit
+        empirical_kf : float — estimated kf from the fit
+    """
+    n = coords.shape[0]
+    if n < 2:
+        return {
+            "r_bins": np.array([]),
+            "r_centers": np.array([]),
+            "M_r": np.array([]),
+            "empirical_Df": 0.0,
+            "fit_r_squared": 0.0,
+            "empirical_kf": 0.0,
+        }
+
+    masses = radii**3
+    total_mass = np.sum(masses)
+    cm = np.sum(coords * masses[:, np.newaxis], axis=0) / total_mass
+    distances = np.linalg.norm(coords - cm[np.newaxis, :], axis=1)
+
+    r_min = np.min(distances[distances > 0]) * 0.5
+    r_max = np.max(distances) * 0.99
+    if r_min >= r_max or r_min <= 0:
+        return {
+            "r_bins": np.array([]),
+            "r_centers": np.array([]),
+            "M_r": np.array([]),
+            "empirical_Df": 0.0,
+            "fit_r_squared": 0.0,
+            "empirical_kf": 0.0,
+        }
+
+    r_bins = np.linspace(r_min, r_max, n_bins + 1)
+    cumulative_mass = np.zeros(n_bins + 1)
+    for i in range(n_bins + 1):
+        mask = distances <= r_bins[i]
+        cumulative_mass[i] = np.sum(masses[mask])
+
+    M_r = cumulative_mass / total_mass
+    r_centers = 0.5 * (r_bins[:-1] + r_bins[1:])
+
+    # Use raw cumulative mass for log-log fit (normalised values < 1 have negative logs)
+    log_r = np.log(r_centers)
+    log_M_raw = np.log(cumulative_mass[1:])  # skip bin edge at r_min
+
+    valid = np.isfinite(log_M_raw) & np.isfinite(log_r) & (cumulative_mass[1:] > 0)
+    if np.sum(valid) < 3:
+        return {
+            "r_bins": r_bins,
+            "r_centers": r_centers,
+            "M_r": M_r,
+            "empirical_Df": 0.0,
+            "fit_r_squared": 0.0,
+            "empirical_kf": 0.0,
+        }
+
+    coeffs = np.polyfit(log_r[valid], log_M_raw[valid], 1)
+    slope = coeffs[0]
+    intercept = coeffs[1]
+
+    ss_res = np.sum((log_M_raw[valid] - (slope * log_r[valid] + intercept)) ** 2)
+    ss_tot = np.sum((log_M_raw[valid] - np.mean(log_M_raw[valid])) ** 2)
+    r_squared = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+
+    # Estimate kf from: Rg = a * (N/kf)^(1/Df) => kf = N / (Rg/a)^Df
+    # Using empirical fit: M(r) = exp(intercept) * r^slope
+    # At r = Rg: M = total_mass, so: total_mass = exp(intercept) * Rg^slope
+    # kf from fractal scaling: N = kf * (Rg/a)^Df
+    empirical_rg = compute_empirical_rg(coords, radii)
+    geo_mean_r = np.exp(np.mean(np.log(radii[radii > 1e-12])))
+    if slope > 0 and empirical_rg > 0 and geo_mean_r > 0:
+        empirical_kf = n / (empirical_rg / geo_mean_r) ** slope
+    else:
+        empirical_kf = 0.0
+
+    return {
+        "r_bins": r_bins,
+        "r_centers": r_centers,
+        "M_r": M_r,
+        "empirical_Df": float(slope),
+        "fit_r_squared": float(r_squared),
+        "empirical_kf": float(empirical_kf),
+    }
+
+
+def validate_fractal_structure(
+    coords: np.ndarray,
+    radii: np.ndarray,
+    target_df: float,
+    target_kf: float,
+    rg_rtol: float = 0.05,
+) -> dict[str, float]:
+    """Validate that generated aggregate matches target fractal parameters.
+
+    Compares theoretical Rg (from scaling law) vs empirical Rg (from
+    coordinates), and estimates the actual fractal dimension from
+    mass-radius scaling.
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Nx3 array of particle center coordinates.
+    radii : np.ndarray
+        N array of particle radii.
+    target_df : float
+        Target fractal dimension.
+    target_kf : float
+        Target fractal prefactor.
+    rg_rtol : float
+        Relative tolerance for Rg agreement (default 5%).
+
+    Returns
+    -------
+    dict with keys:
+        N : int — number of particles
+        theoretical_rg : float — Rg from scaling law Rg = a*(N/kf)^(1/Df)
+        empirical_rg : float — Rg measured from coordinates
+        rg_error_pct : float — (empirical - theoretical)/theoretical * 100
+        rg_ok : bool — |rg_error_pct| < rg_rtol * 100
+        empirical_Df : float — Df estimated from mass-radius scaling
+        target_Df : float — target fractal dimension
+        df_error : float — empirical_Df - target_Df
+        fit_r_squared : float — goodness of fit for Df estimation
+        empirical_kf : float — estimated fractal prefactor
+        target_kf : float — target fractal prefactor
+    """
+    n = coords.shape[0]
+    theoretical_rg = calculate_rg(radii, n, target_df, target_kf)
+    empirical_rg = compute_empirical_rg(coords, radii)
+    rg_error_pct = (
+        (empirical_rg - theoretical_rg) / theoretical_rg * 100
+        if theoretical_rg > 0
+        else 0.0
+    )
+
+    pair_corr = compute_pair_correlation_dimensions(coords, radii)
+
+    return {
+        "N": n,
+        "theoretical_rg": theoretical_rg,
+        "empirical_rg": empirical_rg,
+        "rg_error_pct": rg_error_pct,
+        "rg_ok": abs(rg_error_pct) < rg_rtol * 100,
+        "empirical_Df": pair_corr["empirical_Df"],
+        "target_Df": target_df,
+        "df_error": pair_corr["empirical_Df"] - target_df,
+        "fit_r_squared": pair_corr["fit_r_squared"],
+        "empirical_kf": pair_corr["empirical_kf"],
+        "target_kf": target_kf,
+    }
