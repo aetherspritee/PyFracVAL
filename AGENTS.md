@@ -2,6 +2,12 @@
 
 This file documents repository conventions for humans and coding agents.
 
+## Opencode
+
+Currently Opencode has a problem with the `write` and `apply_patch` tool.
+Refrain from using them and instead use the `bash` tool
+with appropriate an appropriate command to replace them!
+
 ## Environment / Running
 
 **CRITICAL EXECUTION RULE:** This project uses `devenv` (Nix) and `uv`. You must NEVER call binaries directly. Doing so could invoke the global system environment and causes fatal errors.
