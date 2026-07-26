@@ -253,7 +253,7 @@ class OrchestratorSimulationConfig(BaseModel):
 class OrchestratorAlgorithmConfig(BaseModel):
     use_cca_incremental_overlap: bool = True
     cca_incremental_full_sync_period: int = 20
-    cca_candidate_policy: str = "leaf_hybrid"
+    cca_candidate_policy: str = "baseline"
     cca_score_topk_per_class: int = 32
     cca_retry_rotation_mode: str = "single"
     cca_coarse_fine_coarse_fraction: float = 0.67
@@ -264,12 +264,6 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_coarse_sweep_steps: int = 10
     cca_coarse_spin_anchor_steps: int = 6
     cca_coarse_spin_moving_steps: int = 6
-    cca_soft_accept_enabled: bool = False
-    cca_soft_accept_overlap: float = 5e-5
-    cca_repair_max_iters: int = 24
-    cca_repair_step_deg: float = 2.0
-    cca_repair_step_translation_frac: float = 0.02
-    cca_repair_patience: int = 6
     cca_gamma_expansion_enabled: bool = False
     cca_gamma_expansion_step: float = 0.02
     cca_gamma_expansion_max_factor: float = 1.05
