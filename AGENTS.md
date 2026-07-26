@@ -15,9 +15,9 @@ with appropriate an appropriate command to replace them!
 1. **For Python Scripts & Dependencies (`uv`):**
    - Always wrap the command using: `devenv shell -- uv run <command>`
    - Examples: `devenv shell -- uv run pytest`, `devenv shell -- uv run python pyfracval/main_runner.py`
-2. **For Non-Python System Tools (like `bd`):**
+2. **For non-Python system tools:**
    - Always wrap the command using ONLY `devenv shell --`:
-   - Example: `devenv shell -- bd ready`
+   - Example: `devenv shell -- sphinx-build ...`
 
 - Use `devenv` for local development environment (see `devenv.nix`).
 
@@ -73,93 +73,12 @@ with appropriate an appropriate command to replace them!
 
 ## Issue Tracking
 
-We use bd (beads) for issue tracking instead of Markdown TODOs or external tools.
-_Always remember to wrap `bd` commands with `devenv shell --`._
-
-### Quick Reference
-
-```bash
-# Find ready work (no blockers)
-devenv shell -- bd ready --json
-
-# Find ready work including future deferred issues
-devenv shell -- bd ready --include-deferred --json
-
-# Create new issue
-devenv shell -- bd create "Issue title" -t bug|feature|task -p 0-4 -d "Description" --json
-
-# Create issue with due date and defer (GH#820)
-devenv shell -- bd create "Task" --due=+6h              # Due in 6 hours
-devenv shell -- bd create "Task" --defer=tomorrow       # Hidden from bd ready until tomorrow
-devenv shell -- bd create "Task" --due="next monday" --defer=+1h  # Both
-
-# Update issue status
-devenv shell -- bd update <id> --status in_progress --json
-
-# Update issue with due/defer dates
-devenv shell -- bd update <id> --due=+2d                # Set due date
-devenv shell -- bd update <id> --defer=""               # Clear defer (show immediately)
-
-# Link discovered work
-devenv shell -- bd dep add <discovered-id> <parent-id> --type discovered-from
-
-# Complete work
-devenv shell -- bd close <id> --reason "Done" --json
-
-# Show dependency tree
-devenv shell -- bd dep tree <id>
-
-# Get issue details
-devenv shell -- bd show <id> --json
-
-# Query issues by time-based scheduling (GH#820)
-devenv shell -- bd list --deferred              # Show issues with defer_until set
-devenv shell -- bd list --defer-before=tomorrow # Deferred before tomorrow
-devenv shell -- bd list --defer-after=+1w       # Deferred after one week from now
-devenv shell -- bd list --due-before=+2d        # Due within 2 days
-devenv shell -- bd list --due-after="next monday" # Due after next Monday
-devenv shell -- bd list --overdue               # Due date in past (not closed)
-```
-
-### Workflow
-
-1. **Check for ready work**: Run `devenv shell -- bd ready` to see what's unblocked
-2. **Claim your task**: `devenv shell -- bd update <id> --status in_progress`
-3. **Work on it**: Implement, test, document
-4. **Discover new work**: If you find bugs or TODOs, create issues:
-   - `devenv shell -- bd create "Found bug in auth" -t bug -p 1 --json`
-   - Link it: `devenv shell -- bd dep add <new-id> <current-id> --type discovered-from`
-5. **Complete**: `devenv shell -- bd close <id> --reason "Implemented"`
-6. **Persist**: Ensure `.beads/issues.jsonl` is updated before committing.
-   - With auto-flush enabled, it should update automatically after edits.
-   - Otherwise run: `devenv shell -- bd export -o .beads/issues.jsonl`
-7. **Git**: `.beads/issues.jsonl` is meant to be committed; `.beads/beads.db` is local-only.
-   - If `bd init` added `.beads/issues.jsonl` to `.git/info/exclude`, remove that line (or `git add -f .beads/issues.jsonl` once).
-
-### Issue Types
-
-- `bug` - Something broken that needs fixing
-- `feature` - New functionality
-- `task` - Work item (tests, docs, refactoring)
-- `epic` - Large feature composed of multiple issues
-- `chore` - Maintenance work (dependencies, tooling)
-
-### Priorities
-
-- `0` - Critical (security, data loss, broken builds)
-- `1` - High (major features, important bugs)
-- `2` - Medium (nice-to-have features, minor bugs)
-- `3` - Low (polish, optimization)
-- `4` - Backlog (future ideas)
-
-### Dependency Types
-
-- `blocks` - Hard dependency (issue X blocks issue Y)
-- `related` - Soft relationship (issues are connected)
-- `parent-child` - Epic/subtask relationship
-- `discovered-from` - Track issues discovered during work
-
-Only `blocks` dependencies affect the ready work queue.
+We use a plain [`TODO.md`](TODO.md) in the repo root instead of an external
+tool — no daemon, no database, no extra dependency. Open items live under
+`## Open`, add new ones as you find them, check items off or move them to
+`## Done` as they land. If an item needs more than a couple of sentences
+(design rationale, benchmark data, etc.), link out to `PLAN.md` or a
+`docs/source/*.md` page rather than growing `TODO.md` into a wiki.
 
 ## Landing the Plane (Session Completion)
 
@@ -167,19 +86,17 @@ Only `blocks` dependencies affect the ready work queue.
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **Update `TODO.md`** - Add anything that needs follow-up, check off / move finished items to "Done"
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+3. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   devenv shell -- bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+4. **Clean up** - Clear stashes, prune remote branches
+5. **Verify** - All changes committed AND pushed
+6. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
 
