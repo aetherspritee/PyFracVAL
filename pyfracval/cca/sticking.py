@@ -15,8 +15,6 @@ from .. import cca_kernels, geometry, overlap, utils
 
 logger = logging.getLogger(__name__)
 
-_GOLDEN_RATIO = (1.0 + math.sqrt(5.0)) / 2.0
-
 
 def _pair_key(i: int, j: int, n2: int) -> int:
     """Pack pair indices (i,j) into a single integer key."""
@@ -366,7 +364,17 @@ class _StickingMixin:
         axis_moving: np.ndarray,
         intento: int,
     ) -> tuple[np.ndarray, np.ndarray, str]:
-        """Generate next retry pose according to configured retry mode."""
+        """Generate next retry pose according to configured retry mode.
+
+        Production default is ``single`` (Fibonacci-spiral rotation of
+        cluster 2). ``alternate``/``dual_jitter``/``coarse_grid``/
+        ``coarse_to_fine`` are archived in
+        ``pyfracval.experimental.retry_modes`` - benchmarked against
+        ``single`` with no measurable difference in success rate or timing
+        (see docs/source/experiments.md), kept reachable via config for
+        anyone who wants to pick the thread back up.
+        """
+        del cand1_idx
         mode_cfg = str(self.algorithm_config.cca_retry_rotation_mode).lower()
         if mode_cfg not in {
             "single",
@@ -377,183 +385,30 @@ class _StickingMixin:
         }:
             mode_cfg = "single"
 
-        if mode_cfg == "coarse_grid":
-            sweep_steps = int(max(1, self.algorithm_config.cca_coarse_sweep_steps))
-            spin_anchor_steps = int(
-                max(1, self.algorithm_config.cca_coarse_spin_anchor_steps)
-            )
-            spin_moving_steps = int(
-                max(1, self.algorithm_config.cca_coarse_spin_moving_steps)
-            )
-            total = sweep_steps * spin_anchor_steps * spin_moving_steps
-            idx = (int(intento) - 1) % total
-            block = spin_anchor_steps * spin_moving_steps
-            sweep_idx = idx // block
-            rem = idx % block
-            anchor_idx = rem // spin_moving_steps
-            moving_idx = rem % spin_moving_steps
+        if mode_cfg != "single":
+            from ..experimental.retry_modes import apply_retry_rotation_mode
 
-            sweep_attempt = int(
-                round((float(sweep_idx + 1) / float(sweep_steps)) * 360.0)
-            )
-            sweep_attempt = max(1, min(360, sweep_attempt))
-            coords2_swept, _ = self._cca_reintento(
-                coords2_base,
-                cm2_stick,
-                cand2_idx,
-                vec_0,
-                i_vec,
-                j_vec,
-                attempt=sweep_attempt,
-            )
-
-            anchor_angle = (2.0 * math.pi * float(anchor_idx)) / float(
-                spin_anchor_steps
-            )
-            moving_angle = (2.0 * math.pi * float(moving_idx)) / float(
-                spin_moving_steps
-            )
-
-            coords1_next = self._rotate_cluster_about_cm(
-                coords1_base,
-                cm1,
-                axis_anchor,
-                anchor_angle,
-            )
-            coords2_next = self._rotate_cluster_about_cm(
-                coords2_swept,
-                cm2_stick,
-                axis_moving,
-                moving_angle,
-            )
-            return coords1_next, coords2_next, "coarse_grid"
-
-        if mode_cfg == "coarse_to_fine":
-            sweep_steps = int(max(1, self.algorithm_config.cca_coarse_sweep_steps))
-            spin_anchor_steps = int(
-                max(1, self.algorithm_config.cca_coarse_spin_anchor_steps)
-            )
-            spin_moving_steps = int(
-                max(1, self.algorithm_config.cca_coarse_spin_moving_steps)
-            )
-            total = sweep_steps * spin_anchor_steps * spin_moving_steps
-            coarse_fraction = float(
-                self.algorithm_config.cca_coarse_fine_coarse_fraction
-            )
-            coarse_fraction = min(max(coarse_fraction, 0.05), 0.95)
-            coarse_budget = max(1, min(total - 1, int(round(total * coarse_fraction))))
-
-            if int(intento) <= coarse_budget:
-                if coarse_budget == 1:
-                    idx = 0
-                else:
-                    idx = int(
-                        round(
-                            ((int(intento) - 1) * (total - 1))
-                            / float(coarse_budget - 1)
-                        )
-                    )
-                block = spin_anchor_steps * spin_moving_steps
-                sweep_idx = idx // block
-                rem = idx % block
-                anchor_idx = rem // spin_moving_steps
-                moving_idx = rem % spin_moving_steps
-
-                sweep_attempt = int(
-                    round((float(sweep_idx + 1) / float(sweep_steps)) * 360.0)
-                )
-                sweep_attempt = max(1, min(360, sweep_attempt))
-                coords2_swept, _ = self._cca_reintento(
-                    coords2_base,
-                    cm2_stick,
-                    cand2_idx,
-                    vec_0,
-                    i_vec,
-                    j_vec,
-                    attempt=sweep_attempt,
-                )
-
-                anchor_angle = (2.0 * math.pi * float(anchor_idx)) / float(
-                    spin_anchor_steps
-                )
-                moving_angle = (2.0 * math.pi * float(moving_idx)) / float(
-                    spin_moving_steps
-                )
-                coords1_next = self._rotate_cluster_about_cm(
-                    coords1_base,
-                    cm1,
-                    axis_anchor,
-                    anchor_angle,
-                )
-                coords2_next = self._rotate_cluster_about_cm(
-                    coords2_swept,
-                    cm2_stick,
-                    axis_moving,
-                    moving_angle,
-                )
-                return coords1_next, coords2_next, "coarse_to_fine_coarse"
-
-            refine_idx = int(intento) - coarse_budget
-            refine_deg = float(max(0.0, self.algorithm_config.cca_coarse_fine_spin_deg))
-            refine_rad = np.deg2rad(refine_deg)
-            phi = 2.0 * math.pi * float(refine_idx) / float(_GOLDEN_RATIO)
-            angle_anchor = refine_rad * float(np.sin(phi))
-            angle_moving = refine_rad * float(np.cos(phi))
-            coords1_next = self._rotate_cluster_about_cm(
+            return apply_retry_rotation_mode(
+                mode_cfg,
                 coords1_stick,
+                coords2_current,
+                coords1_base,
+                coords2_base,
                 cm1,
+                cm2_stick,
+                cand2_idx,
+                vec_0,
+                i_vec,
+                j_vec,
                 axis_anchor,
-                angle_anchor,
-            )
-            coords2_next = self._rotate_cluster_about_cm(
-                coords2_current,
-                cm2_stick,
                 axis_moving,
-                angle_moving,
+                intento,
+                algorithm_config=self.algorithm_config,
+                reintento_fn=self._cca_reintento,
+                rotate_fn=self._rotate_cluster_about_cm,
+                normalize_axis_fn=self._normalize_axis,
+                rng=self._rng,
             )
-            return coords1_next, coords2_next, "coarse_to_fine_refine"
-
-        escalate_after = int(max(0, self.algorithm_config.cca_retry_escalate_after))
-        use_mode = mode_cfg if intento > escalate_after else "single"
-
-        coords1_next = coords1_stick
-        coords2_next = coords2_current
-
-        if use_mode == "single":
-            coords2_next, _ = self._cca_reintento(
-                coords2_current,
-                cm2_stick,
-                cand2_idx,
-                vec_0,
-                i_vec,
-                j_vec,
-                attempt=intento,
-            )
-            return coords1_next, coords2_next, "single"
-
-        if use_mode == "alternate":
-            if intento % 2 == 0:
-                phi = 2.0 * math.pi * float(intento) / float(_GOLDEN_RATIO)
-                axis = np.array([i_vec[0], i_vec[1], i_vec[2]], dtype=float)
-                axis = self._normalize_axis(axis, fallback=np.array([1.0, 0.0, 0.0]))
-                coords1_next = self._rotate_cluster_about_cm(
-                    coords1_stick,
-                    cm1,
-                    axis,
-                    -phi,
-                )
-                return coords1_next, coords2_next, "alternate_anchor"
-
-            coords2_next, _ = self._cca_reintento(
-                coords2_current,
-                cm2_stick,
-                cand2_idx,
-                vec_0,
-                i_vec,
-                j_vec,
-                attempt=intento,
-            )
-            return coords1_next, coords2_next, "alternate_moving"
 
         coords2_next, _ = self._cca_reintento(
             coords2_current,
@@ -564,24 +419,7 @@ class _StickingMixin:
             j_vec,
             attempt=intento,
         )
-        jitter_interval = int(max(1, self.algorithm_config.cca_dual_jitter_interval))
-        if intento % jitter_interval == 0:
-            jitter_deg = float(max(0.0, self.algorithm_config.cca_dual_jitter_deg))
-            jitter_rad = np.deg2rad(jitter_deg)
-            if jitter_rad > 0.0:
-                axis = self._rng.normal(size=3)
-                axis_norm = float(np.linalg.norm(axis))
-                if axis_norm > 1.0e-12:
-                    axis = axis / axis_norm
-                    angle = float(self._rng.uniform(-jitter_rad, jitter_rad))
-                    coords1_next = self._rotate_cluster_about_cm(
-                        coords1_stick,
-                        cm1,
-                        axis,
-                        angle,
-                    )
-                    return coords1_next, coords2_next, "dual_jitter"
-        return coords1_next, coords2_next, "dual_moving"
+        return coords1_stick, coords2_next, "single"
 
     @staticmethod
     def _pair_overlap(
