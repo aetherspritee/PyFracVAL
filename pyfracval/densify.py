@@ -9,7 +9,7 @@ Two methods are provided:
   - ``radial``: uniform radial compression toward CM, then overlap push-apart
   - ``voronoi``: Voronoi-guided migration of under-dense particles inward
 
-Both methods are opt-in via ``config.DENSIFY_ENABLED``.
+Both methods are opt-in via ``OrchestratorAlgorithmConfig.densify_enabled``.
 """
 
 import logging

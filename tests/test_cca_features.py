@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from pyfracval import config
 from pyfracval.cca_agg import CCAggregator
+from pyfracval.config import OrchestratorAlgorithmConfig
 
 
 def _make_aggregator(n=64, df=1.8, kf=1.3, seed=42):
@@ -29,63 +29,47 @@ class TestBoundingVolumePrecheck:
 
     def test_reject_when_gamma_below_rmax_diff_times_factor(self):
         assert (
-            CCAggregator._bounding_volume_precheck(
-                5.0, 100.0, 10.0, gamma_real=True
-            )
+            CCAggregator._bounding_volume_precheck(5.0, 100.0, 10.0, gamma_real=True)
             is False
         )
 
     def test_accept_when_gamma_above_rmax_diff_times_factor(self):
         assert (
-            CCAggregator._bounding_volume_precheck(
-                80.0, 100.0, 10.0, gamma_real=True
-            )
+            CCAggregator._bounding_volume_precheck(80.0, 100.0, 10.0, gamma_real=True)
             is True
         )
 
     def test_reject_when_gamma_above_sum_of_rmax(self):
         assert (
-            CCAggregator._bounding_volume_precheck(
-                200.0, 100.0, 10.0, gamma_real=True
-            )
+            CCAggregator._bounding_volume_precheck(200.0, 100.0, 10.0, gamma_real=True)
             is False
         )
 
     def test_accept_when_gamma_between_bounds(self):
         assert (
-            CCAggregator._bounding_volume_precheck(
-                40.0, 50.0, 30.0, gamma_real=True
-            )
+            CCAggregator._bounding_volume_precheck(40.0, 50.0, 30.0, gamma_real=True)
             is True
         )
 
     def test_reject_when_gamma_real_false(self):
         assert (
-            CCAggregator._bounding_volume_precheck(
-                50.0, 100.0, 30.0, gamma_real=False
-            )
+            CCAggregator._bounding_volume_precheck(50.0, 100.0, 30.0, gamma_real=False)
             is False
         )
 
     def test_reject_when_gamma_zero_or_negative(self):
         assert (
-            CCAggregator._bounding_volume_precheck(
-                0.0, 100.0, 30.0, gamma_real=True
-            )
+            CCAggregator._bounding_volume_precheck(0.0, 100.0, 30.0, gamma_real=True)
             is False
         )
         assert (
-            CCAggregator._bounding_volume_precheck(
-                -5.0, 100.0, 30.0, gamma_real=True
-            )
+            CCAggregator._bounding_volume_precheck(-5.0, 100.0, 30.0, gamma_real=True)
             is False
         )
 
     def test_equal_rmax_values(self):
         assert (
-            CCAggregator._bounding_volume_precheck(
-                10.0, 50.0, 50.0, gamma_real=True
-            )
+            CCAggregator._bounding_volume_precheck(10.0, 50.0, 50.0, gamma_real=True)
             is True
         )
 
@@ -103,9 +87,7 @@ class TestSurfaceAccessibleMask:
         assert mask[0] is np.True_
 
     def test_all_accessible_with_zero_threshold(self):
-        coords = np.array(
-            [[0, 0, 0], [5, 0, 0], [-5, 0, 0], [0, 5, 0], [0, -5, 0]]
-        )
+        coords = np.array([[0, 0, 0], [5, 0, 0], [-5, 0, 0], [0, 5, 0], [0, -5, 0]])
         radii = np.ones(5)
         cm = np.array([0.0, 0.0, 0.0])
         r_max = 5.0
@@ -136,17 +118,20 @@ class TestSurfaceAccessibleMask:
         assert mask[0] and mask[1]
 
     def test_uses_config_default_when_none(self):
-        orig = config.CCA_SSA_MIN_EXPOSURE
-        config.CCA_SSA_MIN_EXPOSURE = 0.42
-        try:
-            coords = np.array([[0, 0, 0], [5, 0, 0]])
-            radii = np.ones(2)
-            cm = np.array([2.5, 0, 0])
-            r_max = 5.0
-            mask = CCAggregator._surface_accessible_mask(coords, radii, cm, r_max)
-            assert mask.shape == (2,)
-        finally:
-            config.CCA_SSA_MIN_EXPOSURE = orig
+        coords = np.array([[0, 0, 0], [5, 0, 0]])
+        radii = np.ones(2)
+        cm = np.array([2.5, 0, 0])
+        r_max = 5.0
+        algorithm_config = OrchestratorAlgorithmConfig(cca_ssa_min_exposure=0.42)
+
+        mask_via_config = CCAggregator._surface_accessible_mask(
+            coords, radii, cm, r_max, algorithm_config=algorithm_config
+        )
+        mask_via_explicit = CCAggregator._surface_accessible_mask(
+            coords, radii, cm, r_max, min_exposure=0.42
+        )
+        assert mask_via_config.shape == (2,)
+        assert np.array_equal(mask_via_config, mask_via_explicit)
 
 
 class TestTelemetryCounters:

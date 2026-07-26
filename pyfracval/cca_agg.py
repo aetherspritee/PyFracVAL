@@ -2030,8 +2030,6 @@ class CCAggregator:
         Returns:
             Tuple(combined_coords, combined_radii) or None if failed.
         """
-        from . import config
-
         # Get cluster data
         coords1_in, radii1_in = self._get_cluster_data(cluster_idx1)
         coords2_in, radii2_in = self._get_cluster_data(cluster_idx2)

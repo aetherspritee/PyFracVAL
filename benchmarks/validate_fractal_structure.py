@@ -13,7 +13,6 @@ import sys
 import time
 from pathlib import Path
 
-from pyfracval import config as runtime_config
 from pyfracval.main_runner import run_simulation
 from pyfracval.utils import validate_fractal_structure
 
@@ -77,12 +76,6 @@ def main():
             sim_cfg = dict(HARD_REGIME)
             sim_cfg.update(algo)
 
-            # Apply module-level config for baseline (no densify dict keys)
-            for key, val in algo.items():
-                attr = key.upper()
-                if hasattr(runtime_config, attr):
-                    setattr(runtime_config, attr, val)
-
             start = time.perf_counter()
             ok, coords, radii = run_simulation(
                 -1,
@@ -138,14 +131,6 @@ def main():
             "total": len(SEEDS),
             "validations": validations,
         }
-
-        # Reset module-level config
-        for key in algo:
-            attr = key.upper()
-            if hasattr(runtime_config, attr):
-                default_val = type(getattr(runtime_config, attr))()
-                setattr(runtime_config, attr, default_val)
-        runtime_config.DENSIFY_ENABLED = False
 
     out_path = Path("benchmark_results/fractal_structure_validation.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
