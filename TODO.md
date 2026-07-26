@@ -8,14 +8,6 @@ git history has the detail).
 
 ## Open
 
-- [ ] **Phase 1 — Config unification** (priority: high)
-  Replace the dual config system (Pydantic models + ~70 legacy `UPPERCASE`
-  constants + global monkeypatching in `main_runner._apply_algorithm_overrides`)
-  with one immutable config object threaded through constructors. See
-  `PLAN.md` §5 for the full analysis. Not started — large, high-blast-radius
-  refactor touching every algorithm code path; do with test coverage and
-  incremental commits, not in one shot.
-
 - [ ] **Phase 3 — Split `cca_agg.py` monolith into a `cca/` subpackage** (priority: medium)
   2,400-line `CCAggregator` → `cca/pairing.py`, `cca/candidates.py`,
   `cca/sticking.py`, `cca/fallbacks.py`, `cca/aggregator.py` (thin
@@ -25,7 +17,11 @@ git history has the detail).
   soft-accept/repair, BV/SSA filters, Γ-expansion, non-baseline candidate
   policies — confirmed not to help, see `docs/source/experiments.md`) should
   get routed into `pyfracval/experimental/` as part of the same refactor.
-  Depends on Phase 1 landing first for clean scope.
+  Phase 1 (config unification) landed 2026-07-26, so this is now unblocked
+  and ready to start — each of the 39+ former `getattr(config, ...)` sites
+  in `cca_agg.py` now reads `self.algorithm_config.*`, making it much
+  clearer which methods depend on which config knobs before splitting them
+  out.
 
 - [ ] **Phase 4/5 — Shim cleanup, `main_runner`/`batch_runner`/`dask_runner` consolidation** (priority: low)
   Migrate internal `from . import utils` callers to the real domain modules
@@ -51,6 +47,18 @@ git history has the detail).
 
 ## Done (recent)
 
+- [x] **Phase 1 — Config unification.** Config files (TOML/YAML/JSON) are
+      now the source of truth, with CLI flags overriding only what's
+      explicitly passed. `OrchestratorAlgorithmConfig`/`OrchestratorSimulationConfig`
+      completed to cover every former legacy constant (20 fields added);
+      new `RunConfig` model + `load_config_dict()` multi-format loader;
+      `--config PATH` added to the CLI; the config object is now threaded
+      as a real constructor parameter into `CCAggregator`/`PCAggregator`/
+      `Subclusterer` (replacing 64 `getattr(config, ...)`/module-global
+      reads); `main_runner`'s `setattr`/`finally` monkeypatching deleted;
+      the ~70 legacy `UPPERCASE` constants and `config_adapter.py` deleted
+      entirely once verified nothing read them. See `PLAN.md` §5 and the
+      commit history (6 incremental commits, tests green throughout).
 - [x] Deleted orphaned dead modules (`cca_pairing.py`, `cca_candidates.py`,
       `cca_sticking.py`, `cca_fallbacks.py`) and broken top-level `main.py`.
 - [x] Fixed `benchmark_results/` git hygiene (`.gitignore` +
