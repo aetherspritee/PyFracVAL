@@ -8,29 +8,6 @@ git history has the detail).
 
 ## Open
 
-- [ ] **Route confirmed-losing CCA features into `pyfracval/experimental/`** (priority: medium)
-  Now that `cca_agg.py` is split into `pyfracval/cca/{pairing,candidates,
-  sticking,fallbacks}.py` (see Done, below), the losing features are
-  visible as identifiable methods/branches rather than being buried in one
-  2,400-line file — but they weren't moved out in that pass, since it was
-  already large and risky enough as a pure mechanical split. Still to do,
-  as a separate, smaller pass per area (confirmed not to help, see
-  `docs/source/experiments.md`):
-  - Extra retry rotation modes (`alternate`, `dual_jitter`, `coarse_grid`,
-    `coarse_to_fine`) in `cca/sticking.py::_apply_retry_rotation_mode` —
-    keep only `single` on the production path.
-  - Soft-accept + rigid repair (config flags `cca_soft_accept_*`/
-    `cca_repair_*`) — appears to already be dead/unused in the current
-    sticking flow; confirm and delete rather than relocate if so.
-  - BV/SSA pair-feasibility prefilters in `cca/candidates.py` /
-    `cca/fallbacks.py` — confirmed no improvement.
-  - Γ-expansion in `cca/fallbacks.py::_perform_cca_sticking_with_expansion`.
-  - Non-baseline candidate policies (`cca_candidate_policy` != `baseline`)
-    in `cca/candidates.py`.
-  Each of these is now an isolated method or clearly-scoped branch instead
-  of inline logic mixed into a monolith, which is exactly what makes this
-  now tractable as small, independent, well-tested extractions.
-
 - [ ] **Phase 5 follow-up — consolidate `dask_runner.py`, decide `SweepConfig`'s dask pattern** (priority: low)
   The CLI-facing piece landed (see Done, below). Left for a smaller
   follow-up: `dask_runner.py` (worker deployment/wheel-install plumbing)
@@ -57,24 +34,42 @@ git history has the detail).
   genuinely unsupported/experimental, a clear error message instead of a
   silent `AttributeError`.
 
-## In progress / needs a decision
-
-- [ ] **Coarse-grid CCA retry mode evaluation** (was `PyFracVAL-bcy`)
-  Implemented `coarse_grid` and `coarse_to_fine` retry rotation modes with
-  CM→contact spin axes, benchmarked against `single`/`alternate`. Own
-  benchmark notes already concluded: all modes reach the same success rate,
-  `coarse_grid`/`coarse_to_fine` are *slower* than `single`/`alternate`, and
-  in the hard regime (Df=2.25, kf=0.95, σ=1.9) none of the four rotation
-  modes show a meaningful difference. This independently confirms the
-  broader Phase 2 retrospective finding (`docs/source/experiments.md`) that
-  retry-mode search strategy doesn't matter when the real problem is
-  geometric frustration. **Decision needed:** close this out and let the
-  "route confirmed-losing CCA features" item above move
-  `alternate`/`coarse_grid`/`coarse_to_fine`/`dual_jitter` into
-  `pyfracval/experimental/`, keeping only `single` on the production path?
-
 ## Done (recent)
 
+- [x] **Route confirmed-losing CCA features into `pyfracval/experimental/`**
+      (closes the "Coarse-grid CCA retry mode evaluation" decision item too —
+      answer was yes, close it out and archive). Five separate small passes,
+      each committed and verified independently (full test suite + a real
+      end-to-end CLI run exercising the archived path via its config flag):
+      - Extra retry rotation modes (`alternate`, `dual_jitter`, `coarse_grid`,
+        `coarse_to_fine`) → `pyfracval/experimental/retry_modes.py`.
+        `cca/sticking.py::_apply_retry_rotation_mode` now only has `single`
+        inline, delegates elsewhere.
+      - Soft-accept + rigid repair (`cca_soft_accept_*`/`cca_repair_*`) —
+        confirmed genuinely dead (grepped: no reader anywhere outside
+        `config.py` and already-archived `configs/archive/*.toml`) and
+        **deleted** rather than relocated, per the original item's own call.
+      - BV/SSA pair-feasibility prefilters → moved
+        `_bounding_volume_precheck` (was in `fallbacks.py`) and
+        `_surface_accessible_mask` (was in `candidates.py`) to
+        `pyfracval/experimental/pair_prefilters.py`; updated
+        `tests/test_cca_features.py` to import them from their new home.
+      - Γ-expansion → `pyfracval/experimental/gamma_expansion.py`
+        (`run_gamma_expansion(aggregator, ...)`, takes the aggregator
+        instance directly since the loop is tightly coupled to its telemetry
+        counters and the `_gamma_pc_override` side-channel).
+      - Non-baseline candidate policies (`leaf_soft`/`leaf_score`/
+        `leaf_hybrid`) → `pyfracval/experimental/candidate_policies.py`.
+        Also fixed `config.py`'s `cca_candidate_policy` default, which was
+        `"leaf_hybrid"` even though `docs/source/experiments.md` already
+        claimed `"baseline"` was the production default — the doc and the
+        code disagreed; the doc was right, the config default was fixed to
+        match.
+      All five follow the existing `fft_docking`/`soft_relaxation` archival
+      pattern: implementation moves to `pyfracval/experimental/`, a thin
+      opt-in dispatch stays in `cca/` gated by the same config flag as
+      before, so nothing reachable via config actually stopped working —
+      it just isn't cluttering the production sticking loop anymore.
 - [x] **Phase 5 — Unified execution entry points, opt-in Dask via config
       presence.** Author direction (2026-07-26): a simple example runner,
       Dask kept but opt-in by presence, `main_runner.run_simulation()`

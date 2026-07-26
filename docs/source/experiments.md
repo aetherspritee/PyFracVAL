@@ -98,21 +98,28 @@ exists at all* at the enforced `gamma_pc`.
 
 - **Production path (default, kept as first-class code):** vanilla Fibonacci
   sticking, single rotation mode, incremental active-set overlap checking,
-  baseline candidate ordering. This is what `cca_agg.py` should optimize for
-  after the Phase 3 CCA split.
+  baseline candidate ordering. This is what `pyfracval/cca/` (`pairing.py`,
+  `candidates.py`, `sticking.py`, `fallbacks.py`, `aggregator.py`) optimizes
+  for.
 - **Supported opt-in feature:** densification (`pyfracval/densify.py`). It is
   the only mechanism in this codebase that reliably solves hard-regime
   generation, and does so faster than the "easy" regime's own rigid search.
-- **Archived, not deleted** (moved to `pyfracval/experimental/`, off the hot
-  path, not imported by the orchestrator):
+- **Archived, not deleted** (moved to `pyfracval/experimental/`, off the
+  production path but still reachable via the same config flags they always
+  had - `cca/` keeps a thin opt-in dispatch to each):
   - Extra retry rotation modes (`alternate`, `dual_jitter`, `coarse_grid`,
-    `coarse_to_fine`)
-  - Soft-accept + rigid repair
-  - Pair feasibility pre-filters (bounding-volume, SSA)
-  - Γ-expansion
-  - FFT rigid-body docking
-  - Soft potential relaxation
-  - Non-baseline candidate scoring policies
+    `coarse_to_fine`) → `experimental/retry_modes.py`
+  - Pair feasibility pre-filters (bounding-volume, SSA) →
+    `experimental/pair_prefilters.py`
+  - Γ-expansion → `experimental/gamma_expansion.py`
+  - FFT rigid-body docking → `experimental/fft_docking.py`
+  - Soft potential relaxation → `experimental/soft_relaxation.py`
+  - Non-baseline candidate scoring policies (`leaf_soft`/`leaf_score`/
+    `leaf_hybrid`) → `experimental/candidate_policies.py`
+  - Soft-accept + rigid repair (config flags `cca_soft_accept_*`/
+    `cca_repair_*`) — confirmed genuinely dead code (no reader anywhere) and
+    deleted outright rather than archived; there was no implementation left
+    to preserve.
 
 None of these were bugs — they were reasonable hypotheses, tested rigorously,
 and the data says they don't move the needle on this problem. They're kept
