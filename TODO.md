@@ -31,12 +31,43 @@ git history has the detail).
   of inline logic mixed into a monolith, which is exactly what makes this
   now tractable as small, independent, well-tested extractions.
 
-- [ ] **Phase 4/5 — Shim cleanup, `main_runner`/`batch_runner`/`dask_runner` consolidation** (priority: low)
-  Migrate internal `from . import utils` callers to the real domain modules
-  but *keep* the `utils.py` re-export shim (unconfirmed whether anything
-  external imports `pyfracval.utils.*` — don't break it blind). Rationalize
-  the three runner modules into one clear execution story; decide the fate
-  of Dask. See `PLAN.md` §4, §9, §10.
+- [ ] **Phase 5 — Unify execution entry points, opt-in Dask via config presence** (priority: medium)
+  Direction from the author (2026-07-26):
+  - One simple, working example runner script (in the spirit of the old,
+    broken top-level `main.py` that Phase 0 deleted) showing how to use
+    `pyfracval` as a library — construct a `RunConfig`, call
+    `main_runner.run_simulation()`, done. This is the "easy" on-ramp for
+    someone writing their own custom runner.
+  - More complex use cases (sweeps, batches, distributed) stay in
+    `benchmarks/`/`batch_runner.py` — not everyone needs those, so they
+    shouldn't be in the way of the simple path.
+  - Keep Dask (worth having for this kind of embarrassingly-parallel
+    workload) but make it **opt-in via config presence**: only engage Dask
+    if the config actually has a `[dask]` table, rather than an
+    always-present `enable: bool` flag. Note `SweepConfig` already has a
+    `dask: DaskSettings` field with `DaskSettings.enable: bool = False` —
+    decide whether to keep that pattern (works, but "enable" flag can be
+    left stale/true by accident) or switch to `dask: DaskSettings | None
+    = None` (presence-implies-intent, closer to what was asked for) across
+    the config models that matter here.
+  - Rationalize `main_runner.py` (the actual shared core — already used by
+    CLI, batch_runner, and most benchmarks) / `batch_runner.py` /
+    `dask_runner.py` into one clear story once the above is decided.
+  See `PLAN.md` §9, §10 for the original analysis this refines.
+
+- [ ] **Fix or document the `ext_case=1` / `random_point_sc` bug** (priority: low)
+  Discovered during the Phase 4 utils.py migration: `cca/sticking.py`'s
+  `_cca_sticking_v1` calls `utils.random_point_sc(...)` in the
+  `self.ext_case == 1` branch, but no such function exists anywhere in the
+  codebase (confirmed by grep and by a Pyright "not a known attribute"
+  warning). This is a **pre-existing bug**, not something introduced by
+  the Phase 3/4 refactors — the mechanical extraction just preserved it
+  faithfully. It's latent because `ext_case` defaults to `0`; anyone who
+  explicitly sets `ext_case=1` will hit an `AttributeError` at runtime.
+  Needs either an implementation (based on what the Fortran `RAND_SAMPLE.f90`
+  path was meant to do — see `docs/FracVAL/`) or, if `ext_case=1` is
+  genuinely unsupported/experimental, a clear error message instead of a
+  silent `AttributeError`.
 
 ## In progress / needs a decision
 
@@ -56,6 +87,22 @@ git history has the detail).
 
 ## Done (recent)
 
+- [x] **Phase 4 — Migrated internal `utils.py` shim callers to the real
+      domain modules.** `cca/pairing.py`, `cca/fallbacks.py`,
+      `cca/sticking.py`, `pca_agg.py`, `densify.py`, `main_runner.py` now
+      import directly from `fractal.py`/`overlap.py`/`geometry.py`/
+      `cca_kernels.py`/`pca_kernels.py` instead of going through
+      `from . import utils; utils.X()`. `utils.py` itself is **kept** as
+      the backward-compat shim (per the earlier "unsure on external
+      importers, don't break it blind" decision — see `PLAN.md` §4)
+      — it still re-exports everything, just isn't used internally
+      anymore except for `shuffle_array`/`sort_clusters`/`random_point_sc`,
+      which genuinely live there (`sort_clusters`) or have no other home
+      to migrate to (`random_point_sc` — see the bug entry above).
+      `main_runner.py` also switched from the `cca_agg` shim to importing
+      `CCAggregator` directly from `pyfracval.cca`. Verified: `ruff check
+      --select F821,F401` clean across every touched file, full test
+      suite green, a real end-to-end CLI run, and a clean docs build.
 - [x] **Phase 3 — Split `cca_agg.py` monolith into `pyfracval/cca/`.**
       2,424-line `CCAggregator` → `cca/pairing.py`, `cca/candidates.py`,
       `cca/sticking.py`, `cca/fallbacks.py`, `cca/aggregator.py` (thin

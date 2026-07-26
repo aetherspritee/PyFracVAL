@@ -6,17 +6,14 @@ i_orden, df, kf, etc.), set up in ``CCAggregator.__init__``.
 """
 
 import logging
-import math
 from typing import Tuple
 
 import numpy as np
 
-from .. import utils
+from .. import fractal
 from ..logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
-
-_GOLDEN_RATIO = (1.0 + math.sqrt(5.0)) / 2.0
 
 
 class _PairingMixin:
@@ -26,7 +23,7 @@ class _PairingMixin:
         """Calculates Gamma_pc between two clusters based on their properties."""
         m1, rg1, _, _, radii1 = props1
         m2, rg2, _, _, radii2 = props2
-        return utils.gamma_calculation(
+        return fractal.gamma_calculation(
             m1,
             rg1,
             radii1,
@@ -84,7 +81,7 @@ class _PairingMixin:
             if coords_i.shape[0] == 0:
                 cluster_props[i] = (0.0, 0.0, np.zeros(3), 0.0, np.array([]))
                 continue
-            m_i, rg_i, cm_i, r_max_i = utils.calculate_cluster_properties(
+            m_i, rg_i, cm_i, r_max_i = fractal.calculate_cluster_properties(
                 coords_i,
                 radii_i,
                 self.df,

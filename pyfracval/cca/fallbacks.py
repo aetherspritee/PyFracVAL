@@ -12,7 +12,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .. import utils
+from .. import cca_kernels, fractal, overlap
 from ..config import OrchestratorAlgorithmConfig
 from ..experimental.fft_docking import fft_dock_sticking
 from ..experimental.soft_relaxation import soft_sticking
@@ -87,10 +87,10 @@ class _FallbacksMixin:
             m1, rg1, cm1, r_max1 = _p1[0], _p1[1], _p1[2], _p1[3]
             m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
         else:
-            m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
+            m1, rg1, cm1, r_max1 = fractal.calculate_cluster_properties(
                 coords1_in, radii1_in, self.df, self.kf
             )
-            m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
+            m2, rg2, cm2, r_max2 = fractal.calculate_cluster_properties(
                 coords2_in, radii2_in, self.df, self.kf
             )
         if self.algorithm_config.profile_timing:
@@ -206,7 +206,7 @@ class _FallbacksMixin:
                 return None
 
             # Recompute gamma from fractal scaling law for physical consistency
-            rg3_exp = utils.calculate_rg(
+            rg3_exp = fractal.calculate_rg(
                 np.concatenate((radii1_in, radii2_in)),
                 n_total,
                 self.df,
@@ -303,10 +303,10 @@ class _FallbacksMixin:
             m1, rg1, cm1, r_max1 = _p1[0], _p1[1], _p1[2], _p1[3]
             m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
         else:
-            m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
+            m1, rg1, cm1, r_max1 = fractal.calculate_cluster_properties(
                 coords1_in, radii1_in, self.df, self.kf
             )
-            m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
+            m2, rg2, cm2, r_max2 = fractal.calculate_cluster_properties(
                 coords2_in, radii2_in, self.df, self.kf
             )
         if self.algorithm_config.profile_timing:
@@ -530,7 +530,7 @@ class _FallbacksMixin:
                 )
                 active_collisions = set()
             else:
-                cov_max = utils.calculate_max_overlap_cca_auto(
+                cov_max = overlap.calculate_max_overlap_cca_auto(
                     coords1_stick,
                     radii1_in,
                     coords2_stick,
@@ -590,7 +590,7 @@ class _FallbacksMixin:
                     angles = 2.0 * math.pi * attempts / golden_ratio
 
                     # Batch rotate cluster2 for all angles (parallel computation)
-                    coords2_batch = utils.batch_rotate_cluster_cca(
+                    coords2_batch = cca_kernels.batch_rotate_cluster_cca(
                         current_coords2,
                         cm2_stick,
                         cand2_idx,
@@ -601,7 +601,7 @@ class _FallbacksMixin:
                     )
 
                     # Check overlaps for all rotated configurations (parallel)
-                    overlaps = utils.batch_check_overlaps_cca(
+                    overlaps = cca_kernels.batch_check_overlaps_cca(
                         coords1_stick,
                         radii1_in,
                         coords2_batch,
@@ -714,7 +714,7 @@ class _FallbacksMixin:
                             )
                             active_collisions = set()
                     else:
-                        cov_max = utils.calculate_max_overlap_cca_auto(
+                        cov_max = overlap.calculate_max_overlap_cca_auto(
                             coords1_rotated,
                             radii1_in,
                             coords2_rotated,
@@ -745,7 +745,7 @@ class _FallbacksMixin:
                 if use_incremental:
                     # Strict final validation with full overlap check before accept.
                     self._full_final_validations += 1
-                    final_cov = utils.calculate_max_overlap_cca_auto(
+                    final_cov = overlap.calculate_max_overlap_cca_auto(
                         coords1_stick,
                         radii1_in,
                         current_coords2,
@@ -825,10 +825,10 @@ class _FallbacksMixin:
             m1, rg1, cm1, r_max1 = _p1[0], _p1[1], _p1[2], _p1[3]
             m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
         else:
-            m1, rg1, cm1, r_max1 = utils.calculate_cluster_properties(
+            m1, rg1, cm1, r_max1 = fractal.calculate_cluster_properties(
                 coords1_in, radii1_in, self.df, self.kf
             )
-            m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
+            m2, rg2, cm2, r_max2 = fractal.calculate_cluster_properties(
                 coords2_in, radii2_in, self.df, self.kf
             )
 

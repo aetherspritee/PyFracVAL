@@ -17,7 +17,7 @@ from typing import Tuple
 
 import numpy as np
 
-from . import utils
+from . import fractal, overlap
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ def _compute_measured_rg(
 ) -> float:
     """Compute measured Rg from coordinates using the fractal scaling law."""
     n = coords.shape[0]
-    return utils.calculate_rg(radii, n, df, kf)
+    return fractal.calculate_rg(radii, n, df, kf)
 
 
 def _compute_empirical_rg(coords: np.ndarray, radii: np.ndarray) -> float:
@@ -403,7 +403,7 @@ def densify_aggregate(
         rng = np.random.default_rng()
 
     n = coords.shape[0]
-    rg_target = utils.calculate_rg(radii, n, target_df, target_kf)
+    rg_target = fractal.calculate_rg(radii, n, target_df, target_kf)
     rg_current = _compute_empirical_rg(coords, radii)
 
     logger.info(
@@ -502,7 +502,7 @@ def densify_aggregate(
         logger.error(f"Densify: unknown method '{method}'. Use 'radial' or 'voronoi'.")
         return best_coords, radii, False
 
-    max_cov = utils.calculate_max_overlap_cca_auto(
+    max_cov = overlap.calculate_max_overlap_cca_auto(
         best_coords, radii, best_coords, radii, tolerance=tol_ov
     )
     overlap_ok = max_cov <= tol_ov

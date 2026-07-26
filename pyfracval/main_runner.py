@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 
 # Import necessary modules from your library
-from . import particle_generation, utils
-from .cca_agg import CCAggregator
+from . import fractal, particle_generation, utils
+from .cca import CCAggregator
 from .config import OrchestratorAlgorithmConfig
 from .densify import densify_aggregate
 from .pca_subclusters import Subclusterer
@@ -295,7 +295,7 @@ def _run_simulation_core(
         try:
             # Pass target Df/kf for final property calculation consistency
             final_mass, final_rg_val, final_cm_arr, final_r_max = (
-                utils.calculate_cluster_properties(
+                fractal.calculate_cluster_properties(
                     final_coords,
                     final_radii,
                     sim_params.Df,

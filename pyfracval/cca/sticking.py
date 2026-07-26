@@ -11,7 +11,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .. import utils
+from .. import cca_kernels, geometry, overlap, utils
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +128,8 @@ class _StickingMixin:
             # Use intersection of spheres defined by D1max and D2max
             sphere_1 = np.concatenate((cm1, [d1_max]))
             sphere_2 = np.concatenate((cm2, [d2_max]))  # Use updated cm2
-            x_cp, y_cp, z_cp, _, _, _, _, point_valid = utils.two_sphere_intersection(
-                sphere_1, sphere_2, rng=self._rng
+            x_cp, y_cp, z_cp, _, _, _, _, point_valid = (
+                geometry.two_sphere_intersection(sphere_1, sphere_2, rng=self._rng)
             )
             if point_valid:
                 contact_point = np.array([x_cp, y_cp, z_cp])
@@ -202,7 +202,7 @@ class _StickingMixin:
         # Apply rotation 1
         if perform_rot1 and np.linalg.norm(rot_axis1) > 1e-9 and abs(rot_angle1) > 1e-9:
             coords1_rel = coords1 - cm1
-            coords1_rel_rotated = utils.rodrigues_rotation(
+            coords1_rel_rotated = geometry.rodrigues_rotation(
                 coords1_rel, rot_axis1, rot_angle1
             )
             coords1 = coords1_rel_rotated + cm1
@@ -218,7 +218,7 @@ class _StickingMixin:
         sphere_B = np.concatenate((center_B, [radius_B]))
 
         x_cp2, y_cp2, z_cp2, theta_a, vec_0, i_vec, j_vec, intersection_valid = (
-            utils.two_sphere_intersection(sphere_A, sphere_B, rng=self._rng)
+            geometry.two_sphere_intersection(sphere_A, sphere_B, rng=self._rng)
         )
 
         if not intersection_valid:
@@ -275,7 +275,7 @@ class _StickingMixin:
 
         if perform_rot2 and np.linalg.norm(rot_axis2) > 1e-9 and abs(rot_angle2) > 1e-9:
             coords2_rel = coords2 - cm2
-            coords2_rel_rotated = utils.rodrigues_rotation(
+            coords2_rel_rotated = geometry.rodrigues_rotation(
                 coords2_rel, rot_axis2, rot_angle2
             )
             coords2 = coords2_rel_rotated + cm2
@@ -298,11 +298,11 @@ class _StickingMixin:
 
         Rotates cluster 2 to the next Fibonacci-spiral position on the
         intersection circle.  The heavy lifting is done by
-        ``utils._cca_reintento_kernel`` which is @njit-compiled to eliminate
+        ``cca_kernels._cca_reintento_kernel`` which is @njit-compiled to eliminate
         Python dispatch overhead and numpy scalar overhead for every step.
         """
         x0, y0, z0, r0 = vec_0
-        coords2_out = utils._cca_reintento_kernel(
+        coords2_out = cca_kernels._cca_reintento_kernel(
             coords2_in,
             cm2,
             cand2_idx,
@@ -331,7 +331,7 @@ class _StickingMixin:
         if np.linalg.norm(axis) <= 1.0e-12 or abs(float(angle_rad)) <= 1.0e-12:
             return coords_in
         coords_rel = coords_in - cm
-        coords_rel_rot = utils.rodrigues_rotation(coords_rel, axis, float(angle_rad))
+        coords_rel_rot = geometry.rodrigues_rotation(coords_rel, axis, float(angle_rad))
         return coords_rel_rot + cm
 
     @staticmethod
@@ -638,7 +638,7 @@ class _StickingMixin:
     ) -> float:
         """Run global overlap check using fast early-termination kernel."""
         self._full_calls += 1
-        return utils.calculate_max_overlap_cca_auto(
+        return overlap.calculate_max_overlap_cca_auto(
             coords1,
             radii1,
             coords2,

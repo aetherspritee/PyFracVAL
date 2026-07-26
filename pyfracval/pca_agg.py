@@ -10,7 +10,7 @@ import logging
 import numpy as np
 from scipy.spatial import cKDTree
 
-from . import utils
+from . import fractal, geometry, overlap, pca_kernels, utils
 from .config import OrchestratorAlgorithmConfig
 from .logs import TRACE_LEVEL_NUM
 
@@ -92,7 +92,7 @@ class PCAggregator:
         # overlap).  Random order from shuffling avoids both extremes.
         self.initial_radii = initial_radii.copy()
         # Calculate initial mass using utils consistently
-        self.initial_mass = utils.calculate_mass(self.initial_radii)
+        self.initial_mass = fractal.calculate_mass(self.initial_radii)
 
         self.df = df
         self.kf = kf
@@ -194,9 +194,11 @@ class PCAggregator:
             self.sum_log_radii = 0.0
 
         # Use utils for rg calculation (initial setup)
-        self.rg1 = utils.calculate_rg(self.radii[: self.n1], self.n1, self.df, self.kf)
+        self.rg1 = fractal.calculate_rg(
+            self.radii[: self.n1], self.n1, self.df, self.kf
+        )
 
-        if self.m1 > utils.FLOATING_POINT_ERROR:  # Use utils tolerance
+        if self.m1 > geometry.FLOATING_POINT_ERROR:  # Use utils tolerance
             self.cm = (
                 self.coords[0] * self.mass[0] + self.coords[1] * self.mass[1]
             ) / self.m1
@@ -218,7 +220,7 @@ class PCAggregator:
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
         """
         if heuristic:
-            return utils.gamma_calculation(
+            return fractal.gamma_calculation(
                 self.n1,
                 self.rg1,
                 self.radii[: self.n1],
@@ -230,7 +232,7 @@ class PCAggregator:
                 all_radii=self.initial_radii,
             )
         else:
-            return utils.gamma_calculation(
+            return fractal.gamma_calculation(
                 self.m1,
                 self.rg1,
                 self.radii[: self.n1],
@@ -261,7 +263,7 @@ class PCAggregator:
 
         # # Radii of particles already in cluster + the next one to be added
         # combined_radii = np.concatenate((self.radii[:n1], [self.initial_radii[n1]]))
-        # rg3 = utils.calculate_rg(combined_radii, n3, self.df, self.kf)
+        # rg3 = fractal.calculate_rg(combined_radii, n3, self.df, self.kf)
 
         # # Heuristic from Fortran: ensure rg3 is not smaller than rg1
         # # (avoids issues if rg calculation is noisy for small N)
@@ -350,12 +352,14 @@ class PCAggregator:
                 lower_dist_bound = gamma_pc - radius_sum
                 upper_dist_bound = gamma_pc + radius_sum
 
-                radius_sum_check = radius_sum <= (gamma_pc + utils.FLOATING_POINT_ERROR)
+                radius_sum_check = radius_sum <= (
+                    gamma_pc + geometry.FLOATING_POINT_ERROR
+                )
                 lower_bound_check = distances > (
-                    lower_dist_bound - utils.FLOATING_POINT_ERROR
+                    lower_dist_bound - geometry.FLOATING_POINT_ERROR
                 )
                 upper_bound_check = distances <= (
-                    upper_dist_bound + utils.FLOATING_POINT_ERROR
+                    upper_dist_bound + geometry.FLOATING_POINT_ERROR
                 )
 
                 all_checks = radius_sum_check & lower_bound_check & upper_bound_check
@@ -391,12 +395,12 @@ class PCAggregator:
             upper_dist_bound = gamma_pc + radius_sum
 
             # Apply all three Fortran conditions (vectorized)
-            radius_sum_check = radius_sum <= (gamma_pc + utils.FLOATING_POINT_ERROR)
+            radius_sum_check = radius_sum <= (gamma_pc + geometry.FLOATING_POINT_ERROR)
             lower_bound_check = distances > (
-                lower_dist_bound - utils.FLOATING_POINT_ERROR
+                lower_dist_bound - geometry.FLOATING_POINT_ERROR
             )
             upper_bound_check = distances <= (
-                upper_dist_bound + utils.FLOATING_POINT_ERROR
+                upper_dist_bound + geometry.FLOATING_POINT_ERROR
             )
 
             # Combine all conditions
@@ -615,7 +619,7 @@ class PCAggregator:
         try:
             # This utility finds the circle and returns *one* random point on it
             x_k, y_k, z_k, theta_a, vec_0, i_vec, j_vec, intersection_valid = (
-                utils.two_sphere_intersection(sphere1, sphere2, rng=self._rng)
+                geometry.two_sphere_intersection(sphere1, sphere2, rng=self._rng)
             )
         except Exception as e:
             logger.error(
@@ -637,13 +641,13 @@ class PCAggregator:
                 f"Dist={dist_centers:.4f}, R1+R2={radius_sum:.4f}, |R1-R2|={radius_diff:.4f}"
             )
             # Check conditions violated by intersection check in utils
-            if dist_centers > radius_sum + utils.FLOATING_POINT_ERROR:
+            if dist_centers > radius_sum + geometry.FLOATING_POINT_ERROR:
                 logger.warning("  -> Spheres too far apart.")
-            if dist_centers < radius_diff - utils.FLOATING_POINT_ERROR:
+            if dist_centers < radius_diff - geometry.FLOATING_POINT_ERROR:
                 logger.warning("  -> Sphere contained.")
             if (
-                dist_centers < utils.FLOATING_POINT_ERROR
-                and abs(radius_diff) < utils.FLOATING_POINT_ERROR
+                dist_centers < geometry.FLOATING_POINT_ERROR
+                and abs(radius_diff) < geometry.FLOATING_POINT_ERROR
             ):
                 logger.warning("  -> Spheres coincide.")
 
@@ -653,7 +657,7 @@ class PCAggregator:
         coord_k_initial = np.array([x_k, y_k, z_k])
         return coord_k_initial, theta_a, vec_0, i_vec, j_vec
 
-    # Remove internal overlap check, use utils.calculate_max_overlap_pca
+    # Remove internal overlap check, use overlap.calculate_max_overlap_pca
     # def _overlap_check(self, k: int) -> float: ...
 
     def _reintento(
@@ -686,7 +690,7 @@ class PCAggregator:
         x0, y0, z0, r0 = vec_0
 
         # If radius of intersection is near zero (touching point case), rotation is meaningless
-        if r0 < utils.FLOATING_POINT_ERROR:
+        if r0 < geometry.FLOATING_POINT_ERROR:
             logger.debug(
                 f"Reintento k={k}: Intersection radius near zero, no rotation possible."
             )
@@ -774,7 +778,7 @@ class PCAggregator:
         for step in range(1, n_coarse + 1):
             coord_new, angle = self._reintento(k, vec_0, i_vec, j_vec, attempt=step)
             self.coords[k] = coord_new
-            ov = utils.calculate_max_overlap_pca_auto(
+            ov = overlap.calculate_max_overlap_pca_auto(
                 self.coords[: self.n1],
                 self.radii[: self.n1],
                 self.coords[k],
@@ -876,7 +880,7 @@ class PCAggregator:
                 + r0 * np.sin(mid_angle) * j_vec
             )
             self.coords[k] = coord_mid
-            ov = utils.calculate_max_overlap_pca_auto(
+            ov = overlap.calculate_max_overlap_pca_auto(
                 self.coords[: self.n1],
                 self.radii[: self.n1],
                 self.coords[k],
@@ -903,7 +907,7 @@ class PCAggregator:
                 + r0 * np.sin(mid_left) * j_vec
             )
             self.coords[k] = coord_mid_left
-            ov_left = utils.calculate_max_overlap_pca_auto(
+            ov_left = overlap.calculate_max_overlap_pca_auto(
                 self.coords[: self.n1],
                 self.radii[: self.n1],
                 self.coords[k],
@@ -1043,7 +1047,7 @@ class PCAggregator:
                     self.radii[k] = radius_k_current
                     self.mass[k] = mass_k_current
 
-                    cov_max = utils.calculate_max_overlap_pca_auto(
+                    cov_max = overlap.calculate_max_overlap_pca_auto(
                         self.coords[: self.n1],
                         self.radii[: self.n1],
                         self.coords[k],
@@ -1072,7 +1076,7 @@ class PCAggregator:
                         golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
 
                         # If intersection radius is near zero, skip rotation attempts
-                        if vec_0[3] < utils.FLOATING_POINT_ERROR:
+                        if vec_0[3] < geometry.FLOATING_POINT_ERROR:
                             logger.debug(
                                 f"  PCA k={k}, cand={current_selected_idx}: Intersection radius near zero, no rotation needed."
                             )
@@ -1094,13 +1098,13 @@ class PCAggregator:
 
                                 # Calculate all positions in batch (parallel)
                                 candidate_positions = (
-                                    utils.batch_calculate_positions_pca(
+                                    pca_kernels.batch_calculate_positions_pca(
                                         vec_0, i_vec, j_vec, angles
                                     )
                                 )
 
                                 # Check overlaps for all positions in batch (parallel)
-                                overlaps = utils.batch_check_overlaps_pca(
+                                overlaps = pca_kernels.batch_check_overlaps_pca(
                                     self.coords[: self.n1],
                                     self.radii[: self.n1],
                                     candidate_positions,
@@ -1217,7 +1221,7 @@ class PCAggregator:
                                         + (intento - N_COARSE - N_BISECT - 1),
                                     )
                                     self.coords[k] = coord_k_new
-                                    cov_max = utils.calculate_max_overlap_pca_auto(
+                                    cov_max = overlap.calculate_max_overlap_pca_auto(
                                         self.coords[: self.n1],
                                         self.radii[: self.n1],
                                         self.coords[k],
@@ -1298,7 +1302,7 @@ class PCAggregator:
             self.n1 += 1
             m_old = self.m1
             self.m1 += self.mass[k]  # Use mass that was set during successful attempt
-            if self.m1 > utils.FLOATING_POINT_ERROR:
+            if self.m1 > geometry.FLOATING_POINT_ERROR:
                 self.cm = (self.cm * m_old + self.coords[k] * self.mass[k]) / self.m1
             else:
                 self.cm = np.mean(self.coords[: self.n1], axis=0)
