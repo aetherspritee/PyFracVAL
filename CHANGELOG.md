@@ -21,6 +21,8 @@
 - Sphinx hard doc build error caused by unintended substitution in API docstrings.
 - README placeholders for documentation links and outdated setup commands.
 
+<!-- version list -->
+
 ## v0.1.0 (2025-04-30)
 
 ### Features
