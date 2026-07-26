@@ -20,21 +20,25 @@ git history has the detail).
   established convention (it's `benchmarks/`-only, different audience than
   the CLI). See `PLAN.md` §9, §10 for the original analysis.
 
-- [ ] **Fix or document the `ext_case=1` / `random_point_sc` bug** (priority: low)
-  Discovered during the Phase 4 utils.py migration: `cca/sticking.py`'s
-  `_cca_sticking_v1` calls `utils.random_point_sc(...)` in the
-  `self.ext_case == 1` branch, but no such function exists anywhere in the
-  codebase (confirmed by grep and by a Pyright "not a known attribute"
-  warning). This is a **pre-existing bug**, not something introduced by
-  the Phase 3/4 refactors — the mechanical extraction just preserved it
-  faithfully. It's latent because `ext_case` defaults to `0`; anyone who
-  explicitly sets `ext_case=1` will hit an `AttributeError` at runtime.
-  Needs either an implementation (based on what the Fortran `RAND_SAMPLE.f90`
-  path was meant to do — see `docs/FracVAL/`) or, if `ext_case=1` is
-  genuinely unsupported/experimental, a clear error message instead of a
-  silent `AttributeError`.
-
 ## Done (recent)
+
+- [x] **Fix the `ext_case=1` / `random_point_sc` bug** — implemented, not just
+      documented. `cca/sticking.py`'s `_cca_sticking_v1` called
+      `utils.random_point_sc(...)` in the `ext_case == 1` branch, but that
+      function never existed anywhere (pre-existing bug, latent because
+      `ext_case` defaults to `0`). The original guess that the missing logic
+      lived in `RAND_SAMPLE.f90` was wrong — that file is an unrelated
+      Fisher-Yates shuffle. The real routine is `CCA_module.f90`'s
+      `Random_point_SC`/`Spherical_cap_angle` subroutines
+      (`docs/FracVAL/CCA_module.f90`), now ported to
+      `geometry.spherical_cap_angle`/`geometry.random_point_sc`.
+      `cca/sticking.py` calls the new `geometry.random_point_sc` instead.
+      Verified: new `tests/test_geometry.py` (closed-form check on symmetric
+      spheres, point-on-surface and cap-angle-bounds invariants, degenerate
+      cases), full test suite green, real `--ext-case 1` CLI runs across 6
+      seeds all succeeding (previously a guaranteed `AttributeError`), and a
+      hand-crafted geometry directly confirming the `case>0` branch invokes
+      the new function correctly.
 
 - [x] **Route confirmed-losing CCA features into `pyfracval/experimental/`**
       (closes the "Coarse-grid CCA retry mode evaluation" decision item too —
