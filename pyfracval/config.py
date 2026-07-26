@@ -1,10 +1,66 @@
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic import BaseModel, Field, model_validator
+
+# ---------------------------------------------------------------------------
+# Multi-format config loading
+# ---------------------------------------------------------------------------
+
+_CONFIG_LOADERS = {
+    ".toml": lambda fh: tomllib.load(fh),
+    ".yaml": lambda fh: yaml.safe_load(fh) or {},
+    ".yml": lambda fh: yaml.safe_load(fh) or {},
+    ".json": lambda fh: json.load(fh),
+}
+
+
+def load_config_dict(path: str | Path) -> dict[str, Any]:
+    """Load a config file into a plain dict, auto-detecting format from extension.
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Path to a ``.toml``, ``.yaml``/``.yml``, or ``.json`` config file.
+
+    Returns
+    -------
+    dict[str, Any]
+        The parsed file contents, ready for ``SomeModel.model_validate(...)``.
+
+    Raises
+    ------
+    ValueError
+        If the file extension isn't one of the supported formats.
+
+    Notes
+    -----
+    TOML is parsed in binary mode via :mod:`tomllib` (its required mode);
+    YAML and JSON are parsed in text mode. YAML is loaded with
+    :func:`yaml.safe_load` — arbitrary Python object tags are not supported,
+    matching TOML/JSON's data-only semantics.
+    """
+    path = Path(path)
+    suffix = path.suffix.lower()
+    try:
+        loader = _CONFIG_LOADERS[suffix]
+    except KeyError:
+        supported = ", ".join(sorted(_CONFIG_LOADERS))
+        raise ValueError(
+            f"Unrecognized config file extension '{suffix}' for {path} "
+            f"(supported: {supported})"
+        ) from None
+
+    mode = "rb" if suffix == ".toml" else "r"
+    with open(path, mode) as fh:
+        data = loader(fh)
+    return data if data is not None else {}
+
 
 # ---------------------------------------------------------------------------
 # Sweep configuration — Pydantic models
@@ -122,11 +178,29 @@ class SweepConfig(BaseModel):
         Notes
         -----
         The TOML file is parsed with :mod:`tomllib` and validated through the
-        Pydantic model constructor.
+        Pydantic model constructor. See :meth:`from_file` for a version that
+        also accepts YAML/JSON.
         """
         with open(path, "rb") as fh:
             data = tomllib.load(fh)
         return cls.model_validate(data)
+
+    @classmethod
+    def from_file(cls, path: str | Path) -> "SweepConfig":
+        """Load a :class:`SweepConfig` from a TOML, YAML, or JSON file.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Path to the config file. Format is auto-detected from the file
+            extension (``.toml``, ``.yaml``/``.yml``, or ``.json``).
+
+        Returns
+        -------
+        SweepConfig
+            A validated configuration instance created from the file data.
+        """
+        return cls.model_validate(load_config_dict(path))
 
     # --- Merge helpers ------------------------------------------------------
 
@@ -362,10 +436,28 @@ class OrchestratorConfig(BaseModel):
         Notes
         -----
         The TOML file is parsed with :mod:`tomllib` and validated by Pydantic.
+        See :meth:`from_file` for a version that also accepts YAML/JSON.
         """
         with open(path, "rb") as fh:
             data = tomllib.load(fh)
         return cls.model_validate(data)
+
+    @classmethod
+    def from_file(cls, path: str | Path) -> "OrchestratorConfig":
+        """Load an :class:`OrchestratorConfig` from a TOML, YAML, or JSON file.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Path to the config file. Format is auto-detected from the file
+            extension (``.toml``, ``.yaml``/``.yml``, or ``.json``).
+
+        Returns
+        -------
+        OrchestratorConfig
+            A validated orchestrator configuration created from the file data.
+        """
+        return cls.model_validate(load_config_dict(path))
 
 
 # ---------------------------------------------------------------------------
