@@ -10,7 +10,6 @@ from click.core import ParameterSource
 from pyfracval.config import RunConfig
 from pyfracval.logs import TRACE_LEVEL_NUM, create_logger
 from pyfracval.main_runner import run_simulation
-from pyfracval.visualization import plot_particles
 
 # --- Default values shown in --help / used when no --config and no flag given ---
 _DEFAULTS = RunConfig()
@@ -385,6 +384,8 @@ def cli(ctx, **kwargs) -> None:
             agg_num = i + 1
             try:
                 import pyvista as pv  # Import only if needed
+
+                from pyfracval.visualization import plot_particles
 
                 pl = plot_particles(final_coords, final_radii)
                 pl.add_text(
