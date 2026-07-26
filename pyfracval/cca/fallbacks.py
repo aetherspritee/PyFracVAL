@@ -140,99 +140,31 @@ class _FallbacksMixin:
         if result is not None:
             return result
 
-        # --- Gamma Expansion ---
-        gamma_expansion_enabled = bool(
-            self.algorithm_config.cca_gamma_expansion_enabled
-        )
-        if not gamma_expansion_enabled:
+        # --- Gamma Expansion (archived, off by default - see
+        # pyfracval/experimental/gamma_expansion.py) ---
+        if not bool(self.algorithm_config.cca_gamma_expansion_enabled):
             return None
 
-        gamma_expansion_step = float(self.algorithm_config.cca_gamma_expansion_step)
-        gamma_expansion_max_factor = float(
-            self.algorithm_config.cca_gamma_expansion_max_factor
+        from ..experimental.gamma_expansion import run_gamma_expansion
+
+        return run_gamma_expansion(
+            self,
+            cluster_idx1,
+            cluster_idx2,
+            cluster_props_cache,
+            n1,
+            n2,
+            m1,
+            rg1,
+            cm1,
+            r_max1,
+            radii1_in,
+            m2,
+            rg2,
+            cm2,
+            r_max2,
+            radii2_in,
         )
-        gamma_expansion_mass_exponent = float(
-            self.algorithm_config.cca_gamma_expansion_mass_exponent
-        )
-        gamma_expansion_max_attempts = int(
-            self.algorithm_config.cca_gamma_expansion_max_attempts
-        )
-        n_total = n1 + n2
-        self._gamma_expansion_hits += 1
-
-        props1 = (m1, rg1, cm1, r_max1, radii1_in)
-        props2 = (m2, rg2, cm2, r_max2, radii2_in)
-        _, gamma_pc_original = self._calculate_cca_gamma(props1, props2)
-
-        for attempt in range(1, gamma_expansion_max_attempts + 1):
-            expansion_delta = (
-                gamma_expansion_step
-                * (n_total**gamma_expansion_mass_exponent)
-                * attempt
-            )
-            gamma_pc_expanded = gamma_pc_original * (1.0 + expansion_delta)
-
-            if gamma_pc_expanded > gamma_pc_original * gamma_expansion_max_factor:
-                logger.info(
-                    f"CCA gamma expansion hit max factor "
-                    f"{gamma_expansion_max_factor:.3f} for clusters "
-                    f"{cluster_idx1}, {cluster_idx2}. Giving up."
-                )
-                return None
-
-            # Recompute gamma from fractal scaling law for physical consistency
-            rg3_exp = fractal.calculate_rg(
-                np.concatenate((radii1_in, radii2_in)),
-                n_total,
-                self.df,
-                self.kf,
-            )
-            m1_h, m2_h = float(n1), float(n2)
-            m3_h = float(n_total)
-            term1 = (m3_h**2) * (rg3_exp**2)
-            term2 = m3_h * (m1_h * rg1**2 + m2_h * rg2**2)
-            denom = m1_h * m2_h
-            radicand = term1 - term2
-
-            gamma_real_exp = (denom > 0) and (radicand >= 0)
-            if gamma_real_exp:
-                gamma_pc_rec = float(np.sqrt(radicand / denom))
-                gamma_pc = min(
-                    gamma_pc_expanded, gamma_pc_rec * gamma_expansion_max_factor
-                )
-                gamma_pc = max(gamma_pc, gamma_pc_original)
-            else:
-                gamma_pc = gamma_pc_expanded
-            gamma_real = True
-
-            self._gamma_expansion_total_steps += 1
-            logger.info(
-                f"CCA gamma expansion ({cluster_idx1},{cluster_idx2}): "
-                f"attempt {attempt}/{gamma_expansion_max_attempts}, "
-                f"gamma {gamma_pc_original:.4f} -> {gamma_pc:.4f} "
-                f"(factor={gamma_pc / gamma_pc_original:.4f})"
-            )
-
-            # Override gamma via temp attribute
-            self._gamma_pc_override = gamma_pc
-            self._gamma_real_override = gamma_real
-            try:
-                result = self._perform_cca_sticking(
-                    cluster_idx1, cluster_idx2, cluster_props_cache
-                )
-            finally:
-                self._gamma_pc_override = None
-                self._gamma_real_override = None
-
-            if result is not None:
-                self._gamma_expansion_successes += 1
-                return result
-
-        logger.warning(
-            f"CCA sticking failed for clusters {cluster_idx1}, {cluster_idx2} "
-            f"after {gamma_expansion_max_attempts} gamma expansions."
-        )
-        return None
 
     def _perform_cca_sticking(
         self,
