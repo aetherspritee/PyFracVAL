@@ -244,6 +244,7 @@ class SweepConfig(BaseModel):
 
 
 class OrchestratorSimulationConfig(BaseModel):
+    N: int = 128
     Df: float = 1.8
     kf: float = 1.0
     rp_g: float = 100.0
@@ -251,6 +252,7 @@ class OrchestratorSimulationConfig(BaseModel):
     tol_ov: float = 1e-6
     n_subcl_percentage: float = 0.1
     ext_case: int = 0
+    seed: int | None = None
 
 
 class OrchestratorAlgorithmConfig(BaseModel):
@@ -320,6 +322,93 @@ class OrchestratorAlgorithmConfig(BaseModel):
     profile_timing: bool = False
     profile_cca_leaf_stats: bool = False
     profile_cca_candidate_score: bool = False
+
+
+class RunConfig(BaseModel):
+    """Top-level config for a single CLI/library simulation run.
+
+    Config files are the source of truth: load one with :meth:`from_file`
+    (TOML/YAML/JSON, auto-detected by extension), then apply explicit CLI
+    flag overrides with :meth:`merged` — only values the user actually
+    typed take precedence over the file; the file takes precedence over
+    these built-in defaults.
+
+    Example TOML::
+
+        num_aggregates = 5
+        output_dir = "RESULTS"
+
+        [simulation]
+        N = 256
+        Df = 1.8
+        kf = 1.0
+        rp_gstd = 1.5
+
+        [algorithm]
+        cca_retry_rotation_mode = "alternate"
+        densify_enabled = true
+    """
+
+    simulation: OrchestratorSimulationConfig = Field(
+        default_factory=lambda: OrchestratorSimulationConfig(Df=2.0)
+    )
+    algorithm: OrchestratorAlgorithmConfig = Field(
+        default_factory=OrchestratorAlgorithmConfig
+    )
+    num_aggregates: int = 1
+    output_dir: str = "RESULTS"
+    max_attempts: int = 5
+    plot: bool = False
+
+    @classmethod
+    def from_file(cls, path: str | Path) -> "RunConfig":
+        """Load a :class:`RunConfig` from a TOML, YAML, or JSON file.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Path to the config file. Format is auto-detected from the file
+            extension (``.toml``, ``.yaml``/``.yml``, or ``.json``).
+
+        Returns
+        -------
+        RunConfig
+            A validated configuration instance created from the file data.
+        """
+        return cls.model_validate(load_config_dict(path))
+
+    def merged(self, overrides: dict[str, Any]) -> "RunConfig":
+        """Return a new :class:`RunConfig` with *overrides* applied.
+
+        Parameters
+        ----------
+        overrides : dict[str, Any]
+            Mapping of replacement values. ``None`` values are ignored, so
+            that a dict built from CLI options (unset options represented
+            as ``None``) only overrides what the user actually provided.
+            Nested ``"simulation"`` and ``"algorithm"`` dicts are merged
+            into the corresponding sub-models field-by-field.
+
+        Returns
+        -------
+        RunConfig
+            A new configuration instance with the requested overrides
+            applied (flags win over the loaded file, which won over these
+            defaults).
+        """
+        top: dict[str, Any] = self.model_dump()
+
+        for key, value in overrides.items():
+            if value is None:
+                continue
+            if key in ("simulation", "algorithm") and isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    if sub_value is not None:
+                        top[key][sub_key] = sub_value
+            else:
+                top[key] = value
+
+        return RunConfig.model_validate(top)
 
 
 class OrchestratorDefaultsConfig(BaseModel):

@@ -5,23 +5,43 @@ from pathlib import Path
 
 import click
 import numpy as np
+from click.core import ParameterSource
 
-from pyfracval import config as default_config
+from pyfracval.config import RunConfig
 from pyfracval.logs import TRACE_LEVEL_NUM, create_logger
 from pyfracval.main_runner import run_simulation
 from pyfracval.visualization import plot_particles
 
-# --- Default values from config (or override here) ---
-# These will be used if the user doesn't provide options
-DEFAULT_DF = default_config.DF
-DEFAULT_KF = default_config.KF
-DEFAULT_N = default_config.N
-DEFAULT_R0 = default_config.RP_GEOMETRIC_MEAN
-DEFAULT_SIGMA = default_config.RP_GEOMETRIC_STD  # Note: Sigma here is rp_gstd
-DEFAULT_EXT_CASE = default_config.EXT_CASE
-DEFAULT_TOL_OV = default_config.TOL_OVERLAP
-DEFAULT_N_SUBCL_PERC = default_config.N_SUBCL_PERCENTAGE
-DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
+# --- Default values shown in --help / used when no --config and no flag given ---
+_DEFAULTS = RunConfig()
+DEFAULT_DF = _DEFAULTS.simulation.Df
+DEFAULT_KF = _DEFAULTS.simulation.kf
+DEFAULT_N = _DEFAULTS.simulation.N
+DEFAULT_R0 = _DEFAULTS.simulation.rp_g
+DEFAULT_SIGMA = _DEFAULTS.simulation.rp_gstd  # Note: Sigma here is rp_gstd
+DEFAULT_EXT_CASE = _DEFAULTS.simulation.ext_case
+DEFAULT_TOL_OV = _DEFAULTS.simulation.tol_ov
+DEFAULT_N_SUBCL_PERC = _DEFAULTS.simulation.n_subcl_percentage
+DEFAULT_OUTPUT_DIR = _DEFAULTS.output_dir
+
+# Maps click option/kwarg names to RunConfig.simulation field names.
+_SIMULATION_FLAG_MAP: dict[str, str] = {
+    "df": "Df",
+    "kf": "kf",
+    "num_particles": "N",
+    "rp_g": "rp_g",
+    "ext_case": "ext_case",
+    "tol_ov": "tol_ov",
+    "n_subcl_perc": "n_subcl_percentage",
+    "seed": "seed",
+}
+# Maps click option/kwarg names to top-level RunConfig field names.
+_RUN_FLAG_MAP: dict[str, str] = {
+    "num_aggregates": "num_aggregates",
+    "folder": "output_dir",
+    "max_attempts": "max_attempts",
+    "plot": "plot",
+}
 
 
 # --- Click Command Group ---
@@ -34,6 +54,19 @@ DEFAULT_OUTPUT_DIR = "RESULTS"  # Default save location
     package_name="pyfracval"
 )  # Add version if you have __version__ in __init__.py
 @click.pass_context
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
+    default=None,
+    help="Path to a TOML/YAML/JSON config file (format auto-detected from "
+    "the extension). The config file is the source of truth for anything "
+    "it sets; any flag below that you explicitly pass overrides the "
+    "corresponding config file value. Algorithm-tuning options not exposed "
+    "as flags (retry modes, densification, etc.) can only be set via a "
+    "config file's [algorithm] table - see docs/source/experiments.md for "
+    "what's available.",
+)
 # --- Options mirroring config.py ---
 @click.option(
     "--df",
@@ -189,70 +222,89 @@ def cli(ctx, **kwargs) -> None:
 
     logger = create_logger(log_level, kwargs["log_file"])
 
-    # --- Validate Inputs ---
-    if kwargs["rp_g"] <= 0:
-        raise click.BadParameter(
-            "Geometric mean radius (rp_g) must be > 0.", param_hint="--rp-g"
-        )
-    if kwargs["num_particles"] < 2:
-        raise click.BadParameter(
-            "Number of particles (n) must be at least 2.", param_hint="-n"
-        )
-    if kwargs["rp_gstd"] is not None:
-        # Geometric STD provided, use it directly (takes precedence)
+    # --- Load config file (source of truth), then layer explicit CLI flags on top ---
+    run_cfg = (
+        RunConfig.from_file(kwargs["config_path"])
+        if kwargs["config_path"]
+        else RunConfig()
+    )
+
+    def _explicit(name: str) -> bool:
+        return ctx.get_parameter_source(name) == ParameterSource.COMMANDLINE
+
+    sim_overrides: dict = {
+        field: kwargs[flag]
+        for flag, field in _SIMULATION_FLAG_MAP.items()
+        if _explicit(flag)
+    }
+    run_overrides: dict = {
+        field: kwargs[flag] for flag, field in _RUN_FLAG_MAP.items() if _explicit(flag)
+    }
+
+    # rp_gstd / rp_std precedence: --rp-gstd wins, then --rp-std (heuristic),
+    # then whatever the config file / defaults already say (left untouched
+    # below if neither flag was explicitly given).
+    if _explicit("rp_gstd"):
         if kwargs["rp_gstd"] < 1.0:
             raise click.BadParameter(
                 "Geometric standard deviation (--rp-gstd) must be >= 1.0.",
                 param_hint="--rp-gstd",
             )
-        final_rp_gstd = kwargs["rp_gstd"]
-        if kwargs["rp_std"] is not None:
+        sim_overrides["rp_gstd"] = kwargs["rp_gstd"]
+        if _explicit("rp_std"):
             logger.warning("Both --rp-gstd and --rp-std provided. Using --rp-gstd.")
-    elif kwargs["rp_std"] is not None:
-        # Arithmetic STD provided, Geometric STD not provided
+    elif _explicit("rp_std"):
         if kwargs["rp_std"] < 0:
             raise click.BadParameter(
                 "Arithmetic standard deviation (--rp-std) cannot be negative.",
                 param_hint="--rp-std",
             )
         # Apply heuristic: sigma_g = exp(sigma_a / mu_g)
-
-        final_rp_gstd = np.exp(kwargs["rp_std"] / kwargs["rp_g"])
+        rp_g_for_heuristic = sim_overrides.get("rp_g", run_cfg.simulation.rp_g)
+        computed_rp_gstd = np.exp(kwargs["rp_std"] / rp_g_for_heuristic)
+        sim_overrides["rp_gstd"] = computed_rp_gstd
         logger.warning(
             f"Using heuristic to calculate geometric standard deviation from arithmetic std: "
-            f"exp(rp_std / rp_g) = exp({kwargs['rp_std']:.2f} / {kwargs['rp_g']:.2f}) = {final_rp_gstd:.3f}. "
-            f"Targeting rp_gstd = {final_rp_gstd:.3f} for generation."
+            f"exp(rp_std / rp_g) = exp({kwargs['rp_std']:.2f} / {rp_g_for_heuristic:.2f}) = {computed_rp_gstd:.3f}. "
+            f"Targeting rp_gstd = {computed_rp_gstd:.3f} for generation."
         )
-    else:
-        # Neither provided, use the default geometric STD
-        final_rp_gstd = DEFAULT_SIGMA
-        logger.info(
-            f"No geometric or arithmetic standard deviation provided. Using default rp_gstd = {final_rp_gstd:.3f}"
+
+    run_cfg = run_cfg.merged({**run_overrides, "simulation": sim_overrides})
+    sim = run_cfg.simulation
+
+    # --- Validate Inputs ---
+    if sim.rp_g <= 0:
+        raise click.BadParameter(
+            "Geometric mean radius (rp_g) must be > 0.", param_hint="--rp-g"
+        )
+    if sim.N < 2:
+        raise click.BadParameter(
+            "Number of particles (n) must be at least 2.", param_hint="-n"
         )
 
     # --- Prepare Configuration for Runner ---
     sim_config = {
-        "N": kwargs["num_particles"],
-        "Df": kwargs["df"],
-        "kf": kwargs["kf"],
-        "rp_g": kwargs["rp_g"],
-        "rp_gstd": final_rp_gstd,
-        "tol_ov": kwargs["tol_ov"],
-        "n_subcl_percentage": kwargs["n_subcl_perc"],
-        "ext_case": kwargs["ext_case"],
-        # Add any other parameters required by run_simulation
+        "N": sim.N,
+        "Df": sim.Df,
+        "kf": sim.kf,
+        "rp_g": sim.rp_g,
+        "rp_gstd": sim.rp_gstd,
+        "tol_ov": sim.tol_ov,
+        "n_subcl_percentage": sim.n_subcl_percentage,
+        "ext_case": sim.ext_case,
+        **run_cfg.algorithm.model_dump(),
     }
 
     # --- Run Simulation Loop ---
-    output_folder = Path(kwargs["folder"])
+    output_folder = Path(run_cfg.output_dir)
     output_folder.mkdir(parents=True, exist_ok=True)  # Ensure folder exists
 
     aggregates_generated = 0
     global_start_time = time.time()
-    base_seed = kwargs["seed"]
+    base_seed = sim.seed
     plotters = []  # Store plotters if plotting multiple aggregates
 
-    for i in range(kwargs["num_aggregates"]):
+    for i in range(run_cfg.num_aggregates):
         agg_num = i + 1
         attempt = 0
         success = False
@@ -266,10 +318,10 @@ def cli(ctx, **kwargs) -> None:
             else int(time.time() * 1000) % (2**32)
         )
 
-        while not success and attempt < kwargs["max_attempts"]:
+        while not success and attempt < run_cfg.max_attempts:
             attempt += 1
             logger.info(
-                f"--- Generating Aggregate {agg_num}/{kwargs['num_aggregates']}, Attempt {attempt}/{kwargs['max_attempts']} ---"
+                f"--- Generating Aggregate {agg_num}/{run_cfg.num_aggregates}, Attempt {attempt}/{run_cfg.max_attempts} ---"
             )
             success, final_coords, final_radii = run_simulation(
                 iteration=agg_num,
@@ -284,19 +336,19 @@ def cli(ctx, **kwargs) -> None:
                 )
                 # Provide general retry advice (specific advice logged by runner)
                 logger.info(
-                    f"--- Retrying (up to {kwargs['max_attempts']} attempts)... ---"
+                    f"--- Retrying (up to {run_cfg.max_attempts} attempts)... ---"
                 )
                 # time.sleep(0.5)  # Small pause
 
         if success:
             aggregates_generated += 1
-            if kwargs["plot"] and final_coords is not None and final_radii is not None:
+            if run_cfg.plot and final_coords is not None and final_radii is not None:
                 try:
                     import pyvista as pv  # Import only if needed
 
                     pl = plot_particles(final_coords, final_radii)
                     pl.add_text(
-                        f"Aggregate {agg_num}/{kwargs['num_aggregates']}\nN={sim_config['N']}, Df={sim_config['Df']:.2f}",
+                        f"Aggregate {agg_num}/{run_cfg.num_aggregates}\nN={sim_config['N']}, Df={sim_config['Df']:.2f}",
                         position="upper_left",
                         font_size=10,
                     )
@@ -309,7 +361,7 @@ def cli(ctx, **kwargs) -> None:
                     logger.warning(f"Error during plotting: {e}")
         else:
             logger.critical(
-                f"FATAL: Failed to generate aggregate {agg_num} after {kwargs['max_attempts']} attempts."
+                f"FATAL: Failed to generate aggregate {agg_num} after {run_cfg.max_attempts} attempts."
             )
             # Optionally exit early on failure
             # ctx.fail(f"Failed to generate aggregate {agg_num}")
@@ -318,7 +370,7 @@ def cli(ctx, **kwargs) -> None:
     global_end_time = time.time()
     logger.info("--------------------------------------------------")
     logger.info(
-        f"Generated {aggregates_generated}/{kwargs['num_aggregates']} aggregates."
+        f"Generated {aggregates_generated}/{run_cfg.num_aggregates} aggregates."
     )
     logger.info(f"Results saved to: {output_folder.resolve()}")
     logger.info(
@@ -354,7 +406,7 @@ def cli(ctx, **kwargs) -> None:
             pl.show()  # Blocking call, shows one plot at a time
             logger.info(f"Plot {i + 1} closed.")
 
-    if aggregates_generated < kwargs["num_aggregates"]:
+    if aggregates_generated < run_cfg.num_aggregates:
         logger.warning(
             f"Only {aggregates_generated}/{kwargs['num_aggregates']} aggregates were generated successfully."
         )
