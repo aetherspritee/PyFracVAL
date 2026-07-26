@@ -6,21 +6,35 @@ record). Convention: group by rough priority, check items off as they land,
 move finished items to the bottom "Done" section (or just delete them —
 git history has the detail).
 
-## Open
-
-- [ ] **Phase 5 follow-up — consolidate `dask_runner.py`, decide `SweepConfig`'s dask pattern** (priority: low)
-  The CLI-facing piece landed (see Done, below). Left for a smaller
-  follow-up: `dask_runner.py` (worker deployment/wheel-install plumbing)
-  and `batch_runner.py` (sequential/parallel dispatch) are still separate
-  modules with some overlapping responsibility with `benchmarks/`'s own
-  Dask setup code. `SweepConfig.dask` still uses the older
-  `DaskSettings.enable: bool` pattern (untouched by this pass) rather than
-  the new presence-based `RunConfig.dask: DaskSettings | None` — worth
-  deciding whether to unify these or leave `SweepConfig` as its own
-  established convention (it's `benchmarks/`-only, different audience than
-  the CLI). See `PLAN.md` §9, §10 for the original analysis.
-
 ## Done (recent)
+
+- [x] **Phase 5 follow-up — surveyed `dask_runner.py`/`batch_runner.py` vs.
+      `benchmarks/`, decided `SweepConfig`'s dask pattern.** Actually
+      checked the premise before acting on it: `benchmarks/
+      unified_local_remote_benchmark.py` and `benchmarks/stability_sweep.py`
+      already import and reuse `dask_runner.get_client()` directly rather
+      than reimplementing their own Dask setup — there wasn't real
+      duplication to consolidate, just one genuinely dead code path found
+      along the way: `dask_runner._install_wheel_bytes` (module-level) was
+      an exact unused duplicate of the `_install_wheel_bytes_embedded`
+      closure inside `_register_package` (the embedded version is
+      deliberately self-contained with its own local imports so cloudpickle
+      serialises it by value for `client.run`/`client.run_on_scheduler` —
+      see the comment above `_register_package`). Deleted the dead
+      module-level copy and its now-unused `importlib`/`sys`/`tempfile`
+      imports.
+      **Decision:** leave `SweepConfig.dask`'s `enable`-flag pattern as its
+      own established convention rather than unifying with `RunConfig`'s
+      presence-based one. It's `benchmarks/`-only (not user-facing CLI
+      surface), unifying would mean touching every existing sweep config's
+      semantics for no functional benefit, and the presence-based pattern
+      was specifically the author's call for the CLI-facing `RunConfig`
+      (2026-07-26: "make a config entry to configure dask and only use it
+      if there is a dask config entry in the file") — not a general mandate
+      to replace `enable: bool` everywhere.
+      Verified: full test suite green, ruff F821/F401 clean, a real
+      `[dask]`-config CLI run (2/2 aggregates via a local 2-worker cluster)
+      still succeeds after the dead-code removal.
 
 - [x] **Fix the `ext_case=1` / `random_point_sc` bug** — implemented, not just
       documented. `cca/sticking.py`'s `_cca_sticking_v1` called

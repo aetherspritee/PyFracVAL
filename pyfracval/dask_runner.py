@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 import subprocess
-import sys
-import tempfile
 import tomllib
 from pathlib import Path
 
@@ -48,69 +45,6 @@ def _project_version() -> str:
     with open(pyproject, "rb") as fh:
         data = tomllib.load(fh)
     return str(data["project"]["version"])
-
-
-def _install_wheel_bytes(
-    wheel_bytes: bytes,
-    wheel_filename: str,
-    expected_version: str,
-) -> dict[str, str]:
-    """Install wheel bytes into current interpreter process.
-
-    This function is designed to run in the scheduler/worker process via
-    ``client.run_on_scheduler`` and ``client.run``.
-    """
-    tmp_dir = tempfile.mkdtemp(prefix="pyfracval_wheel_")
-    wheel_path = os.path.join(tmp_dir, wheel_filename)
-    with open(wheel_path, "wb") as fh:
-        fh.write(wheel_bytes)
-
-    install_cmds = [
-        [
-            "uv",
-            "pip",
-            "install",
-            "--python",
-            sys.executable,
-            "--force-reinstall",
-            wheel_path,
-        ],
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--force-reinstall",
-            wheel_path,
-        ],
-    ]
-    last_exc: Exception | None = None
-    for cmd in install_cmds:
-        try:
-            subprocess.check_call(cmd)
-            last_exc = None
-            break
-        except Exception as exc:  # pragma: no cover - environment-specific
-            last_exc = exc
-    if last_exc is not None:
-        raise RuntimeError(
-            "Failed to install wheel on scheduler/worker using pip and uv pip"
-        ) from last_exc
-
-    importlib.invalidate_caches()
-    for mod_name in list(sys.modules):
-        if mod_name == "pyfracval" or mod_name.startswith("pyfracval."):
-            sys.modules.pop(mod_name, None)
-
-    os.environ[PYFRACVAL_INSTALLED_WHEEL] = wheel_filename
-    os.environ[PYFRACVAL_EXPECTED_VERSION] = expected_version
-
-    return {
-        "python": sys.executable,
-        "pid": str(os.getpid()),
-        "installed_wheel": wheel_filename,
-        "expected_version": expected_version,
-    }
 
 
 def _worker_fingerprint() -> dict[str, str]:
