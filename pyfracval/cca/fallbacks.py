@@ -285,86 +285,31 @@ class _FallbacksMixin:
         _candidate_indices = np.argwhere(list_matrix > 0)
         self._rng.shuffle(_candidate_indices)
 
+        # Production default is "baseline" (unranked shuffled order, set up
+        # above). "leaf_soft"/"leaf_score"/"leaf_hybrid" are archived in
+        # pyfracval/experimental/candidate_policies.py - benchmarked against
+        # baseline with no measurable difference in success rate (see
+        # docs/source/experiments.md), kept reachable via config.
         candidate_policy = str(self.algorithm_config.cca_candidate_policy).lower()
+        if candidate_policy in {"leaf_soft", "leaf_score", "leaf_hybrid"}:
+            from ..experimental.candidate_policies import reorder_candidates_by_policy
 
-        # Optional soft leaf-priority policy: LL first, then LN, then NN.
-        if candidate_policy == "leaf_soft":
-            ll: list[np.ndarray] = []
-            ln: list[np.ndarray] = []
-            nn: list[np.ndarray] = []
-            for pair in _candidate_indices:
-                i = int(pair[0])
-                j = int(pair[1])
-                cls = self._candidate_leaf_class(
-                    bool(leaf_mask_1[i]), bool(leaf_mask_2[j])
-                )
-                if cls == "LL":
-                    ll.append(pair)
-                elif cls == "LN":
-                    ln.append(pair)
-                else:
-                    nn.append(pair)
-            _candidate_indices = np.array(ll + ln + nn, dtype=int)
-        elif candidate_policy in {"leaf_score", "leaf_hybrid"}:
-            ll: list[np.ndarray] = []
-            ln: list[np.ndarray] = []
-            nn: list[np.ndarray] = []
-            for pair in _candidate_indices:
-                i = int(pair[0])
-                j = int(pair[1])
-                cls = self._candidate_leaf_class(
-                    bool(leaf_mask_1[i]), bool(leaf_mask_2[j])
-                )
-                if cls == "LL":
-                    ll.append(pair)
-                elif cls == "LN":
-                    ln.append(pair)
-                else:
-                    nn.append(pair)
-
-            topk = int(self.algorithm_config.cca_score_topk_per_class)
-
-            def _score_and_sort(pairs: list[np.ndarray], cls: str) -> list[np.ndarray]:
-                if not pairs:
-                    return []
-                n_score = len(pairs) if topk <= 0 else min(topk, len(pairs))
-                scored: list[tuple[float, np.ndarray]] = []
-                for pair in pairs[:n_score]:
-                    i = int(pair[0])
-                    j = int(pair[1])
-                    score = self._candidate_score(
-                        coords1_in,
-                        radii1_in,
-                        cm1,
-                        i,
-                        coords2_in,
-                        radii2_in,
-                        cm2,
-                        j,
-                        float(gamma_pc),
-                        cls,
-                    )
-                    scored.append((score, pair))
-                scored.sort(key=lambda x: x[0], reverse=True)
-                scored_pairs = [p for _, p in scored]
-                return scored_pairs + pairs[n_score:]
-
-            if candidate_policy == "leaf_score":
-                # Score order globally, optionally only top-k per class for speed.
-                merged = (
-                    _score_and_sort(ll, "LL")
-                    + _score_and_sort(ln, "LN")
-                    + _score_and_sort(nn, "NN")
-                )
-                _candidate_indices = np.array(merged, dtype=int)
-            else:
-                # Hybrid: keep leaf priority class order, score only within each class.
-                merged = (
-                    _score_and_sort(ll, "LL")
-                    + _score_and_sort(ln, "LN")
-                    + _score_and_sort(nn, "NN")
-                )
-                _candidate_indices = np.array(merged, dtype=int)
+            _candidate_indices = reorder_candidates_by_policy(
+                candidate_policy,
+                _candidate_indices,
+                leaf_mask_1,
+                leaf_mask_2,
+                coords1_in,
+                radii1_in,
+                cm1,
+                coords2_in,
+                radii2_in,
+                cm2,
+                gamma_pc,
+                self.algorithm_config,
+                candidate_leaf_class_fn=self._candidate_leaf_class,
+                candidate_score_fn=self._candidate_score,
+            )
 
         sticking_successful = False
         final_coords1 = None
