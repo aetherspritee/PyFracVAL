@@ -1,0 +1,119 @@
+{
+  "generated_at": "2026-03-10 23:59:25",
+  "total_combinations": 8,
+  "trials_per_combo": 3,
+  "sizes": [
+    32,
+    64
+  ],
+  "sigmas": [
+    1.0
+  ],
+  "df_values": [
+    1.8,
+    2.0
+  ],
+  "kf_values": [
+    1.0,
+    1.2
+  ],
+  "total_runtime_s": 164.1878366470337,
+  "results": [
+    {
+      "N": 32,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 32,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 32,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 32,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 64,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 3,
+      "successes": 3,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.0,
+      "median_runtime_s": 0.0,
+      "failure_stage_counts": {}
+    }
+  ]
+}

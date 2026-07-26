@@ -1,0 +1,69 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "run_name": "marvin_remote_N32_rep1",
+  "commit": "98df7c0",
+  "started_at": "2026-04-07 14:04:00",
+  "config": {
+    "N": 32,
+    "Df": 1.8,
+    "kf": 1.0,
+    "rp_g": 100.0,
+    "rp_gstd": 1.5,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0
+  },
+  "algorithm": {
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32
+  },
+  "n_aggregates": 1,
+  "warmup_tasks": 0,
+  "local": {
+    "environment": "local",
+    "workers": 1,
+    "total_threads": 16,
+    "effective_threads": 16.0,
+    "worker_threads": {
+      "tcp://127.0.0.1:36657": 16
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:36657": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 2825820,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:36657": 0.26430821092799306
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:36657": 1.0
+    },
+    "n_aggregates": 1,
+    "successes": 1,
+    "success_rate": 1.0,
+    "total_wall_s": 0.05396904889494181,
+    "throughput_agg_per_s": 18.5291388393121,
+    "throughput_per_thread": 1.1580711774570063,
+    "throughput_per_effective_thread": 1.1580711774570063,
+    "task_wall_mean_s": 0.038501378148794174,
+    "task_wall_median_s": 0.038501378148794174,
+    "task_cpu_mean_s": 0.03923208700000003,
+    "task_cpu_median_s": 0.03923208700000003,
+    "cpu_to_wall_ratio": 1.018978771315196,
+    "thread_busy_fraction": 0.04458733632649152,
+    "profiling_artifacts": {
+      "performance_report_html": "benchmark_results/profiles/marvin_remote/N32_rep1/profiles/local/dask_performance_report.html",
+      "client_profile_json": "benchmark_results/profiles/marvin_remote/N32_rep1/profiles/local/client_profile.json",
+      "transfer_logs_json": "benchmark_results/profiles/marvin_remote/N32_rep1/profiles/local/transfer_logs.json",
+      "scheduler_info_error": "keys must be str, int, float, bool or None, not tuple"
+    }
+  },
+  "remote": null,
+  "comparison": {}
+}

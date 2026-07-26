@@ -1,0 +1,267 @@
+{
+  "input_files": [
+    "benchmark_results/profiles/dask_profile_pilot_20260401_200410/remote/unified_N128_rep1.json",
+    "benchmark_results/profiles/dask_profile_pilot_20260401_200410/remote/unified_N256_rep1.json"
+  ],
+  "total_records": 2,
+  "per_N": {
+    "128": {
+      "records": 1,
+      "summary": {
+        "local_throughput": {
+          "count": 1.0,
+          "mean": 29.00848502227579,
+          "median": 29.00848502227579,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 29.00848502227579,
+          "min": 29.00848502227579,
+          "max": 29.00848502227579
+        },
+        "remote_throughput": {
+          "count": 1.0,
+          "mean": 51.11323071841741,
+          "median": 51.11323071841741,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 51.11323071841741,
+          "min": 51.11323071841741,
+          "max": 51.11323071841741
+        },
+        "local_per_thread": {
+          "count": 1.0,
+          "mean": 1.8130303138922368,
+          "median": 1.8130303138922368,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.8130303138922368,
+          "min": 1.8130303138922368,
+          "max": 1.8130303138922368
+        },
+        "remote_per_thread": {
+          "count": 1.0,
+          "mean": 2.1297179466007257,
+          "median": 2.1297179466007257,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 2.1297179466007257,
+          "min": 2.1297179466007257,
+          "max": 2.1297179466007257
+        },
+        "local_per_effective_thread": {
+          "count": 1.0,
+          "mean": 1.9395812522495002,
+          "median": 1.9395812522495002,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.9395812522495002,
+          "min": 1.9395812522495002,
+          "max": 1.9395812522495002
+        },
+        "remote_per_effective_thread": {
+          "count": 1.0,
+          "mean": 1.5508160719771098,
+          "median": 1.5508160719771098,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.5508160719771098,
+          "min": 1.5508160719771098,
+          "max": 1.5508160719771098
+        },
+        "remote_busy_fraction": {
+          "count": 1.0,
+          "mean": 1.072816058104788,
+          "median": 1.072816058104788,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.072816058104788,
+          "min": 1.072816058104788,
+          "max": 1.072816058104788
+        },
+        "ratios": {
+          "raw": {
+            "count": 1.0,
+            "mean": 1.762009656111557,
+            "median": 1.762009656111557,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 1.762009656111557,
+            "min": 1.762009656111557,
+            "max": 1.762009656111557
+          },
+          "per_thread": {
+            "count": 1.0,
+            "mean": 1.1746731040743714,
+            "median": 1.1746731040743714,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 1.1746731040743714,
+            "min": 1.1746731040743714,
+            "max": 1.1746731040743714
+          },
+          "per_effective_thread": {
+            "count": 1.0,
+            "mean": 0.7995623128335017,
+            "median": 0.7995623128335017,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.7995623128335017,
+            "min": 0.7995623128335017,
+            "max": 0.7995623128335017
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "Remote worker calibration spread is high; cluster heterogeneity is significant.",
+        "findings": [
+          "Remote worker calibration spread is high; cluster heterogeneity is significant."
+        ],
+        "opportunities": [
+          {
+            "action": "Split heterogeneous workers into separate benchmark pools",
+            "reason": "Mixed node speeds can cause stragglers and misleading normalization."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/profiles/dask_profile_pilot_20260401_200410/remote/unified_N128_rep1.json"
+      ]
+    },
+    "256": {
+      "records": 1,
+      "summary": {
+        "local_throughput": {
+          "count": 1.0,
+          "mean": 16.55163328617395,
+          "median": 16.55163328617395,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 16.55163328617395,
+          "min": 16.55163328617395,
+          "max": 16.55163328617395
+        },
+        "remote_throughput": {
+          "count": 1.0,
+          "mean": 21.94693180919688,
+          "median": 21.94693180919688,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 21.94693180919688,
+          "min": 21.94693180919688,
+          "max": 21.94693180919688
+        },
+        "local_per_thread": {
+          "count": 1.0,
+          "mean": 1.0344770803858718,
+          "median": 1.0344770803858718,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.0344770803858718,
+          "min": 1.0344770803858718,
+          "max": 1.0344770803858718
+        },
+        "remote_per_thread": {
+          "count": 1.0,
+          "mean": 0.91445549204987,
+          "median": 0.91445549204987,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.91445549204987,
+          "min": 0.91445549204987,
+          "max": 0.91445549204987
+        },
+        "local_per_effective_thread": {
+          "count": 1.0,
+          "mean": 1.1273694943005532,
+          "median": 1.1273694943005532,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.1273694943005532,
+          "min": 1.1273694943005532,
+          "max": 1.1273694943005532
+        },
+        "remote_per_effective_thread": {
+          "count": 1.0,
+          "mean": 0.9614036016460324,
+          "median": 0.9614036016460324,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.9614036016460324,
+          "min": 0.9614036016460324,
+          "max": 0.9614036016460324
+        },
+        "remote_busy_fraction": {
+          "count": 1.0,
+          "mean": 0.6760474458011071,
+          "median": 0.6760474458011071,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.6760474458011071,
+          "min": 0.6760474458011071,
+          "max": 0.6760474458011071
+        },
+        "ratios": {
+          "raw": {
+            "count": 1.0,
+            "mean": 1.3259677416566362,
+            "median": 1.3259677416566362,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 1.3259677416566362,
+            "min": 1.3259677416566362,
+            "max": 1.3259677416566362
+          },
+          "per_thread": {
+            "count": 1.0,
+            "mean": 0.8839784944377574,
+            "median": 0.8839784944377574,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.8839784944377574,
+            "min": 0.8839784944377574,
+            "max": 0.8839784944377574
+          },
+          "per_effective_thread": {
+            "count": 1.0,
+            "mean": 0.852784829203233,
+            "median": 0.852784829203233,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.852784829203233,
+            "min": 0.852784829203233,
+            "max": 0.852784829203233
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "No dominant bottleneck detected; behavior appears balanced for current runs.",
+        "findings": [
+          "No dominant bottleneck detected; behavior appears balanced for current runs."
+        ],
+        "opportunities": [
+          {
+            "action": "Increase workload size and re-profile",
+            "reason": "Small-N runs can hide or distort true scaling trends."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/profiles/dask_profile_pilot_20260401_200410/remote/unified_N256_rep1.json"
+      ]
+    }
+  },
+  "global_findings": [
+    "N=128: Remote worker calibration spread is high; cluster heterogeneity is significant.",
+    "N=256: No dominant bottleneck detected; behavior appears balanced for current runs."
+  ],
+  "recommended_next_actions": [
+    {
+      "action": "Split heterogeneous workers into separate benchmark pools",
+      "reason": "Mixed node speeds can cause stragglers and misleading normalization."
+    },
+    {
+      "action": "Increase workload size and re-profile",
+      "reason": "Small-N runs can hide or distort true scaling trends."
+    }
+  ]
+}

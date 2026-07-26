@@ -1,0 +1,26 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/benchmark_comparison_normal.toml",
+  "execution_mode": "sequential",
+  "cases": 16,
+  "outputs": [
+    "benchmark_results/comparison_baseline/single/unified_N256_rep1.json",
+    "benchmark_results/comparison_baseline/single/unified_N256_rep2.json",
+    "benchmark_results/comparison_baseline/single/unified_N512_rep1.json",
+    "benchmark_results/comparison_baseline/single/unified_N512_rep2.json",
+    "benchmark_results/comparison_baseline/alternate/unified_N256_rep1.json",
+    "benchmark_results/comparison_baseline/alternate/unified_N256_rep2.json",
+    "benchmark_results/comparison_baseline/alternate/unified_N512_rep1.json",
+    "benchmark_results/comparison_baseline/alternate/unified_N512_rep2.json",
+    "benchmark_results/comparison_baseline/coarse_grid/unified_N256_rep1.json",
+    "benchmark_results/comparison_baseline/coarse_grid/unified_N256_rep2.json",
+    "benchmark_results/comparison_baseline/coarse_grid/unified_N512_rep1.json",
+    "benchmark_results/comparison_baseline/coarse_grid/unified_N512_rep2.json",
+    "benchmark_results/comparison_baseline/coarse_to_fine/unified_N256_rep1.json",
+    "benchmark_results/comparison_baseline/coarse_to_fine/unified_N256_rep2.json",
+    "benchmark_results/comparison_baseline/coarse_to_fine/unified_N512_rep1.json",
+    "benchmark_results/comparison_baseline/coarse_to_fine/unified_N512_rep2.json"
+  ],
+  "started_at": "2026-04-09 21:49:36",
+  "commit": "ce9aec5"
+}

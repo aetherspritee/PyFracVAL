@@ -1,0 +1,284 @@
+{
+  "type": "Scheduler",
+  "id": "Scheduler-ae7c8f66-57af-48ae-a2c8-4ae35ed648f3",
+  "address": "tcp://172.18.0.18:8786",
+  "services": {
+    "dashboard": 8787
+  },
+  "started": 1774453260.7670133,
+  "n_workers": 28,
+  "total_threads": 200,
+  "total_memory": 4315452170240,
+  "workers": {
+    "tcp://129.217.143.165:34837": {
+      "type": "Worker",
+      "id": "boba-2",
+      "host": "129.217.143.165",
+      "resources": {},
+      "local_directory": "/tmp/dask-scratch-space/worker-izw28ymm",
+      "name": "boba-2",
+      "nthreads": 4,
+      "memory_limit": 16771131392,
+      "last_seen": 1775563839.5941772,
+      "services": {
+        "dashboard": 35259
+      },
+      "metrics": {
+        "task_counts": {},
+        "bandwidth": {
+          "total": 100000000,
+          "workers": {},
+          "types": {}
+        },
+        "digests_total_since_heartbeat": {
+          "latency": 0.0035398006439208984,
+          "tick-duration": 1.0001614093780518
+        },
+        "managed_bytes": 0,
+        "spilled_bytes": {
+          "memory": 0,
+          "disk": 0
+        },
+        "transfer": {
+          "incoming_bytes": 0,
+          "incoming_count": 0,
+          "incoming_count_total": 0,
+          "outgoing_bytes": 0,
+          "outgoing_count": 0,
+          "outgoing_count_total": 2
+        },
+        "event_loop_interval": 0.020808701713879902,
+        "cpu": 4.0,
+        "memory": 269410304,
+        "time": 1775563839.0934615,
+        "host_net_io": {
+          "read_bps": 5606250.486195263,
+          "write_bps": 3530599.191633997
+        },
+        "host_disk_io": {
+          "read_bps": 0.0,
+          "write_bps": 0.0
+        },
+        "num_fds": 22
+      },
+      "status": "running",
+      "nanny": "tcp://129.217.143.165:41355"
+    },
+    "tcp://129.217.143.165:35177": {
+      "type": "Worker",
+      "id": "boba-0",
+      "host": "129.217.143.165",
+      "resources": {},
+      "local_directory": "/tmp/dask-scratch-space/worker-mlxklj45",
+      "name": "boba-0",
+      "nthreads": 4,
+      "memory_limit": 16771131392,
+      "last_seen": 1775563839.607951,
+      "services": {
+        "dashboard": 39025
+      },
+      "metrics": {
+        "task_counts": {},
+        "bandwidth": {
+          "total": 100000000,
+          "workers": {},
+          "types": {}
+        },
+        "digests_total_since_heartbeat": {
+          "latency": 0.0040585994720458984,
+          "tick-duration": 0.9999802112579346
+        },
+        "managed_bytes": 0,
+        "spilled_bytes": {
+          "memory": 0,
+          "disk": 0
+        },
+        "transfer": {
+          "incoming_bytes": 0,
+          "incoming_count": 0,
+          "incoming_count_total": 0,
+          "outgoing_bytes": 0,
+          "outgoing_count": 0,
+          "outgoing_count_total": 1
+        },
+        "event_loop_interval": 0.020411968231201172,
+        "cpu": 2.0,
+        "memory": 266981376,
+        "time": 1775563839.1068392,
+        "host_net_io": {
+          "read_bps": 5594449.151043623,
+          "write_bps": 3524315.490052728
+        },
+        "host_disk_io": {
+          "read_bps": 0.0,
+          "write_bps": 0.0
+        },
+        "num_fds": 22
+      },
+      "status": "running",
+      "nanny": "tcp://129.217.143.165:40081"
+    },
+    "tcp://129.217.143.165:41639": {
+      "type": "Worker",
+      "id": "boba-3",
+      "host": "129.217.143.165",
+      "resources": {},
+      "local_directory": "/tmp/dask-scratch-space/worker-kagtwyei",
+      "name": "boba-3",
+      "nthreads": 4,
+      "memory_limit": 16771131392,
+      "last_seen": 1775563839.5955722,
+      "services": {
+        "dashboard": 42349
+      },
+      "metrics": {
+        "task_counts": {},
+        "bandwidth": {
+          "total": 100000000,
+          "workers": {},
+          "types": {}
+        },
+        "digests_total_since_heartbeat": {
+          "latency": 0.0035598278045654297,
+          "tick-duration": 1.0008301734924316
+        },
+        "managed_bytes": 0,
+        "spilled_bytes": {
+          "memory": 0,
+          "disk": 0
+        },
+        "transfer": {
+          "incoming_bytes": 0,
+          "incoming_count": 0,
+          "incoming_count_total": 0,
+          "outgoing_bytes": 0,
+          "outgoing_count": 0,
+          "outgoing_count_total": 1
+        },
+        "event_loop_interval": 0.020854721466700237,
+        "cpu": 6.0,
+        "memory": 269770752,
+        "time": 1775563839.0948372,
+        "host_net_io": {
+          "read_bps": 5602871.422892372,
+          "write_bps": 3527982.9110402837
+        },
+        "host_disk_io": {
+          "read_bps": 0.0,
+          "write_bps": 0.0
+        },
+        "num_fds": 22
+      },
+      "status": "running",
+      "nanny": "tcp://129.217.143.165:35709"
+    },
+    "tcp://129.217.143.165:42661": {
+      "type": "Worker",
+      "id": "boba-1",
+      "host": "129.217.143.165",
+      "resources": {},
+      "local_directory": "/tmp/dask-scratch-space/worker-d6ahij58",
+      "name": "boba-1",
+      "nthreads": 4,
+      "memory_limit": 16771131392,
+      "last_seen": 1775563839.5953023,
+      "services": {
+        "dashboard": 41585
+      },
+      "metrics": {
+        "task_counts": {},
+        "bandwidth": {
+          "total": 100000000,
+          "workers": {},
+          "types": {}
+        },
+        "digests_total_since_heartbeat": {
+          "latency": 0.0043752193450927734,
+          "tick-duration": 1.0000555515289307
+        },
+        "managed_bytes": 0,
+        "spilled_bytes": {
+          "memory": 0,
+          "disk": 0
+        },
+        "transfer": {
+          "incoming_bytes": 0,
+          "incoming_count": 0,
+          "incoming_count_total": 0,
+          "outgoing_bytes": 0,
+          "outgoing_count": 0,
+          "outgoing_count_total": 1
+        },
+        "event_loop_interval": 0.02129127116913491,
+        "cpu": 6.0,
+        "memory": 271335424,
+        "time": 1775563839.094441,
+        "host_net_io": {
+          "read_bps": 5603906.195762484,
+          "write_bps": 3531284.8245102167
+        },
+        "host_disk_io": {
+          "read_bps": 0.0,
+          "write_bps": 0.0
+        },
+        "num_fds": 22
+      },
+      "status": "running",
+      "nanny": "tcp://129.217.143.165:36511"
+    },
+    "tcp://129.217.143.182:33815": {
+      "type": "Worker",
+      "id": "sauron-12",
+      "host": "129.217.143.182",
+      "resources": {},
+      "local_directory": "/tmp/dask-scratch-space/worker-fojar3e_",
+      "name": "sauron-12",
+      "nthreads": 8,
+      "memory_limit": 235944184576,
+      "last_seen": 1775563838.7460296,
+      "services": {
+        "dashboard": 35113
+      },
+      "metrics": {
+        "task_counts": {},
+        "bandwidth": {
+          "total": 100000000,
+          "workers": {},
+          "types": {}
+        },
+        "digests_total_since_heartbeat": {
+          "tick-duration": 1.0018503665924072,
+          "latency": 0.09101152420043945
+        },
+        "managed_bytes": 0,
+        "spilled_bytes": {
+          "memory": 0,
+          "disk": 0
+        },
+        "transfer": {
+          "incoming_bytes": 0,
+          "incoming_count": 0,
+          "incoming_count_total": 0,
+          "outgoing_bytes": 0,
+          "outgoing_count": 0,
+          "outgoing_count_total": 150
+        },
+        "event_loop_interval": 0.01999950408935547,
+        "cpu": 12.0,
+        "memory": 708763648,
+        "time": 1775563838.2427735,
+        "host_net_io": {
+          "read_bps": 45233.55271799677,
+          "write_bps": 1010383.0375862996
+        },
+        "host_disk_io": {
+          "read_bps": 0.0,
+          "write_bps": 13340771.30853361
+        },
+        "num_fds": 22
+      },
+      "status": "running",
+      "nanny": "tcp://129.217.143.182:34641"
+    }
+  }
+}

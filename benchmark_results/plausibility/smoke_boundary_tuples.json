@@ -1,0 +1,18 @@
+{
+  "total_selected": 1,
+  "selected": [
+    {
+      "sigma": 1.1,
+      "Df": 1.8,
+      "kf": 1.0,
+      "n_ref": 64,
+      "sr_ref": 1.0,
+      "class": "stable",
+      "boundary_distance": 0.09999999999999998,
+      "degradation": 0.0,
+      "df_plus_kf": 2.8,
+      "dist_df_plus_kf_3p2": 0.40000000000000036,
+      "rank_within_sigma": 1
+    }
+  ]
+}

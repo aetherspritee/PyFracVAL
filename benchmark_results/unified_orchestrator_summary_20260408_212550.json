@@ -1,0 +1,16 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/retry_soft_accept_sweep_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 6,
+  "outputs": [
+    "benchmark_results/profiles/retry_soft_accept_sweep_v1/strict_baseline/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_soft_accept_sweep_v1/soft_5e5_i24/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_soft_accept_sweep_v1/soft_1e4_i24/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_soft_accept_sweep_v1/soft_2e4_i24/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_soft_accept_sweep_v1/soft_1e4_i48/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_soft_accept_sweep_v1/soft_2e4_i48/unified_N512_rep1.json"
+  ],
+  "started_at": "2026-04-08 21:13:39",
+  "commit": "ce9aec5"
+}

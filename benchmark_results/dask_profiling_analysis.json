@@ -1,0 +1,295 @@
+{
+  "input_files": [
+    "benchmark_results/unified_local_vs_marvin_N128.json",
+    "benchmark_results/unified_local_vs_marvin_N256.json"
+  ],
+  "total_records": 2,
+  "per_N": {
+    "128": {
+      "records": 1,
+      "summary": {
+        "local_throughput": {
+          "count": 1.0,
+          "mean": 31.031745662446696,
+          "median": 31.031745662446696,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 31.031745662446696,
+          "min": 31.031745662446696,
+          "max": 31.031745662446696
+        },
+        "remote_throughput": {
+          "count": 1.0,
+          "mean": 16.302308492165228,
+          "median": 16.302308492165228,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 16.302308492165228,
+          "min": 16.302308492165228,
+          "max": 16.302308492165228
+        },
+        "local_per_thread": {
+          "count": 1.0,
+          "mean": 1.9394841039029185,
+          "median": 1.9394841039029185,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.9394841039029185,
+          "min": 1.9394841039029185,
+          "max": 1.9394841039029185
+        },
+        "remote_per_thread": {
+          "count": 1.0,
+          "mean": 0.6792628538402178,
+          "median": 0.6792628538402178,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.6792628538402178,
+          "min": 0.6792628538402178,
+          "max": 0.6792628538402178
+        },
+        "local_per_effective_thread": {
+          "count": 1.0,
+          "mean": 1.5381558177232908,
+          "median": 1.5381558177232908,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 1.5381558177232908,
+          "min": 1.5381558177232908,
+          "max": 1.5381558177232908
+        },
+        "remote_per_effective_thread": {
+          "count": 1.0,
+          "mean": 0.5108414986339775,
+          "median": 0.5108414986339775,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.5108414986339775,
+          "min": 0.5108414986339775,
+          "max": 0.5108414986339775
+        },
+        "remote_busy_fraction": {
+          "count": 1.0,
+          "mean": 0.25034863596155876,
+          "median": 0.25034863596155876,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.25034863596155876,
+          "min": 0.25034863596155876,
+          "max": 0.25034863596155876
+        },
+        "ratios": {
+          "raw": {
+            "count": 1.0,
+            "mean": 0.5253429397590607,
+            "median": 0.5253429397590607,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.5253429397590607,
+            "min": 0.5253429397590607,
+            "max": 0.5253429397590607
+          },
+          "per_thread": {
+            "count": 1.0,
+            "mean": 0.3502286265060405,
+            "median": 0.3502286265060405,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.3502286265060405,
+            "min": 0.3502286265060405,
+            "max": 0.3502286265060405
+          },
+          "per_effective_thread": {
+            "count": 1.0,
+            "mean": 0.3321129710968439,
+            "median": 0.3321129710968439,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.3321129710968439,
+            "min": 0.3321129710968439,
+            "max": 0.3321129710968439
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "Remote worker busy fraction is low; cluster likely underutilized.",
+        "findings": [
+          "Remote worker busy fraction is low; cluster likely underutilized.",
+          "Remote underperforms local after thread normalization.",
+          "Remote worker calibration spread is high; cluster heterogeneity is significant."
+        ],
+        "opportunities": [
+          {
+            "action": "Increase task granularity (larger chunks / fewer tiny tasks)",
+            "reason": "Low busy fraction suggests scheduler/dispatch overhead dominates useful compute."
+          },
+          {
+            "action": "Profile scheduler overhead and task wait time",
+            "reason": "Likely orchestration overhead at current task size."
+          },
+          {
+            "action": "Split heterogeneous workers into separate benchmark pools",
+            "reason": "Mixed node speeds can cause stragglers and misleading normalization."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/unified_local_vs_marvin_N128.json"
+      ]
+    },
+    "256": {
+      "records": 1,
+      "summary": {
+        "local_throughput": {
+          "count": 1.0,
+          "mean": 15.552336542987673,
+          "median": 15.552336542987673,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 15.552336542987673,
+          "min": 15.552336542987673,
+          "max": 15.552336542987673
+        },
+        "remote_throughput": {
+          "count": 1.0,
+          "mean": 21.822212732352455,
+          "median": 21.822212732352455,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 21.822212732352455,
+          "min": 21.822212732352455,
+          "max": 21.822212732352455
+        },
+        "local_per_thread": {
+          "count": 1.0,
+          "mean": 0.9720210339367296,
+          "median": 0.9720210339367296,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.9720210339367296,
+          "min": 0.9720210339367296,
+          "max": 0.9720210339367296
+        },
+        "remote_per_thread": {
+          "count": 1.0,
+          "mean": 0.9092588638480189,
+          "median": 0.9092588638480189,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.9092588638480189,
+          "min": 0.9092588638480189,
+          "max": 0.9092588638480189
+        },
+        "local_per_effective_thread": {
+          "count": 1.0,
+          "mean": 0.7502480558258089,
+          "median": 0.7502480558258089,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.7502480558258089,
+          "min": 0.7502480558258089,
+          "max": 0.7502480558258089
+        },
+        "remote_per_effective_thread": {
+          "count": 1.0,
+          "mean": 0.14990106054388685,
+          "median": 0.14990106054388685,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.14990106054388685,
+          "min": 0.14990106054388685,
+          "max": 0.14990106054388685
+        },
+        "remote_busy_fraction": {
+          "count": 1.0,
+          "mean": 0.29164678736333594,
+          "median": 0.29164678736333594,
+          "stdev": 0.0,
+          "iqr": 0.0,
+          "p95": 0.29164678736333594,
+          "min": 0.29164678736333594,
+          "max": 0.29164678736333594
+        },
+        "ratios": {
+          "raw": {
+            "count": 1.0,
+            "mean": 1.4031468951327304,
+            "median": 1.4031468951327304,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 1.4031468951327304,
+            "min": 1.4031468951327304,
+            "max": 1.4031468951327304
+          },
+          "per_thread": {
+            "count": 1.0,
+            "mean": 0.9354312634218203,
+            "median": 0.9354312634218203,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.9354312634218203,
+            "min": 0.9354312634218203,
+            "max": 0.9354312634218203
+          },
+          "per_effective_thread": {
+            "count": 1.0,
+            "mean": 0.19980199799236878,
+            "median": 0.19980199799236878,
+            "stdev": 0.0,
+            "iqr": 0.0,
+            "p95": 0.19980199799236878,
+            "min": 0.19980199799236878,
+            "max": 0.19980199799236878
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "Remote worker busy fraction is low; cluster likely underutilized.",
+        "findings": [
+          "Remote worker busy fraction is low; cluster likely underutilized.",
+          "Remote worker calibration spread is high; cluster heterogeneity is significant.",
+          "Per-effective-thread ratio is far below per-thread ratio."
+        ],
+        "opportunities": [
+          {
+            "action": "Increase task granularity (larger chunks / fewer tiny tasks)",
+            "reason": "Low busy fraction suggests scheduler/dispatch overhead dominates useful compute."
+          },
+          {
+            "action": "Split heterogeneous workers into separate benchmark pools",
+            "reason": "Mixed node speeds can cause stragglers and misleading normalization."
+          },
+          {
+            "action": "Harden calibration model (more repeats + clipping)",
+            "reason": "Current effective-thread weighting may be unstable due to outlier workers."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/unified_local_vs_marvin_N256.json"
+      ]
+    }
+  },
+  "global_findings": [
+    "N=128: Remote worker busy fraction is low; cluster likely underutilized.",
+    "N=256: Remote worker busy fraction is low; cluster likely underutilized."
+  ],
+  "recommended_next_actions": [
+    {
+      "action": "Increase task granularity (larger chunks / fewer tiny tasks)",
+      "reason": "Low busy fraction suggests scheduler/dispatch overhead dominates useful compute."
+    },
+    {
+      "action": "Profile scheduler overhead and task wait time",
+      "reason": "Likely orchestration overhead at current task size."
+    },
+    {
+      "action": "Split heterogeneous workers into separate benchmark pools",
+      "reason": "Mixed node speeds can cause stragglers and misleading normalization."
+    },
+    {
+      "action": "Harden calibration model (more repeats + clipping)",
+      "reason": "Current effective-thread weighting may be unstable due to outlier workers."
+    }
+  ]
+}

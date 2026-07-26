@@ -1,0 +1,74 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "run_name": "local_smoke_N64_rep1",
+  "commit": "df52af7",
+  "started_at": "2026-04-07 16:38:55",
+  "config": {
+    "N": 64,
+    "Df": 1.8,
+    "kf": 1.0,
+    "rp_g": 100.0,
+    "rp_gstd": 1.5,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0
+  },
+  "algorithm": {
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32
+  },
+  "n_aggregates": 2,
+  "warmup_tasks": 1,
+  "local": {
+    "environment": "local",
+    "workers": 2,
+    "total_threads": 16,
+    "effective_threads": 21.046611893316282,
+    "worker_threads": {
+      "tcp://127.0.0.1:35753": 8,
+      "tcp://127.0.0.1:43771": 8
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:35753": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 2999083,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:43771": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 2999080,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:35753": 0.07631509099155664,
+      "tcp://127.0.0.1:43771": 0.2227697940543294
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:35753": 1.959539595379479,
+      "tcp://127.0.0.1:43771": 0.6712868912850564
+    },
+    "n_aggregates": 2,
+    "successes": 2,
+    "success_rate": 1.0,
+    "total_wall_s": 0.0807663039304316,
+    "throughput_agg_per_s": 24.762802092846893,
+    "throughput_per_thread": 1.5476751308029308,
+    "throughput_per_effective_thread": 1.1765695218958616,
+    "task_wall_mean_s": 0.062067263992503285,
+    "task_wall_median_s": 0.062067263992503285,
+    "task_cpu_mean_s": 0.06235516400000002,
+    "task_cpu_median_s": 0.06235516400000002,
+    "cpu_to_wall_ratio": 1.0046385161674196,
+    "thread_busy_fraction": 0.09605996091817756,
+    "profiling_artifacts": {}
+  },
+  "remote": null,
+  "comparison": {}
+}

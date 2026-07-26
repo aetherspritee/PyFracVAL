@@ -1,0 +1,22 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/densify_probe_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 12,
+  "outputs": [
+    "benchmark_results/profiles/densify_probe_v1/baseline_hard_no_densify/unified_N128_rep1.json",
+    "benchmark_results/profiles/densify_probe_v1/baseline_hard_no_densify/unified_N128_rep2.json",
+    "benchmark_results/profiles/densify_probe_v1/baseline_hard_no_densify/unified_N128_rep3.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_radial_df20/unified_N128_rep1.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_radial_df20/unified_N128_rep2.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_radial_df20/unified_N128_rep3.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_radial_df18/unified_N128_rep1.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_radial_df18/unified_N128_rep2.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_radial_df18/unified_N128_rep3.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_voronoi_df20/unified_N128_rep1.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_voronoi_df20/unified_N128_rep2.json",
+    "benchmark_results/profiles/densify_probe_v1/densify_voronoi_df20/unified_N128_rep3.json"
+  ],
+  "started_at": "2026-04-10 02:58:34",
+  "commit": "cc4fa64"
+}

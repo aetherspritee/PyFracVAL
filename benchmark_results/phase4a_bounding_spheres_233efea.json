@@ -1,0 +1,33 @@
+{
+  "commit": "233efea",
+  "timestamp": "2026-01-10 19:17:49",
+  "optimization": "CCA bounding sphere fast rejection",
+  "description": "Single sphere check before n1\u00d7n2 particle checks",
+  "results": {
+    "N=128, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 1.0121205647786458,
+      "std_runtime": 1.0119856299239591,
+      "min_runtime": 0.29259800910949707,
+      "max_runtime": 2.44327712059021,
+      "all_runtimes": [
+        2.44327712059021,
+        0.30048656463623047,
+        0.29259800910949707
+      ]
+    },
+    "N=256, Optimal": null,
+    "N=512, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 3.219066619873047,
+      "std_runtime": 0.18911880702498504,
+      "min_runtime": 3.0197701454162598,
+      "max_runtime": 3.4731802940368652,
+      "all_runtimes": [
+        3.0197701454162598,
+        3.1642494201660156,
+        3.4731802940368652
+      ]
+    }
+  }
+}

@@ -1,0 +1,707 @@
+{
+  "metadata": {
+    "timestamp": "2026-01-09 16:52:53",
+    "description": "Investigation of wide particle size distribution failures",
+    "total_trials": 25
+  },
+  "results": [
+    {
+      "sigma": 1.3,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 42,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 100.0970556018479,
+        "std": 23.164484035953013,
+        "min": 59.36489922874743,
+        "max": 164.0281341174881,
+        "range": 104.66323488874066,
+        "size_ratio": 2.763049146018891,
+        "cv": 0.23142023405856676,
+        "percentiles": {
+          "p10": 70.17152695913181,
+          "p25": 85.41434142677565,
+          "p50": 97.53856426914487,
+          "p75": 110.56513532519617,
+          "p90": 130.4028744717082
+        }
+      },
+      "runtime": 48.91132044792175
+    },
+    {
+      "sigma": 1.3,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 123,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 103.19632171631865,
+        "std": 25.975582815543245,
+        "min": 59.51587440174124,
+        "max": 167.209865253621,
+        "range": 107.69399085187975,
+        "size_ratio": 2.8095002708845183,
+        "cv": 0.25171035540344916,
+        "percentiles": {
+          "p10": 71.8900375412571,
+          "p25": 81.91175718635898,
+          "p50": 99.88239292940445,
+          "p75": 123.28840279128869,
+          "p90": 138.68834726589643
+        }
+      },
+      "runtime": 91.52665996551514
+    },
+    {
+      "sigma": 1.3,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 456,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 104.42956384340386,
+        "std": 23.720450053669776,
+        "min": 60.57080103437639,
+        "max": 166.56582872348204,
+        "range": 105.99502768910565,
+        "size_ratio": 2.7499360397916677,
+        "cv": 0.2271430539462896,
+        "percentiles": {
+          "p10": 76.92804756220569,
+          "p25": 84.66574519614704,
+          "p50": 101.10148609355755,
+          "p75": 119.404017839745,
+          "p90": 136.8510112739807
+        }
+      },
+      "runtime": 109.46821570396423
+    },
+    {
+      "sigma": 1.3,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 789,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 103.53851815183712,
+        "std": 23.44410867018494,
+        "min": 61.215152669915184,
+        "max": 163.4399047711181,
+        "range": 102.22475210120292,
+        "size_ratio": 2.6699256253173136,
+        "cv": 0.22642886037643142,
+        "percentiles": {
+          "p10": 74.15121991197522,
+          "p25": 86.35234149350184,
+          "p50": 102.47640931778793,
+          "p75": 118.89670950311431,
+          "p90": 135.93567798456593
+        }
+      },
+      "runtime": 49.68521237373352
+    },
+    {
+      "sigma": 1.3,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 1024,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 106.2820908216971,
+        "std": 23.201790147922633,
+        "min": 61.1395363847193,
+        "max": 166.94294021665976,
+        "range": 105.80340383194047,
+        "size_ratio": 2.730523489189952,
+        "cv": 0.21830385503844524,
+        "percentiles": {
+          "p10": 75.59238834378789,
+          "p25": 89.2005430036371,
+          "p50": 106.3204417846044,
+          "p75": 121.55446537306437,
+          "p90": 137.33289060785802
+        }
+      },
+      "runtime": 55.477144956588745
+    },
+    {
+      "sigma": 1.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 42,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 102.3844093907079,
+        "std": 36.97029945936317,
+        "min": 44.66902646338147,
+        "max": 214.85271703466768,
+        "range": 170.1836905712862,
+        "size_ratio": 4.809881343861354,
+        "cv": 0.3610930578139222,
+        "percentiles": {
+          "p10": 57.84516126422884,
+          "p25": 78.37648302269311,
+          "p50": 96.22284371082944,
+          "p75": 116.79135579074419,
+          "p90": 150.71970152123782
+        }
+      },
+      "runtime": 147.52300882339478
+    },
+    {
+      "sigma": 1.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 123,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 107.76003387317245,
+        "std": 41.92434614551151,
+        "min": 44.844710411582966,
+        "max": 221.32741428399135,
+        "range": 176.48270387240836,
+        "size_ratio": 4.935418519880208,
+        "cv": 0.3890528300580726,
+        "percentiles": {
+          "p10": 60.047132973360426,
+          "p25": 73.46550566926629,
+          "p50": 99.81846097098034,
+          "p75": 138.20193575874427,
+          "p90": 165.7726847589008
+        }
+      },
+      "runtime": 7.773085117340088
+    },
+    {
+      "sigma": 1.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 456,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 109.22283354710602,
+        "std": 38.750540587540264,
+        "min": 46.07905997447236,
+        "max": 220.01135355542095,
+        "range": 173.9322935809486,
+        "size_ratio": 4.7746493456530255,
+        "cv": 0.35478424546482573,
+        "percentiles": {
+          "p10": 66.67358883769222,
+          "p25": 77.31745089435209,
+          "p50": 101.7092857271629,
+          "p75": 131.53100266072713,
+          "p90": 162.3908668596362
+        }
+      },
+      "runtime": 82.76479053497314
+    },
+    {
+      "sigma": 1.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 789,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 107.79993703029967,
+        "std": 37.318647905574544,
+        "min": 46.83880547750985,
+        "max": 213.66313931145393,
+        "range": 166.82433383394408,
+        "size_ratio": 4.561669264047448,
+        "cv": 0.34618432008068123,
+        "percentiles": {
+          "p10": 62.99103501035167,
+          "p25": 79.71147693908485,
+          "p50": 103.85290324552432,
+          "p75": 130.66812808026185,
+          "p90": 160.7154516987874
+        }
+      },
+      "runtime": 78.49318218231201
+    },
+    {
+      "sigma": 1.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 1024,
+      "success": true,
+      "failure_stage": "success",
+      "failure_details": {},
+      "particle_size_stats": {
+        "mean": 112.0772180075577,
+        "std": 37.494621814950655,
+        "min": 46.749420473389904,
+        "max": 220.7816284295624,
+        "range": 174.0322079561725,
+        "size_ratio": 4.722660221108684,
+        "cv": 0.3345427597285853,
+        "percentiles": {
+          "p10": 64.89703221160273,
+          "p25": 83.81087976799523,
+          "p50": 109.93573982467112,
+          "p75": 135.21198668815538,
+          "p90": 163.27537593915247
+        }
+      },
+      "runtime": 65.53883171081543
+    },
+    {
+      "sigma": 1.8,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 42,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 107.7350266370786,
+        "std": 57.36002700564585,
+        "min": 31.09054278456117,
+        "max": 303.0340290339144,
+        "range": 271.9434862493532,
+        "size_ratio": 9.746823371137603,
+        "cv": 0.5324176249463566,
+        "percentiles": {
+          "p10": 45.226629290137,
+          "p25": 70.24336693780484,
+          "p50": 94.5733838654812,
+          "p75": 125.23512072610384,
+          "p90": 181.25488088320108
+        }
+      },
+      "runtime": 18.474564790725708
+    },
+    {
+      "sigma": 1.8,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 123,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 116.81223916530635,
+        "std": 65.7951958087889,
+        "min": 31.267963254226082,
+        "max": 316.3616572405946,
+        "range": 285.0936939863685,
+        "size_ratio": 10.11775710072309,
+        "cv": 0.5632560104911533,
+        "percentiles": {
+          "p10": 47.740826682520236,
+          "p25": 63.953995209552474,
+          "p50": 99.73722530929095,
+          "p75": 159.84476513168903,
+          "p90": 208.07503932846802
+        }
+      },
+      "runtime": 7.642167091369629
+    },
+    {
+      "sigma": 1.8,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 456,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 118.16363888984213,
+        "std": 61.60795707227919,
+        "min": 32.52329571184599,
+        "max": 313.63827139667876,
+        "range": 281.11497568483276,
+        "size_ratio": 9.643495978251737,
+        "cv": 0.5213782992051651,
+        "percentiles": {
+          "p10": 55.564324789231215,
+          "p25": 68.87163831968864,
+          "p50": 102.4909370807509,
+          "p75": 148.7825539378309,
+          "p90": 201.94958471445833
+        }
+      },
+      "runtime": 17.377586603164673
+    },
+    {
+      "sigma": 1.8,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 789,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 115.81786496304358,
+        "std": 57.55828861614341,
+        "min": 33.30353431946429,
+        "max": 300.604801985508,
+        "range": 267.3012676660437,
+        "size_ratio": 9.026213227159472,
+        "cv": 0.49697245441806176,
+        "percentiles": {
+          "p10": 51.17116091696153,
+          "p25": 71.98586326645236,
+          "p50": 105.63352311128062,
+          "p75": 147.36920079396782,
+          "p90": 198.936390501979
+        }
+      },
+      "runtime": 25.106711864471436
+    },
+    {
+      "sigma": 1.8,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 1024,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 122.23234825358588,
+        "std": 58.86751297908349,
+        "min": 33.21144081940466,
+        "max": 315.23135083227095,
+        "range": 282.01991001286626,
+        "size_ratio": 9.491649355004458,
+        "cv": 0.48160338748426623,
+        "percentiles": {
+          "p10": 53.436958688062305,
+          "p25": 77.41386555206266,
+          "p50": 114.72179174308974,
+          "p75": 154.86099321276825,
+          "p90": 203.54605821443363
+        }
+      },
+      "runtime": 8.468363046646118
+    },
+    {
+      "sigma": 2.0,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 42,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 112.19015236995233,
+        "std": 71.26022572635483,
+        "min": 25.21634503259662,
+        "max": 369.6566587210388,
+        "range": 344.4403136884422,
+        "size_ratio": 14.659406755546518,
+        "cv": 0.6351736246098576,
+        "percentiles": {
+          "p10": 39.23210585656054,
+          "p25": 65.93399501346849,
+          "p50": 93.63371372588881,
+          "p75": 130.39048877700762,
+          "p90": 201.64643933512096
+        }
+      },
+      "runtime": 8.150242328643799
+    },
+    {
+      "sigma": 2.0,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 123,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 123.91022871527993,
+        "std": 82.18351591844873,
+        "min": 25.386124438038618,
+        "max": 388.90326380250264,
+        "range": 363.517139364464,
+        "size_ratio": 15.319520896217197,
+        "cv": 0.6632504577752774,
+        "percentiles": {
+          "p10": 41.8149606218942,
+          "p25": 59.029666123634044,
+          "p50": 99.69039210745079,
+          "p75": 173.86482634949675,
+          "p90": 237.28008875880846
+        }
+      },
+      "runtime": 7.797853231430054
+    },
+    {
+      "sigma": 2.0,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 456,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 124.99667925264995,
+        "std": 77.44950040609173,
+        "min": 26.592282948302636,
+        "max": 384.95835779737126,
+        "range": 358.36607484906864,
+        "size_ratio": 14.476318507356392,
+        "cv": 0.6196124638603132,
+        "percentiles": {
+          "p10": 50.00955633970246,
+          "p25": 64.41829961267457,
+          "p50": 102.94638726793004,
+          "p75": 159.76550422568437,
+          "p90": 229.06448417562544
+        }
+      },
+      "runtime": 53.53080916404724
+    },
+    {
+      "sigma": 2.0,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 789,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 121.90896477604564,
+        "std": 71.1846663488192,
+        "min": 27.346195498584237,
+        "max": 366.16470765265115,
+        "range": 338.8185121540669,
+        "size_ratio": 13.389968914381825,
+        "cv": 0.5839165846382985,
+        "percentiles": {
+          "p10": 45.380590920447666,
+          "p25": 67.86793488986213,
+          "p50": 106.67642022189568,
+          "p75": 157.97693425274196,
+          "p90": 225.03967420318384
+        }
+      },
+      "runtime": 8.113755464553833
+    },
+    {
+      "sigma": 2.0,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 1024,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 129.71027765708996,
+        "std": 73.50961792992832,
+        "min": 27.25704298944399,
+        "max": 387.26523911788627,
+        "range": 360.00819612844225,
+        "size_ratio": 14.207896258881236,
+        "cv": 0.5667216141828241,
+        "percentiles": {
+          "p10": 47.76312329223714,
+          "p25": 73.94254653742684,
+          "p50": 117.58264116464656,
+          "p75": 167.49389869764897,
+          "p90": 231.2013540758285
+        }
+      },
+      "runtime": 7.716321706771851
+    },
+    {
+      "sigma": 2.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 42,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 125.45244077214579,
+        "std": 108.21045341094919,
+        "min": 16.183289711361084,
+        "max": 563.1042872335959,
+        "range": 546.9209975222348,
+        "size_ratio": 34.79541534983967,
+        "cv": 0.8625615631304254,
+        "percentiles": {
+          "p10": 29.031750711286847,
+          "p25": 57.66013186417521,
+          "p50": 91.67571963992822,
+          "p75": 142.02132285827716,
+          "p90": 252.728308596287
+        }
+      },
+      "runtime": 8.222618818283081
+    },
+    {
+      "sigma": 2.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 123,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 144.33157600376734,
+        "std": 125.97328208821344,
+        "min": 16.327483719131067,
+        "max": 602.1825502431678,
+        "range": 585.8550665240368,
+        "size_ratio": 36.881528140039414,
+        "cv": 0.8728047290561373,
+        "percentiles": {
+          "p10": 31.581257036486463,
+          "p25": 49.816547724212604,
+          "p50": 99.5914729913371,
+          "p75": 207.7513788821948,
+          "p90": 313.37899269767547
+        }
+      },
+      "runtime": 7.606564998626709
+    },
+    {
+      "sigma": 2.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 456,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 144.35714898357347,
+        "std": 120.10266383413533,
+        "min": 17.360742549833592,
+        "max": 594.1209779118321,
+        "range": 576.7602353619985,
+        "size_ratio": 34.22209483300742,
+        "cv": 0.8319827918449811,
+        "percentiles": {
+          "p10": 40.01066411426616,
+          "p25": 55.91445019484457,
+          "p50": 103.92014980261615,
+          "p75": 185.77748438146872,
+          "p90": 299.11528562546863
+        }
+      },
+      "runtime": 7.48622989654541
+    },
+    {
+      "sigma": 2.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 789,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 138.90426702393594,
+        "std": 106.86964508161859,
+        "min": 18.014333999668118,
+        "max": 556.0832059815357,
+        "range": 538.0688719818676,
+        "size_ratio": 30.868929486473412,
+        "cv": 0.7693762572693525,
+        "percentiles": {
+          "p10": 35.18945446614835,
+          "p25": 59.90856731752205,
+          "p50": 108.91935109336265,
+          "p75": 183.03194511989219,
+          "p90": 292.1880570230996
+        }
+      },
+      "runtime": 8.608855485916138
+    },
+    {
+      "sigma": 2.5,
+      "Df": 2.0,
+      "kf": 1.0,
+      "seed": 1024,
+      "success": false,
+      "failure_stage": "pca_or_cca",
+      "failure_details": {
+        "message": "Simulation failed during PCA or CCA",
+        "likely_cause": "Geometric constraints from wide size distribution"
+      },
+      "particle_size_stats": {
+        "mean": 150.2022883737479,
+        "std": 112.50407338837869,
+        "min": 17.93673885114133,
+        "max": 598.8319699024772,
+        "range": 580.8952310513359,
+        "size_ratio": 33.38577736300002,
+        "cv": 0.749017039663438,
+        "percentiles": {
+          "p10": 37.660132425943615,
+          "p25": 67.0967297068444,
+          "p50": 123.88104437620294,
+          "p75": 197.75998356782532,
+          "p90": 302.8092568409306
+        }
+      },
+      "runtime": 7.270013093948364
+    }
+  ]
+}

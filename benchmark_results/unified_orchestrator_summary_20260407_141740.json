@@ -1,0 +1,11 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/unified_local_smoke.toml",
+  "execution_mode": "parallel",
+  "cases": 1,
+  "outputs": [
+    "benchmark_results/testing_parallel_warning_config.json"
+  ],
+  "started_at": "2026-04-07 14:17:38",
+  "commit": "98df7c0"
+}

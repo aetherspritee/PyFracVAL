@@ -1,0 +1,16 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/retry_mode_matrix.toml",
+  "execution_mode": "sequential",
+  "cases": 6,
+  "outputs": [
+    "benchmark_results/profiles/retry_mode_matrix/single/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix/single/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix/alternate/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix/alternate/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix/dual_jitter/unified_N256_rep1.json",
+    "benchmark_results/profiles/retry_mode_matrix/dual_jitter/unified_N512_rep1.json"
+  ],
+  "started_at": "2026-04-07 16:43:00",
+  "commit": "df52af7"
+}

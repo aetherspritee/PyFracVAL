@@ -1,0 +1,11 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/tmp_retry_dual.toml",
+  "execution_mode": "sequential",
+  "cases": 1,
+  "outputs": [
+    "benchmark_results/testing_rotation_mode_dual_profiled.json"
+  ],
+  "started_at": "2026-04-07 16:39:30",
+  "commit": "df52af7"
+}

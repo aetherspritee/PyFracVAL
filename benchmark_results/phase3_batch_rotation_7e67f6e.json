@@ -1,0 +1,43 @@
+{
+  "commit": "7e67f6e",
+  "timestamp": "2026-01-10 18:30:56",
+  "optimization": "Batch rotation with Numba prange",
+  "results": {
+    "N=128, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 0.9199135303497314,
+      "std_runtime": 0.0830739278185651,
+      "min_runtime": 0.8135929107666016,
+      "max_runtime": 1.016361951828003,
+      "all_runtimes": [
+        1.016361951828003,
+        0.9297857284545898,
+        0.8135929107666016
+      ]
+    },
+    "N=256, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 1.6874639987945557,
+      "std_runtime": 0.022833138966613015,
+      "min_runtime": 1.6572051048278809,
+      "max_runtime": 1.7123570442199707,
+      "all_runtimes": [
+        1.7123570442199707,
+        1.6572051048278809,
+        1.6928298473358154
+      ]
+    },
+    "N=512, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 3.9073328177134194,
+      "std_runtime": 0.09808345675474868,
+      "min_runtime": 3.7789642810821533,
+      "max_runtime": 4.017032861709595,
+      "all_runtimes": [
+        4.017032861709595,
+        3.9260013103485107,
+        3.7789642810821533
+      ]
+    }
+  }
+}

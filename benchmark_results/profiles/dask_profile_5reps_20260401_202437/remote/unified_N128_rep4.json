@@ -1,0 +1,182 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "commit": "d9dab17",
+  "started_at": "2026-04-01 20:25:47",
+  "config": {
+    "N": 128,
+    "Df": 1.8,
+    "kf": 1.0,
+    "rp_g": 100.0,
+    "rp_gstd": 1.5,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0
+  },
+  "n_aggregates": 48,
+  "warmup_tasks": 4,
+  "local": {
+    "environment": "local",
+    "workers": 4,
+    "total_threads": 16,
+    "effective_threads": 14.397563784381566,
+    "worker_threads": {
+      "tcp://127.0.0.1:36347": 4,
+      "tcp://127.0.0.1:37627": 4,
+      "tcp://127.0.0.1:42011": 4,
+      "tcp://127.0.0.1:45651": 4
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:36347": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 1840517,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:37627": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 1840520,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:42011": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 1840509,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:45651": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 1840513,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:45651": 0.10465241177007556,
+      "tcp://127.0.0.1:42011": 0.10706412699073553,
+      "tcp://127.0.0.1:36347": 0.11378383729606867,
+      "tcp://127.0.0.1:37627": 0.20358863985165954
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:36347": 0.970471595680816,
+      "tcp://127.0.0.1:37627": 0.5423877394331047,
+      "tcp://127.0.0.1:42011": 1.0313817078334493,
+      "tcp://127.0.0.1:45651": 1.0551499031480216
+    },
+    "n_aggregates": 48,
+    "successes": 48,
+    "success_rate": 1.0,
+    "total_wall_s": 1.7780053652822971,
+    "throughput_agg_per_s": 26.996543957210697,
+    "throughput_per_thread": 1.6872839973256686,
+    "throughput_per_effective_thread": 1.875077225669003,
+    "task_wall_mean_s": 0.43174661506782286,
+    "task_wall_median_s": 0.43588492181152105,
+    "task_cpu_mean_s": 0.43785897077083336,
+    "task_cpu_median_s": 0.44147556050000003,
+    "cpu_to_wall_ratio": 1.0141572753316208,
+    "thread_busy_fraction": 0.7284791545034629,
+    "profiling_artifacts": {
+      "performance_report_html": "benchmark_results/profiles/dask_profile_5reps_20260401_202437/local/dask_performance_report.html",
+      "client_profile_json": "benchmark_results/profiles/dask_profile_5reps_20260401_202437/local/client_profile.json",
+      "transfer_logs_json": "benchmark_results/profiles/dask_profile_5reps_20260401_202437/local/transfer_logs.json",
+      "scheduler_info_error": "keys must be str, int, float, bool or None, not tuple"
+    }
+  },
+  "remote": {
+    "environment": "remote",
+    "workers": 5,
+    "total_threads": 24,
+    "effective_threads": 23.937255228988864,
+    "worker_threads": {
+      "tcp://129.217.143.165:35035": 4,
+      "tcp://129.217.143.165:38013": 4,
+      "tcp://129.217.143.165:40809": 4,
+      "tcp://129.217.143.165:41235": 4,
+      "tcp://129.217.143.182:33815": 8
+    },
+    "worker_metadata": {
+      "tcp://129.217.143.165:35035": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 41,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:38013": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 46,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:40809": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 38,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:41235": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 35,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.182:33815": {
+        "hostname": "sauron",
+        "platform": "Linux-6.8.0-63-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 208,
+        "cpu_count": 128
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://129.217.143.165:41235": 1.1000349230016582,
+      "tcp://129.217.143.165:40809": 1.141924255003687,
+      "tcp://129.217.143.182:33815": 1.2054666876792908,
+      "tcp://129.217.143.165:38013": 1.241454718998284,
+      "tcp://129.217.143.165:35035": 1.3987561269968865
+    },
+    "worker_performance_index": {
+      "tcp://129.217.143.165:35035": 0.8618133385892036,
+      "tcp://129.217.143.165:38013": 0.9710114023747627,
+      "tcp://129.217.143.165:40809": 1.05564505035879,
+      "tcp://129.217.143.165:41235": 1.0958440159244596,
+      "tcp://129.217.143.182:33815": 1.0
+    },
+    "n_aggregates": 48,
+    "successes": 48,
+    "success_rate": 1.0,
+    "total_wall_s": 1.0567975267767906,
+    "throughput_agg_per_s": 45.420242557151845,
+    "throughput_per_thread": 1.8925101065479935,
+    "throughput_per_effective_thread": 1.8974707886368827,
+    "task_wall_mean_s": 0.4528478379158211,
+    "task_wall_median_s": 0.3925995025783777,
+    "task_cpu_mean_s": 0.46725469606238806,
+    "task_cpu_median_s": 0.4057237284985149,
+    "cpu_to_wall_ratio": 1.031813905114073,
+    "thread_busy_fraction": 0.857019109984099,
+    "profiling_artifacts": {
+      "performance_report_html": "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/dask_performance_report.html",
+      "client_profile_json": "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/client_profile.json",
+      "transfer_logs_json": "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/transfer_logs.json",
+      "scheduler_info_json": "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/scheduler_info.json"
+    }
+  },
+  "comparison": {
+    "remote_vs_local_raw_throughput_ratio": 1.6824465616466522,
+    "remote_vs_local_per_thread_ratio": 1.1216310410977681,
+    "remote_vs_local_per_effective_thread_ratio": 1.0119427416968867,
+    "local_threads": 16.0,
+    "remote_threads": 24.0,
+    "local_effective_threads": 14.397563784381566,
+    "remote_effective_threads": 23.937255228988864
+  }
+}

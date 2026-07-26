@@ -1,0 +1,12 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "/tmp/densify_quick_validation.toml",
+  "execution_mode": "sequential",
+  "cases": 2,
+  "outputs": [
+    "benchmark_results/profiles/densify_quick_validation/baseline_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/densify_quick_validation/densify_radial_df20/unified_N128_rep1.json"
+  ],
+  "started_at": "2026-04-10 03:19:07",
+  "commit": "6be173b"
+}

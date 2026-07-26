@@ -1,0 +1,12 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/release_validation.toml",
+  "execution_mode": "sequential",
+  "cases": 2,
+  "outputs": [
+    "benchmark_results/profiles/release_validation/local_release_baseline/unified_N128_rep1.json",
+    "benchmark_results/profiles/release_validation/marvin_release/unified_N128_rep1.json"
+  ],
+  "started_at": "2026-04-07 14:16:46",
+  "commit": "98df7c0"
+}

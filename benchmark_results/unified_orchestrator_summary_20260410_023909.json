@@ -1,0 +1,25 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/fft_docking_probe_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 15,
+  "outputs": [
+    "benchmark_results/profiles/fft_docking_probe_v1/baseline_fibonacci_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/baseline_fibonacci_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/baseline_fibonacci_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid32_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid32_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid32_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid64_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid64_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid64_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid128_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid128_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_grid128_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_rot140_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_rot140_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/fft_docking_probe_v1/fft_docking_rot140_hard/unified_N128_rep3.json"
+  ],
+  "started_at": "2026-04-10 02:29:10",
+  "commit": "eec7b3f"
+}

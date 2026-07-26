@@ -1,0 +1,12 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/retry_soft_accept_probe_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 2,
+  "outputs": [
+    "benchmark_results/profiles/retry_soft_accept_probe_v1/strict_single/unified_N512_rep1.json",
+    "benchmark_results/profiles/retry_soft_accept_probe_v1/soft_single/unified_N512_rep1.json"
+  ],
+  "started_at": "2026-04-08 21:06:31",
+  "commit": "ce9aec5"
+}

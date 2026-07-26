@@ -1,0 +1,415 @@
+{
+  "input_files": [
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep1.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep2.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep3.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep4.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep5.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep1.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep2.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep3.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep4.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep5.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep1.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep2.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep3.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep4.json",
+    "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep5.json"
+  ],
+  "total_records": 15,
+  "per_N": {
+    "128": {
+      "records": 5,
+      "summary": {
+        "local_throughput": {
+          "count": 5.0,
+          "mean": 28.812381000844482,
+          "median": 29.05079771829239,
+          "stdev": 1.1552651485822534,
+          "iqr": 0.63878278225447,
+          "p95": 29.959435909699092,
+          "min": 26.996543957210697,
+          "max": 30.13443042657388
+        },
+        "remote_throughput": {
+          "count": 5.0,
+          "mean": 47.65909727013682,
+          "median": 46.52686117571,
+          "stdev": 5.030456562267612,
+          "iqr": 6.582455232991769,
+          "p95": 53.056952677114054,
+          "min": 41.02516842882198,
+          "max": 53.32051639885667
+        },
+        "local_per_thread": {
+          "count": 5.0,
+          "mean": 1.8007738125527801,
+          "median": 1.8156748573932744,
+          "stdev": 0.07220407178639084,
+          "iqr": 0.03992392389090438,
+          "p95": 1.8724647443561933,
+          "min": 1.6872839973256686,
+          "max": 1.8834019016608674
+        },
+        "remote_per_thread": {
+          "count": 5.0,
+          "mean": 1.9857957195890343,
+          "median": 1.9386192156545834,
+          "stdev": 0.2096023567611505,
+          "iqr": 0.27426896804132395,
+          "p95": 2.210706361546419,
+          "min": 1.7093820178675825,
+          "max": 2.2216881832856945
+        },
+        "local_per_effective_thread": {
+          "count": 5.0,
+          "mean": 1.8559515958806296,
+          "median": 1.8427633864491848,
+          "stdev": 0.04143281464852019,
+          "iqr": 0.050913823758639065,
+          "p95": 1.9100464626821037,
+          "min": 1.818965193439217,
+          "max": 1.9187887719353791
+        },
+        "remote_per_effective_thread": {
+          "count": 5.0,
+          "mean": 2.039147688657068,
+          "median": 1.8974707886368827,
+          "stdev": 0.4154696453067165,
+          "iqr": 0.1666440144869672,
+          "p95": 2.604276074185228,
+          "min": 1.6864021451238733,
+          "max": 2.7520358882629616
+        },
+        "remote_busy_fraction": {
+          "count": 5.0,
+          "mean": 0.9338441243962441,
+          "median": 0.9153556928068459,
+          "stdev": 0.1405260987409222,
+          "iqr": 0.19953261483714135,
+          "p95": 1.0828550792229672,
+          "min": 0.7508631765456364,
+          "max": 1.089430917823399
+        },
+        "ratios": {
+          "raw": {
+            "count": 5.0,
+            "mean": 1.6574134644917133,
+            "median": 1.6824465616466522,
+            "stdev": 0.19534347203118474,
+            "iqr": 0.19991316927559133,
+            "p95": 1.848417740452018,
+            "min": 1.3614051385104051,
+            "max": 1.8630069447061541
+          },
+          "per_thread": {
+            "count": 5.0,
+            "mean": 1.1049423096611422,
+            "median": 1.1216310410977681,
+            "stdev": 0.13022898135412317,
+            "iqr": 0.13327544618372755,
+            "p95": 1.2322784936346787,
+            "min": 0.9076034256736034,
+            "max": 1.2420046298041028
+          },
+          "per_effective_thread": {
+            "count": 5.0,
+            "mean": 1.1006719040338047,
+            "median": 1.0122957194807631,
+            "stdev": 0.23407609913502286,
+            "iqr": 0.09486063482499074,
+            "p95": 1.4161037046048877,
+            "min": 0.8788888958438558,
+            "max": 1.4934287866256402
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "No dominant bottleneck detected; behavior appears balanced for current runs.",
+        "findings": [
+          "No dominant bottleneck detected; behavior appears balanced for current runs."
+        ],
+        "opportunities": [
+          {
+            "action": "Increase workload size and re-profile",
+            "reason": "Small-N runs can hide or distort true scaling trends."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep1.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep2.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep3.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep4.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N128_rep5.json"
+      ]
+    },
+    "256": {
+      "records": 5,
+      "summary": {
+        "local_throughput": {
+          "count": 5.0,
+          "mean": 16.759300874580788,
+          "median": 16.89503909607131,
+          "stdev": 0.7418952181593258,
+          "iqr": 1.2211384884997827,
+          "p95": 17.533038676845443,
+          "min": 15.893437247970622,
+          "max": 17.585888607298948
+        },
+        "remote_throughput": {
+          "count": 5.0,
+          "mean": 26.636408418771993,
+          "median": 25.18935635670938,
+          "stdev": 4.741540160790415,
+          "iqr": 7.6389502915959255,
+          "p95": 32.3331490555646,
+          "min": 22.140779336068608,
+          "max": 32.83437626613829
+        },
+        "local_per_thread": {
+          "count": 5.0,
+          "mean": 1.0474563046612992,
+          "median": 1.055939943504457,
+          "stdev": 0.04636845113495786,
+          "iqr": 0.07632115553123642,
+          "p95": 1.0958149173028402,
+          "min": 0.9933398279981639,
+          "max": 1.0991180379561842
+        },
+        "remote_per_thread": {
+          "count": 5.0,
+          "mean": 1.1098503507821664,
+          "median": 1.0495565148628907,
+          "stdev": 0.19756417336626736,
+          "iqr": 0.3182895954831636,
+          "p95": 1.3472145439818584,
+          "min": 0.922532472336192,
+          "max": 1.3680990110890956
+        },
+        "local_per_effective_thread": {
+          "count": 5.0,
+          "mean": 1.0418134029400925,
+          "median": 1.034810530347841,
+          "stdev": 0.022859541294990217,
+          "iqr": 0.030330637228265456,
+          "p95": 1.0685231964428876,
+          "min": 1.0148039267069393,
+          "max": 1.0707783956507042
+        },
+        "remote_per_effective_thread": {
+          "count": 5.0,
+          "mean": 1.1368718047583544,
+          "median": 0.9138436752487271,
+          "stdev": 0.4010753574272191,
+          "iqr": 0.4808207501829075,
+          "p95": 1.6625783108756371,
+          "min": 0.7979856285660076,
+          "max": 1.7389189483709182
+        },
+        "remote_busy_fraction": {
+          "count": 5.0,
+          "mean": 1.0269124567050283,
+          "median": 0.9331467341770949,
+          "stdev": 0.18908325102444265,
+          "iqr": 0.2656346178071666,
+          "p95": 1.2632037339515276,
+          "min": 0.8517376763738139,
+          "max": 1.2881035498191253
+        },
+        "ratios": {
+          "raw": {
+            "count": 5.0,
+            "mean": 1.5898485455391065,
+            "median": 1.454213219782682,
+            "stdev": 0.2771667113534395,
+            "iqr": 0.45785769986632774,
+            "p95": 1.899996603338505,
+            "min": 1.3104899734275912,
+            "max": 1.9082241141476377
+          },
+          "per_thread": {
+            "count": 5.0,
+            "mean": 1.0598990303594042,
+            "median": 0.9694754798551213,
+            "stdev": 0.1847778075689597,
+            "iqr": 0.3052384665775518,
+            "p95": 1.26666440222567,
+            "min": 0.8736599822850608,
+            "max": 1.2721494094317585
+          },
+          "per_effective_thread": {
+            "count": 5.0,
+            "mean": 1.0974070470544663,
+            "median": 0.8831024119377177,
+            "stdev": 0.40952988430266074,
+            "iqr": 0.5002802802400464,
+            "p95": 1.6345904495712789,
+            "min": 0.7531701946673484,
+            "max": 1.7135516552579253
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "No dominant bottleneck detected; behavior appears balanced for current runs.",
+        "findings": [
+          "No dominant bottleneck detected; behavior appears balanced for current runs."
+        ],
+        "opportunities": [
+          {
+            "action": "Increase workload size and re-profile",
+            "reason": "Small-N runs can hide or distort true scaling trends."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep1.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep2.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep3.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep4.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N256_rep5.json"
+      ]
+    },
+    "512": {
+      "records": 5,
+      "summary": {
+        "local_throughput": {
+          "count": 5.0,
+          "mean": 6.693659658870469,
+          "median": 6.75682882280829,
+          "stdev": 0.2323299870268784,
+          "iqr": 0.028181627006602206,
+          "p95": 6.868764886505127,
+          "min": 6.29070607212043,
+          "max": 6.891243405517292
+        },
+        "remote_throughput": {
+          "count": 5.0,
+          "mean": 11.318369583793487,
+          "median": 11.293968172962662,
+          "stdev": 0.8786952468269663,
+          "iqr": 1.6588640741348524,
+          "p95": 12.231201416842534,
+          "min": 10.400559290964566,
+          "max": 12.250832805607182
+        },
+        "local_per_thread": {
+          "count": 5.0,
+          "mean": 0.4183537286794043,
+          "median": 0.4223018014255181,
+          "stdev": 0.0145206241891799,
+          "iqr": 0.0017613516879126379,
+          "p95": 0.4292978054065704,
+          "min": 0.39316912950752686,
+          "max": 0.43070271284483075
+        },
+        "remote_per_thread": {
+          "count": 5.0,
+          "mean": 0.471598732658062,
+          "median": 0.4705820072067776,
+          "stdev": 0.036612301951123596,
+          "iqr": 0.06911933642228552,
+          "p95": 0.5096333923684389,
+          "min": 0.43335663712352357,
+          "max": 0.5104513669002992
+        },
+        "local_per_effective_thread": {
+          "count": 5.0,
+          "mean": 0.4145765616972226,
+          "median": 0.419688505003896,
+          "stdev": 0.02284183687244648,
+          "iqr": 0.00860191601476934,
+          "p95": 0.43499918971519913,
+          "min": 0.37666464708975583,
+          "max": 0.4378371892492515
+        },
+        "remote_per_effective_thread": {
+          "count": 5.0,
+          "mean": 0.4966693625397985,
+          "median": 0.45066735907673816,
+          "stdev": 0.12198525160717702,
+          "iqr": 0.12741994599676743,
+          "p95": 0.6606432176664079,
+          "min": 0.396903575511158,
+          "max": 0.6918909075080308
+        },
+        "remote_busy_fraction": {
+          "count": 5.0,
+          "mean": 1.17840202486124,
+          "median": 1.1654938501295384,
+          "stdev": 0.10505579962175081,
+          "iqr": 0.17722892829022596,
+          "p95": 1.3004356477239876,
+          "min": 1.0755065216747743,
+          "max": 1.310873970921109
+        },
+        "ratios": {
+          "raw": {
+            "count": 5.0,
+            "mean": 1.6942254990849914,
+            "median": 1.6714894618669112,
+            "stdev": 0.16910950018082235,
+            "iqr": 0.21547313749713148,
+            "p95": 1.910658726899558,
+            "min": 1.540670859188727,
+            "max": 1.9474495653041617
+          },
+          "per_thread": {
+            "count": 5.0,
+            "mean": 1.129483666056661,
+            "median": 1.1143263079112742,
+            "stdev": 0.11273966678721493,
+            "iqr": 0.143648758331421,
+            "p95": 1.2737724845997054,
+            "min": 1.0271139061258179,
+            "max": 1.2982997102027745
+          },
+          "per_effective_thread": {
+            "count": 5.0,
+            "mean": 1.1950321688186452,
+            "median": 1.0858269822830595,
+            "stdev": 0.27016578891871174,
+            "iqr": 0.16967361859813956,
+            "p95": 1.5635467008159556,
+            "min": 0.9636143480182457,
+            "max": 1.6485819822527852
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "Remote worker calibration spread is high; cluster heterogeneity is significant.",
+        "findings": [
+          "Remote worker calibration spread is high; cluster heterogeneity is significant."
+        ],
+        "opportunities": [
+          {
+            "action": "Split heterogeneous workers into separate benchmark pools",
+            "reason": "Mixed node speeds can cause stragglers and misleading normalization."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep1.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep2.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep3.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep4.json",
+        "benchmark_results/profiles/dask_profile_5reps_20260401_202437/remote/unified_N512_rep5.json"
+      ]
+    }
+  },
+  "global_findings": [
+    "N=128: No dominant bottleneck detected; behavior appears balanced for current runs.",
+    "N=256: No dominant bottleneck detected; behavior appears balanced for current runs.",
+    "N=512: Remote worker calibration spread is high; cluster heterogeneity is significant."
+  ],
+  "recommended_next_actions": [
+    {
+      "action": "Increase workload size and re-profile",
+      "reason": "Small-N runs can hide or distort true scaling trends."
+    },
+    {
+      "action": "Split heterogeneous workers into separate benchmark pools",
+      "reason": "Mixed node speeds can cause stragglers and misleading normalization."
+    }
+  ]
+}

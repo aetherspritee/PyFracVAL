@@ -1,0 +1,26 @@
+[
+  {
+    "N": 128,
+    "Df": 2.0,
+    "kf": 1.0,
+    "rp_g": 100.0,
+    "rp_gstd": 1.5,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0,
+    "seed": 1530102216,
+    "description": "Default config",
+    "category": "stable",
+    "success": true,
+    "runtime_seconds": 0.09365439414978027,
+    "failure_stage": null,
+    "failure_reason": null,
+    "final_N": 128,
+    "final_Rg": 1145.5497621977963,
+    "total_rotations_pca": null,
+    "total_rotations_cca": null,
+    "avg_rotations_per_particle": null,
+    "gamma_failures": null,
+    "candidate_failures": null
+  }
+]

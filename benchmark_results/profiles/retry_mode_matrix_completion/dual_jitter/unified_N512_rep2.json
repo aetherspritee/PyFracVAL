@@ -1,0 +1,94 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "run_name": "dual_jitter_N512_rep2",
+  "commit": "df52af7",
+  "started_at": "2026-04-08 13:21:42",
+  "config": {
+    "N": 512,
+    "Df": 2.2,
+    "kf": 1.0,
+    "rp_g": 100.0,
+    "rp_gstd": 1.8,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0
+  },
+  "algorithm": {
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 20,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32
+  },
+  "n_aggregates": 8,
+  "warmup_tasks": 1,
+  "local": {
+    "environment": "local",
+    "workers": 4,
+    "total_threads": 16,
+    "effective_threads": 20.974124268484115,
+    "worker_threads": {
+      "tcp://127.0.0.1:33153": 4,
+      "tcp://127.0.0.1:38741": 4,
+      "tcp://127.0.0.1:39385": 4,
+      "tcp://127.0.0.1:44617": 4
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:33153": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 3306038,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:38741": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 3306043,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:39385": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 3306035,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:44617": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 3306041,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:33153": 0.14436014695093036,
+      "tcp://127.0.0.1:38741": 0.3250273549929261,
+      "tcp://127.0.0.1:44617": 0.3360910746268928,
+      "tcp://127.0.0.1:39385": 0.3468080051243305
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:33153": 2.2898232080788214,
+      "tcp://127.0.0.1:38741": 1.0170196745966311,
+      "tcp://127.0.0.1:39385": 0.9531475915367182,
+      "tcp://127.0.0.1:44617": 0.9835405929088582
+    },
+    "n_aggregates": 8,
+    "successes": 8,
+    "success_rate": 1.0,
+    "total_wall_s": 28.535464690066874,
+    "throughput_agg_per_s": 0.28035289023293114,
+    "throughput_per_thread": 0.017522055639558196,
+    "throughput_per_effective_thread": 0.013366607665912975,
+    "task_wall_mean_s": 12.873946346109733,
+    "task_wall_median_s": 9.755428606411442,
+    "task_cpu_mean_s": 14.247745345999999,
+    "task_cpu_median_s": 10.833987086,
+    "cpu_to_wall_ratio": 1.1067115679183641,
+    "thread_busy_fraction": 0.22557800417722165,
+    "profiling_artifacts": {}
+  },
+  "remote": null,
+  "comparison": {}
+}

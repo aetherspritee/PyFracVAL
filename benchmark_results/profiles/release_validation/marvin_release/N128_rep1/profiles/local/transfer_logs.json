@@ -1,0 +1,77 @@
+{
+  "incoming": {
+    "tcp://127.0.0.1:36237": [],
+    "tcp://127.0.0.1:43745": []
+  },
+  "outgoing": {
+    "tcp://127.0.0.1:36237": [
+      {
+        "start": 1775564208.9769397,
+        "stop": 1775564208.9774282,
+        "middle": 1775564208.9726305,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-4c9a85e9-d7cf-41aa-ad00-944f590a08a4": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775564209.1242557,
+        "stop": 1775564209.1247928,
+        "middle": 1775564209.1199708,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-411e8e46-a412-46a2-9411-f6a780b08530": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775564209.3826773,
+        "stop": 1775564209.383207,
+        "middle": 1775564209.3783886,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-4691df59-e58a-4eb9-8108-25246c8b7143": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ],
+    "tcp://127.0.0.1:43745": [
+      {
+        "start": 1775564209.2879462,
+        "stop": 1775564209.2885156,
+        "middle": 1775564209.2839847,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-3f642cb2-8bd2-4596-8c50-4f44f7a6c3ac": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775564209.385179,
+        "stop": 1775564209.385605,
+        "middle": 1775564209.381146,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-021dfa7d-4b03-44de-90ee-f0390fe363ea": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ]
+  }
+}

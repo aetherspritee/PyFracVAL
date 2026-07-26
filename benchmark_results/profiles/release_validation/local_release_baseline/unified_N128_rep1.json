@@ -1,0 +1,74 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "run_name": "local_release_baseline_N128_rep1",
+  "commit": "98df7c0",
+  "started_at": "2026-04-07 14:16:46",
+  "config": {
+    "N": 128,
+    "Df": 1.8,
+    "kf": 1.0,
+    "rp_g": 100.0,
+    "rp_gstd": 1.5,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0
+  },
+  "algorithm": {
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32
+  },
+  "n_aggregates": 2,
+  "warmup_tasks": 1,
+  "local": {
+    "environment": "local",
+    "workers": 2,
+    "total_threads": 16,
+    "effective_threads": 18.330585680850657,
+    "worker_threads": {
+      "tcp://127.0.0.1:33881": 8,
+      "tcp://127.0.0.1:35575": 8
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:33881": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 2836394,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:35575": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 2836397,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:33881": 0.13902566395699978,
+      "tcp://127.0.0.1:35575": 0.2931133001111448
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:33881": 1.5541697545922306,
+      "tcp://127.0.0.1:35575": 0.7371534555141016
+    },
+    "n_aggregates": 2,
+    "successes": 2,
+    "success_rate": 1.0,
+    "total_wall_s": 0.10250994702801108,
+    "throughput_agg_per_s": 19.510301760798836,
+    "throughput_per_thread": 1.2193938600499272,
+    "throughput_per_effective_thread": 1.0643577952438579,
+    "task_wall_mean_s": 0.0852718788664788,
+    "task_wall_median_s": 0.0852718788664788,
+    "task_cpu_mean_s": 0.07971765749999998,
+    "task_cpu_median_s": 0.07971765749999998,
+    "cpu_to_wall_ratio": 0.9348645598019978,
+    "thread_busy_fraction": 0.10398000552470539,
+    "profiling_artifacts": {}
+  },
+  "remote": null,
+  "comparison": {}
+}

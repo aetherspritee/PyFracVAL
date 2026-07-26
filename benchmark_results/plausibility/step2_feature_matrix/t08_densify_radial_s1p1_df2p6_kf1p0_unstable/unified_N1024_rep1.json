@@ -1,0 +1,220 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "run_name": "t08_densify_radial_s1p1_df2p6_kf1p0_unstable_N1024_rep1",
+  "commit": "7858f88",
+  "started_at": "2026-04-15 03:50:30",
+  "config": {
+    "N": 1024,
+    "Df": 2.6,
+    "kf": 1.0,
+    "rp_g": 1.0,
+    "rp_gstd": 1.1,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0,
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32,
+    "cca_retry_rotation_mode": "single",
+    "cca_retry_escalate_after": 120,
+    "cca_dual_jitter_interval": 5,
+    "cca_dual_jitter_deg": 8.0,
+    "cca_coarse_sweep_steps": 10,
+    "cca_coarse_spin_anchor_steps": 6,
+    "cca_coarse_spin_moving_steps": 6,
+    "cca_coarse_fine_coarse_fraction": 0.67,
+    "cca_coarse_fine_spin_deg": 12.0,
+    "profile_cca_retry_modes": true,
+    "cca_sticking_method": "fibonacci",
+    "densify_enabled": true,
+    "densify_source_df": 2.0,
+    "densify_source_kf": 1.0,
+    "densify_max_push_iters": 50,
+    "densify_rtol": 0.05,
+    "densify_method": "radial"
+  },
+  "algorithm": {
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32,
+    "cca_retry_rotation_mode": "single",
+    "cca_coarse_fine_coarse_fraction": 0.67,
+    "cca_coarse_fine_spin_deg": 12.0,
+    "cca_retry_escalate_after": 120,
+    "cca_dual_jitter_interval": 5,
+    "cca_dual_jitter_deg": 8.0,
+    "cca_coarse_sweep_steps": 10,
+    "cca_coarse_spin_anchor_steps": 6,
+    "cca_coarse_spin_moving_steps": 6,
+    "profile_cca_retry_modes": true,
+    "cca_gamma_expansion_enabled": false,
+    "cca_pair_feasibility_filter": "none",
+    "cca_sticking_method": "fibonacci",
+    "densify_enabled": true,
+    "densify_source_df": 2.0,
+    "densify_source_kf": 1.0,
+    "densify_max_push_iters": 50,
+    "densify_rtol": 0.05,
+    "densify_method": "radial"
+  },
+  "n_aggregates": 1,
+  "warmup_tasks": 1,
+  "local": {
+    "environment": "local",
+    "workers": 4,
+    "total_threads": 16,
+    "effective_threads": 21.125455899021418,
+    "worker_threads": {
+      "tcp://127.0.0.1:34985": 4,
+      "tcp://127.0.0.1:36785": 4,
+      "tcp://127.0.0.1:42995": 4,
+      "tcp://127.0.0.1:46707": 4
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:34985": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.80-x86_64-with-glibc2.42",
+        "python": "3.13.12",
+        "pid": 2137474,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:36785": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.80-x86_64-with-glibc2.42",
+        "python": "3.13.12",
+        "pid": 2137477,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:42995": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.80-x86_64-with-glibc2.42",
+        "python": "3.13.12",
+        "pid": 2137476,
+        "cpu_count": 16
+      },
+      "tcp://127.0.0.1:46707": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.80-x86_64-with-glibc2.42",
+        "python": "3.13.12",
+        "pid": 2137475,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:34985": 0.1645192940486595,
+      "tcp://127.0.0.1:36785": 0.373787158052437,
+      "tcp://127.0.0.1:42995": 0.4067101189866662,
+      "tcp://127.0.0.1:46707": 0.3946019971044734
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:34985": 2.335255447089524,
+      "tcp://127.0.0.1:36785": 1.027843170376009,
+      "tcp://127.0.0.1:42995": 0.9446398298023434,
+      "tcp://127.0.0.1:46707": 0.973625527487478
+    },
+    "n_aggregates": 1,
+    "successes": 1,
+    "success_rate": 1.0,
+    "total_wall_s": 19.142136720009148,
+    "throughput_agg_per_s": 0.0522407720008972,
+    "throughput_per_thread": 0.003265048250056075,
+    "throughput_per_effective_thread": 0.002472882585379713,
+    "task_wall_mean_s": 1.4098077199887484,
+    "task_wall_median_s": 1.4098077199887484,
+    "task_cpu_mean_s": 4.582136252,
+    "task_cpu_median_s": 4.582136252,
+    "cpu_to_wall_ratio": 3.2501852465643823,
+    "thread_busy_fraction": 0.004603090229064808,
+    "profiling_artifacts": {}
+  },
+  "remote": {
+    "environment": "remote",
+    "workers": 5,
+    "total_threads": 24,
+    "effective_threads": 22.584687204048794,
+    "worker_threads": {
+      "tcp://129.217.143.165:38285": 4,
+      "tcp://129.217.143.165:39819": 4,
+      "tcp://129.217.143.165:41145": 4,
+      "tcp://129.217.143.165:45331": 4,
+      "tcp://129.217.143.182:33815": 8
+    },
+    "worker_metadata": {
+      "tcp://129.217.143.165:38285": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 46,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:39819": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 39,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:41145": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 35,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:45331": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 43,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.182:33815": {
+        "hostname": "sauron",
+        "platform": "Linux-6.8.0-63-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 208,
+        "cpu_count": 128
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://129.217.143.165:45331": 1.0613990270067006,
+      "tcp://129.217.143.165:41145": 1.062409803038463,
+      "tcp://129.217.143.165:39819": 1.1005247728899121,
+      "tcp://129.217.143.182:33815": 1.2641718722879887,
+      "tcp://129.217.143.165:38285": 1.3222161319572479
+    },
+    "worker_performance_index": {
+      "tcp://129.217.143.165:38285": 0.832333493965793,
+      "tcp://129.217.143.165:39819": 1.0,
+      "tcp://129.217.143.165:41145": 1.0358759583565977,
+      "tcp://129.217.143.165:45331": 1.0368624286320969,
+      "tcp://129.217.143.182:33815": 0.8705499600288557
+    },
+    "n_aggregates": 1,
+    "successes": 1,
+    "success_rate": 1.0,
+    "total_wall_s": 5.126782733947039,
+    "throughput_agg_per_s": 0.19505410154764136,
+    "throughput_per_thread": 0.008127254231151723,
+    "throughput_per_effective_thread": 0.0086365642253692,
+    "task_wall_mean_s": 5.1091111190617085,
+    "task_wall_median_s": 5.1091111190617085,
+    "task_cpu_mean_s": 5.225846437002474,
+    "task_cpu_median_s": 5.225846437002474,
+    "cpu_to_wall_ratio": 1.022848459393501,
+    "thread_busy_fraction": 0.04152304495981858,
+    "profiling_artifacts": {}
+  },
+  "comparison": {
+    "remote_vs_local_raw_throughput_ratio": 3.733752279623499,
+    "remote_vs_local_per_thread_ratio": 2.489168186415666,
+    "remote_vs_local_per_effective_thread_ratio": 3.4925088139771296,
+    "local_threads": 16.0,
+    "remote_threads": 24.0,
+    "local_effective_threads": 21.125455899021418,
+    "remote_effective_threads": 22.584687204048794
+  },
+  "error": null
+}

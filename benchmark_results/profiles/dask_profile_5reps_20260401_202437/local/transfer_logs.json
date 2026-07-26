@@ -1,0 +1,746 @@
+{
+  "incoming": {
+    "tcp://127.0.0.1:37057": [],
+    "tcp://127.0.0.1:41171": [],
+    "tcp://127.0.0.1:44039": [],
+    "tcp://127.0.0.1:46137": []
+  },
+  "outgoing": {
+    "tcp://127.0.0.1:37057": [
+      {
+        "start": 1775068219.903865,
+        "stop": 1775068219.9043925,
+        "middle": 1775068219.9036405,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-c12d92d4-a700-4168-8f1c-b5e8a29e4a8b": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068220.2854064,
+        "stop": 1775068220.2858853,
+        "middle": 1775068220.2851577,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-2eacb631-f210-4659-85b3-81c5c73a6eb9": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068222.4413183,
+        "stop": 1775068222.4478543,
+        "middle": 1775068222.5356886,
+        "duration": 0.006536006927490234,
+        "who": null,
+        "keys": {
+          "_timed_run-3b006315-8c5e-4a65-b8d9-5f5f1e2933e1": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 97613.11563434741
+      },
+      {
+        "start": 1775068222.4627893,
+        "stop": 1775068222.5073056,
+        "middle": 1775068222.57615,
+        "duration": 0.04451632499694824,
+        "who": null,
+        "keys": {
+          "_timed_run-4d52f2c2-4963-4e5f-b2ee-4234964dff4e": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 14331.820967785126
+      },
+      {
+        "start": 1775068223.1312668,
+        "stop": 1775068223.1318252,
+        "middle": 1775068223.1408157,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-0bc79588-5fbe-4b25-bdec-3083aacd0edb": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068223.6584897,
+        "stop": 1775068223.663952,
+        "middle": 1775068223.6691623,
+        "duration": 0.0054624080657958984,
+        "who": null,
+        "keys": {
+          "_timed_run-a07a0ce7-eaf8-48a5-8ea6-77ba9f0932f0": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 116798.30439526864
+      },
+      {
+        "start": 1775068224.0767317,
+        "stop": 1775068224.0773532,
+        "middle": 1775068224.2521534,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-6fc1dfca-39d6-4c39-aee0-cd04a98593fa": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068224.613561,
+        "stop": 1775068224.6278083,
+        "middle": 1775068224.783133,
+        "duration": 0.014247417449951172,
+        "who": null,
+        "keys": {
+          "_timed_run-15d76e22-cf26-4046-90bb-c390b2c5bb28": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 44780.04538304495
+      },
+      {
+        "start": 1775068225.0336404,
+        "stop": 1775068225.0390916,
+        "middle": 1775068225.1750195,
+        "duration": 0.005451202392578125,
+        "who": null,
+        "keys": {
+          "_timed_run-d7c5fe79-3017-43ea-b2e3-38ce829b346e": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 117038.3988803359
+      },
+      {
+        "start": 1775068225.7346609,
+        "stop": 1775068225.754209,
+        "middle": 1775068225.7648692,
+        "duration": 0.01954817771911621,
+        "who": null,
+        "keys": {
+          "_timed_run-53f1bdc8-16f8-4a6f-9374-e77fae6cf6ff": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 32637.31326609018
+      },
+      {
+        "start": 1775068226.1388004,
+        "stop": 1775068226.1459506,
+        "middle": 1775068226.1454375,
+        "duration": 0.007150173187255859,
+        "who": null,
+        "keys": {
+          "_timed_run-d528fb5c-6947-4d14-b97e-56c433c7e760": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 89228.60793597865
+      },
+      {
+        "start": 1775068227.035103,
+        "stop": 1775068227.0361304,
+        "middle": 1775068227.1421623,
+        "duration": 0.0010273456573486328,
+        "who": null,
+        "keys": {
+          "_timed_run-a071fcb7-dcf1-4f66-8c8e-c69511c096ce": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 621017.858435832
+      },
+      {
+        "start": 1775068227.38693,
+        "stop": 1775068227.3905804,
+        "middle": 1775068227.3913817,
+        "duration": 0.0036504268646240234,
+        "who": null,
+        "keys": {
+          "_timed_run-ffd4d591-b428-4466-b065-eb47e6b5ceb4": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 174774.08085690025
+      },
+      {
+        "start": 1775068227.4643133,
+        "stop": 1775068227.4647958,
+        "middle": 1775068227.4671812,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-48354c2d-647e-422a-939c-726994e1ac4e": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ],
+    "tcp://127.0.0.1:41171": [
+      {
+        "start": 1775068219.9247577,
+        "stop": 1775068219.9252088,
+        "middle": 1775068219.9174876,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-597ec405-ea8e-47ea-96df-6c2a770a7552": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068220.3723874,
+        "stop": 1775068220.3729465,
+        "middle": 1775068220.3630252,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-2e2fa4b0-87b0-4783-8d2d-200b03d12ab0": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068222.055348,
+        "stop": 1775068222.078276,
+        "middle": 1775068222.0985851,
+        "duration": 0.02292799949645996,
+        "who": null,
+        "keys": {
+          "_timed_run-b4195fb4-a789-42f4-b803-57fad4057b43": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 27826.239271267692
+      },
+      {
+        "start": 1775068222.5580266,
+        "stop": 1775068222.5759306,
+        "middle": 1775068222.6664119,
+        "duration": 0.017904043197631836,
+        "who": null,
+        "keys": {
+          "_timed_run-80b8879c-9fc4-43c6-b842-57ec2125b663": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 35634.40910846261
+      },
+      {
+        "start": 1775068223.1099684,
+        "stop": 1775068223.1333585,
+        "middle": 1775068223.1220827,
+        "duration": 0.02339005470275879,
+        "who": null,
+        "keys": {
+          "_timed_run-d8277a2e-cedb-439e-8840-5726c414d121": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 27276.550145252535
+      },
+      {
+        "start": 1775068223.1335602,
+        "stop": 1775068223.1688464,
+        "middle": 1775068223.1516223,
+        "duration": 0.03528618812561035,
+        "who": null,
+        "keys": {
+          "_timed_run-843be3ef-d2b7-4b36-bd36-257e349e2afa": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 18080.728859940136
+      },
+      {
+        "start": 1775068223.7957816,
+        "stop": 1775068223.8014965,
+        "middle": 1775068223.8030992,
+        "duration": 0.005714893341064453,
+        "who": null,
+        "keys": {
+          "_timed_run-ad9dd632-a54a-4067-8605-e5748806b29f": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 111638.12899457656
+      },
+      {
+        "start": 1775068224.615715,
+        "stop": 1775068224.6212196,
+        "middle": 1775068224.7419026,
+        "duration": 0.005504608154296875,
+        "who": null,
+        "keys": {
+          "_timed_run-221b4754-c6cf-449c-9426-1c182d5a1248": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 115902.8911988912
+      },
+      {
+        "start": 1775068224.7279432,
+        "stop": 1775068224.7335494,
+        "middle": 1775068224.8541815,
+        "duration": 0.005606174468994141,
+        "who": null,
+        "keys": {
+          "_timed_run-2adc976d-9685-4a33-9797-9bfc3e058cdc": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 113803.0939865612
+      },
+      {
+        "start": 1775068225.688711,
+        "stop": 1775068225.7065358,
+        "middle": 1775068225.7534866,
+        "duration": 0.017824888229370117,
+        "who": null,
+        "keys": {
+          "_timed_run-100a4a6c-ef31-42d5-a21d-d57c37855bb8": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 35792.65080320479
+      },
+      {
+        "start": 1775068226.169321,
+        "stop": 1775068226.180146,
+        "middle": 1775068226.1767697,
+        "duration": 0.010824918746948242,
+        "who": null,
+        "keys": {
+          "_timed_run-77011cf1-f4dc-4471-9b66-41e69c50fb07": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 58938.08673435676
+      },
+      {
+        "start": 1775068226.1803405,
+        "stop": 1775068226.2423267,
+        "middle": 1775068226.2133698,
+        "duration": 0.06198620796203613,
+        "who": null,
+        "keys": {
+          "_timed_run-237a4175-40b8-4289-b861-52dbd12c9ca9": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 10292.612195131333
+      },
+      {
+        "start": 1775068226.4749002,
+        "stop": 1775068226.4905596,
+        "middle": 1775068226.4878786,
+        "duration": 0.015659332275390625,
+        "who": null,
+        "keys": {
+          "_timed_run-f47b2e2c-952e-413b-97b8-80330b27bf6e": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 40742.47795371498
+      },
+      {
+        "start": 1775068226.8703244,
+        "stop": 1775068226.870915,
+        "middle": 1775068226.8921661,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-3837e370-7209-4e81-9bc9-607daa593793": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ],
+    "tcp://127.0.0.1:44039": [
+      {
+        "start": 1775068220.1641247,
+        "stop": 1775068220.1647935,
+        "middle": 1775068220.1579657,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-245bcd29-98bf-4ed8-985f-7e742f77bbca": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068220.2661755,
+        "stop": 1775068220.2671907,
+        "middle": 1775068220.2601895,
+        "duration": 0.0010151863098144531,
+        "who": null,
+        "keys": {
+          "_timed_run-33cc88d0-fc5f-4b7d-a810-94900ee58155": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 628456.0713950212
+      },
+      {
+        "start": 1775068222.237718,
+        "stop": 1775068222.2473433,
+        "middle": 1775068222.250484,
+        "duration": 0.00962519645690918,
+        "who": null,
+        "keys": {
+          "_timed_run-6c42ebd3-8a67-417d-87f1-f3e60247882d": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 66284.36134849273
+      },
+      {
+        "start": 1775068222.3227787,
+        "stop": 1775068222.3330963,
+        "middle": 1775068222.3358908,
+        "duration": 0.010317564010620117,
+        "who": null,
+        "keys": {
+          "_timed_run-ddbcf6ee-9936-4645-bb32-1234dc77482d": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 61836.301606008084
+      },
+      {
+        "start": 1775068223.0676134,
+        "stop": 1775068223.0683284,
+        "middle": 1775068223.2352676,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-74636e8e-5a5f-44ad-84ac-afa5cb36d99f": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068223.635315,
+        "stop": 1775068223.671205,
+        "middle": 1775068223.8089519,
+        "duration": 0.03589010238647461,
+        "who": null,
+        "keys": {
+          "_timed_run-12371de0-e650-486b-b507-0e1805c080a2": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 17776.488713513227
+      },
+      {
+        "start": 1775068224.4900978,
+        "stop": 1775068224.4908848,
+        "middle": 1775068224.605075,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-5631a3c6-5d17-47b4-8d91-f254b13e5000": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068225.0371788,
+        "stop": 1775068225.0377967,
+        "middle": 1775068225.1825488,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-28a31858-d017-49ff-83e6-bcd4431c81e3": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068226.3147428,
+        "stop": 1775068226.3190234,
+        "middle": 1775068226.319088,
+        "duration": 0.004280567169189453,
+        "who": null,
+        "keys": {
+          "_timed_run-1aa15720-c6e8-4481-a08f-9887d6588f6f": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 149045.6696000891
+      },
+      {
+        "start": 1775068227.0175436,
+        "stop": 1775068227.0576286,
+        "middle": 1775068227.0464196,
+        "duration": 0.0400850772857666,
+        "who": null,
+        "keys": {
+          "_timed_run-3f4c3780-1269-43ac-908f-df8a7e3897dd": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 15916.147434410483
+      },
+      {
+        "start": 1775068227.0578284,
+        "stop": 1775068227.0602064,
+        "middle": 1775068227.0678508,
+        "duration": 0.0023779869079589844,
+        "who": null,
+        "keys": {
+          "_timed_run-8710a345-5015-4922-9f47-34c37e672ddc": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 268294.1600160417
+      },
+      {
+        "start": 1775068227.3357003,
+        "stop": 1775068227.3379126,
+        "middle": 1775068227.3456397,
+        "duration": 0.0022122859954833984,
+        "who": null,
+        "keys": {
+          "_timed_run-43a084c0-abc3-4a49-a23b-a1e516e968be": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 288389.4764522039
+      },
+      {
+        "start": 1775068227.349939,
+        "stop": 1775068227.3503826,
+        "middle": 1775068227.3504486,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-dab23a08-285f-4220-8d2b-3345efdec414": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ],
+    "tcp://127.0.0.1:46137": [
+      {
+        "start": 1775068220.192841,
+        "stop": 1775068220.1933794,
+        "middle": 1775068220.1837652,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-f99b2b2e-57aa-427c-a206-598537fd9d64": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068220.3006163,
+        "stop": 1775068220.3012762,
+        "middle": 1775068220.2916012,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-ce9d88cb-216b-4cbd-849a-c3ead69719ec": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068221.8838828,
+        "stop": 1775068221.889117,
+        "middle": 1775068221.917479,
+        "duration": 0.005234241485595703,
+        "who": null,
+        "keys": {
+          "_timed_run-d5abdedb-ace7-49aa-9867-ddd9dddafcdc": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 121889.67623212171
+      },
+      {
+        "start": 1775068222.2567163,
+        "stop": 1775068222.2575932,
+        "middle": 1775068222.2881339,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-4cf84f2f-8bd6-4164-8cf0-e0f01194522b": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068222.758745,
+        "stop": 1775068222.7643619,
+        "middle": 1775068222.7621636,
+        "duration": 0.005616903305053711,
+        "who": null,
+        "keys": {
+          "_timed_run-fc8b6036-9117-4e51-ad2b-edee1d9367a3": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 113585.71891846004
+      },
+      {
+        "start": 1775068222.9838543,
+        "stop": 1775068222.9960992,
+        "middle": 1775068223.0997324,
+        "duration": 0.012244939804077148,
+        "who": null,
+        "keys": {
+          "_timed_run-e5c7867a-f8b2-4c7a-92f5-4bf4ea57259b": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 52103.1552795031
+      },
+      {
+        "start": 1775068224.0647244,
+        "stop": 1775068224.065239,
+        "middle": 1775068224.0692918,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-3e80caf1-f0cb-4b24-b2b9-9bccc0403dd9": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068224.0729158,
+        "stop": 1775068224.074939,
+        "middle": 1775068224.0782375,
+        "duration": 0.0020232200622558594,
+        "who": null,
+        "keys": {
+          "_timed_run-4518c73a-7696-438a-af0b-8e5ff571ce83": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 315338.9054913976
+      },
+      {
+        "start": 1775068225.434834,
+        "stop": 1775068225.4460602,
+        "middle": 1775068225.5052445,
+        "duration": 0.011226177215576172,
+        "who": null,
+        "keys": {
+          "_timed_run-c1654f5f-5deb-44f7-b60e-6899eab3b40d": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 56831.45631397868
+      },
+      {
+        "start": 1775068225.5988245,
+        "stop": 1775068225.6552844,
+        "middle": 1775068225.6918519,
+        "duration": 0.056459903717041016,
+        "who": null,
+        "keys": {
+          "_timed_run-c7b04942-8fd7-4eda-a6e6-02a7547bd840": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 11300.054693636248
+      },
+      {
+        "start": 1775068226.2406697,
+        "stop": 1775068226.2731812,
+        "middle": 1775068226.2616544,
+        "duration": 0.03251147270202637,
+        "who": null,
+        "keys": {
+          "_timed_run-304dcb8f-94c7-4797-bc10-62600d8879f9": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 19623.841892595497
+      },
+      {
+        "start": 1775068226.5402741,
+        "stop": 1775068226.557778,
+        "middle": 1775068226.6942008,
+        "duration": 0.017503738403320312,
+        "who": null,
+        "keys": {
+          "_timed_run-c89b9381-3e2f-4add-9f8d-0a570074f7c3": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 36449.356434564674
+      },
+      {
+        "start": 1775068226.9970007,
+        "stop": 1775068226.9976518,
+        "middle": 1775068227.0759783,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-e3ab7713-5ed1-426a-ac36-f67b671007e6": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068227.0080738,
+        "stop": 1775068227.0086484,
+        "middle": 1775068227.087013,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-38044e41-2bfc-463e-9957-ae8d21612d4e": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775068227.0490787,
+        "stop": 1775068227.049712,
+        "middle": 1775068227.1280472,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-f39fb653-699a-4023-910f-6573b9a9ce01": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "commit": "f5be95f",
+  "timestamp": "2026-01-10 18:54:45",
+  "optimization": "Sequential rotation + parallel overlap (auto-dispatch)",
+  "parallel_threshold": 200,
+  "results": {
+    "N=128, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 0.2063141663869222,
+      "std_runtime": 0.05507171366647988,
+      "min_runtime": 0.14211702346801758,
+      "max_runtime": 0.27660155296325684,
+      "all_runtimes": [
+        0.27660155296325684,
+        0.14211702346801758,
+        0.2002239227294922
+      ]
+    },
+    "N=256, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 0.9434277216593424,
+      "std_runtime": 0.018227672679496775,
+      "min_runtime": 0.9229178428649902,
+      "max_runtime": 0.9672060012817383,
+      "all_runtimes": [
+        0.9401593208312988,
+        0.9672060012817383,
+        0.9229178428649902
+      ]
+    },
+    "N=512, Optimal": {
+      "success_rate": 1.0,
+      "avg_runtime": 4.174602190653483,
+      "std_runtime": 0.0788256255394641,
+      "min_runtime": 4.06384801864624,
+      "max_runtime": 4.240949869155884,
+      "all_runtimes": [
+        4.06384801864624,
+        4.240949869155884,
+        4.219008684158325
+      ]
+    }
+  }
+}

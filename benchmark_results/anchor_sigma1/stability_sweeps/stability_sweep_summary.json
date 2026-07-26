@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-03-06 18:09:08",
+  "total_combinations": 1,
+  "trials_per_combo": 30,
+  "sizes": [
+    128
+  ],
+  "sigmas": [
+    1.0
+  ],
+  "df_values": [
+    1.79
+  ],
+  "kf_values": [
+    1.4
+  ],
+  "total_runtime_s": 43.784021615982056,
+  "results": [
+    {
+      "N": 128,
+      "Df": 1.79,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 30,
+      "successes": 30,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.4593711058298746,
+      "median_runtime_s": 0.4733065366744995,
+      "failure_stage_counts": {}
+    }
+  ]
+}

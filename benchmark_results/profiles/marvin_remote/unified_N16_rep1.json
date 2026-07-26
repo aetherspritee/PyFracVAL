@@ -1,0 +1,159 @@
+{
+  "benchmark": "unified_local_remote_dask",
+  "run_name": "marvin_remote_N16_rep1",
+  "commit": "98df7c0",
+  "started_at": "2026-04-07 14:09:42",
+  "config": {
+    "N": 16,
+    "Df": 1.8,
+    "kf": 1.0,
+    "rp_g": 100.0,
+    "rp_gstd": 1.5,
+    "tol_ov": 1e-06,
+    "n_subcl_percentage": 0.1,
+    "ext_case": 0
+  },
+  "algorithm": {
+    "use_cca_incremental_overlap": true,
+    "cca_incremental_full_sync_period": 8,
+    "cca_candidate_policy": "leaf_hybrid",
+    "cca_score_topk_per_class": 32
+  },
+  "n_aggregates": 1,
+  "warmup_tasks": 0,
+  "local": {
+    "environment": "local",
+    "workers": 1,
+    "total_threads": 16,
+    "effective_threads": 16.0,
+    "worker_threads": {
+      "tcp://127.0.0.1:39823": 16
+    },
+    "worker_metadata": {
+      "tcp://127.0.0.1:39823": {
+        "hostname": "madara",
+        "platform": "Linux-6.12.74-x86_64-with-glibc2.40",
+        "python": "3.13.0",
+        "pid": 2830388,
+        "cpu_count": 16
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://127.0.0.1:39823": 0.26208733674138784
+    },
+    "worker_performance_index": {
+      "tcp://127.0.0.1:39823": 1.0
+    },
+    "n_aggregates": 1,
+    "successes": 1,
+    "success_rate": 1.0,
+    "total_wall_s": 0.040164537727832794,
+    "throughput_agg_per_s": 24.89758519757668,
+    "throughput_per_thread": 1.5560990748485426,
+    "throughput_per_effective_thread": 1.5560990748485426,
+    "task_wall_mean_s": 0.02535555511713028,
+    "task_wall_median_s": 0.02535555511713028,
+    "task_cpu_mean_s": 0.015149634999999995,
+    "task_cpu_median_s": 0.015149634999999995,
+    "cpu_to_wall_ratio": 0.597487806124381,
+    "thread_busy_fraction": 0.03945575586003766,
+    "profiling_artifacts": {
+      "performance_report_html": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/local/dask_performance_report.html",
+      "client_profile_json": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/local/client_profile.json",
+      "transfer_logs_json": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/local/transfer_logs.json",
+      "scheduler_info_json": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/local/scheduler_info.json"
+    }
+  },
+  "remote": {
+    "environment": "remote",
+    "workers": 5,
+    "total_threads": 24,
+    "effective_threads": 33.21554612116527,
+    "worker_threads": {
+      "tcp://129.217.143.165:34837": 4,
+      "tcp://129.217.143.165:35177": 4,
+      "tcp://129.217.143.165:41639": 4,
+      "tcp://129.217.143.165:42661": 4,
+      "tcp://129.217.143.182:33815": 8
+    },
+    "worker_metadata": {
+      "tcp://129.217.143.165:34837": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 43,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:35177": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 35,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:41639": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 45,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.165:42661": {
+        "hostname": "boba",
+        "platform": "Linux-6.8.0-107-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 38,
+        "cpu_count": 16
+      },
+      "tcp://129.217.143.182:33815": {
+        "hostname": "sauron",
+        "platform": "Linux-6.8.0-63-generic-x86_64-with-glibc2.39",
+        "python": "3.13.12",
+        "pid": 208,
+        "cpu_count": 128
+      }
+    },
+    "worker_calibration_wall_s": {
+      "tcp://129.217.143.182:33815": 1.1977913714945316,
+      "tcp://129.217.143.165:42661": 2.5462782430113293,
+      "tcp://129.217.143.165:35177": 2.593423234007787,
+      "tcp://129.217.143.165:34837": 2.6245352510013618,
+      "tcp://129.217.143.165:41639": 2.682250195997767
+    },
+    "worker_performance_index": {
+      "tcp://129.217.143.165:34837": 0.988145704279756,
+      "tcp://129.217.143.165:35177": 1.0,
+      "tcp://129.217.143.165:41639": 0.9668834167213333,
+      "tcp://129.217.143.165:42661": 1.0185152550102703,
+      "tcp://129.217.143.182:33815": 2.1651710771399784
+    },
+    "n_aggregates": 1,
+    "successes": 1,
+    "success_rate": 1.0,
+    "total_wall_s": 0.04721840796992183,
+    "throughput_agg_per_s": 21.178181200793578,
+    "throughput_per_thread": 0.8824242166997324,
+    "throughput_per_effective_thread": 0.6375984643919083,
+    "task_wall_mean_s": 0.037017757014837116,
+    "task_wall_median_s": 0.037017757014837116,
+    "task_cpu_mean_s": 0.03847983399828081,
+    "task_cpu_median_s": 0.03847983399828081,
+    "cpu_to_wall_ratio": 1.0394966389470242,
+    "thread_busy_fraction": 0.032665365237798664,
+    "profiling_artifacts": {
+      "performance_report_html": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/remote/dask_performance_report.html",
+      "client_profile_json": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/remote/client_profile.json",
+      "transfer_logs_json": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/remote/transfer_logs.json",
+      "scheduler_info_json": "benchmark_results/profiles/marvin_remote/N16_rep1/profiles/remote/scheduler_info.json"
+    }
+  },
+  "comparison": {
+    "remote_vs_local_raw_throughput_ratio": 0.8506118578461529,
+    "remote_vs_local_per_thread_ratio": 0.5670745718974353,
+    "remote_vs_local_per_effective_thread_ratio": 0.4097415612524329,
+    "local_threads": 16.0,
+    "remote_threads": 24.0,
+    "local_effective_threads": 16.0,
+    "remote_effective_threads": 33.21554612116527
+  }
+}

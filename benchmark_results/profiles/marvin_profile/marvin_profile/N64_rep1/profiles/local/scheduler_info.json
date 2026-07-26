@@ -1,0 +1,65 @@
+{
+  "type": "Scheduler",
+  "id": "Scheduler-69da8399-2ddd-4209-851f-f99b9e8af1eb",
+  "address": "tcp://127.0.0.1:42405",
+  "services": {
+    "dashboard": 8787
+  },
+  "started": 1775564232.5795221,
+  "n_workers": 1,
+  "total_threads": 16,
+  "total_memory": 67113820160,
+  "workers": {
+    "tcp://127.0.0.1:40931": {
+      "type": "Worker",
+      "id": 0,
+      "host": "127.0.0.1",
+      "resources": {},
+      "local_directory": "/tmp/dask-scratch-space/worker-eon3xbuu",
+      "name": 0,
+      "nthreads": 16,
+      "memory_limit": 67113820160,
+      "last_seen": 1775564233.4923165,
+      "services": {
+        "dashboard": 35311
+      },
+      "metrics": {
+        "task_counts": {},
+        "bandwidth": {
+          "total": 100000000,
+          "workers": {},
+          "types": {}
+        },
+        "digests_total_since_heartbeat": {},
+        "managed_bytes": 0,
+        "spilled_bytes": {
+          "memory": 0,
+          "disk": 0
+        },
+        "transfer": {
+          "incoming_bytes": 0,
+          "incoming_count": 0,
+          "incoming_count_total": 0,
+          "outgoing_bytes": 0,
+          "outgoing_count": 0,
+          "outgoing_count_total": 0
+        },
+        "event_loop_interval": 0.02,
+        "cpu": 0.0,
+        "memory": 167075840,
+        "time": 1775564233.4792285,
+        "host_net_io": {
+          "read_bps": 0.0,
+          "write_bps": 0.0
+        },
+        "host_disk_io": {
+          "read_bps": 0.0,
+          "write_bps": 0.0
+        },
+        "num_fds": 19
+      },
+      "status": "running",
+      "nanny": "tcp://127.0.0.1:32945"
+    }
+  }
+}

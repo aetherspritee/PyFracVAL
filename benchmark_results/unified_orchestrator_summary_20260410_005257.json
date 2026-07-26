@@ -1,0 +1,22 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/gamma_expansion_probe_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 12,
+  "outputs": [
+    "benchmark_results/profiles/gamma_expansion_probe_v1/baseline_strict/unified_N256_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/baseline_strict/unified_N256_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/gamma_expand_step002_max105/unified_N256_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/gamma_expand_step002_max105/unified_N256_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/gamma_expand_step005_max110/unified_N256_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/gamma_expand_step005_max110/unified_N256_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/bv_filter_only/unified_N256_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/bv_filter_only/unified_N256_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/ssa_filter_only/unified_N256_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/ssa_filter_only/unified_N256_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/gamma_expand_step002_max105_bv/unified_N256_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_probe_v1/gamma_expand_step002_max105_bv/unified_N256_rep2.json"
+  ],
+  "started_at": "2026-04-10 00:49:51",
+  "commit": "a4b1eb9"
+}

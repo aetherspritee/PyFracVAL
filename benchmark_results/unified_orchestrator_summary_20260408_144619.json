@@ -1,0 +1,11 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/retry_mode_profile_probe.toml",
+  "execution_mode": "sequential",
+  "cases": 1,
+  "outputs": [
+    "benchmark_results/profiles/retry_mode_profile_probe/coarse_profile_probe/unified_N128_rep1.json"
+  ],
+  "started_at": "2026-04-08 14:46:14",
+  "commit": "df52af7"
+}

@@ -1,0 +1,279 @@
+{
+  "input_files": [
+    "benchmark_results/unified_local_vs_marvin_N128_rep1.json",
+    "benchmark_results/unified_local_vs_marvin_N128_rep2.json",
+    "benchmark_results/unified_local_vs_marvin_N128_rep3.json",
+    "benchmark_results/unified_local_vs_marvin_N128_rep4.json",
+    "benchmark_results/unified_local_vs_marvin_N128_rep5.json",
+    "benchmark_results/unified_local_vs_marvin_N256_rep1.json",
+    "benchmark_results/unified_local_vs_marvin_N256_rep2.json",
+    "benchmark_results/unified_local_vs_marvin_N256_rep3.json",
+    "benchmark_results/unified_local_vs_marvin_N256_rep4.json",
+    "benchmark_results/unified_local_vs_marvin_N256_rep5.json"
+  ],
+  "total_records": 10,
+  "per_N": {
+    "128": {
+      "records": 5,
+      "summary": {
+        "local_throughput": {
+          "count": 5.0,
+          "mean": 28.41339500341194,
+          "median": 28.075124324157017,
+          "stdev": 0.8567804824665675,
+          "iqr": 0.7071210654174607,
+          "p95": 29.58659141672919,
+          "min": 27.779374206717385,
+          "max": 29.849473802241302
+        },
+        "remote_throughput": {
+          "count": 5.0,
+          "mean": 54.874276001236105,
+          "median": 54.06447035461315,
+          "stdev": 2.6033982783693514,
+          "iqr": 2.4312337652167457,
+          "p95": 57.97375461068023,
+          "min": 51.54037372542562,
+          "max": 58.36282520220627
+        },
+        "local_per_thread": {
+          "count": 5.0,
+          "mean": 1.7758371877132462,
+          "median": 1.7546952702598135,
+          "stdev": 0.053548780154160466,
+          "iqr": 0.04419506658859129,
+          "p95": 1.8491619635455743,
+          "min": 1.7362108879198366,
+          "max": 1.8655921126400814
+        },
+        "remote_per_thread": {
+          "count": 5.0,
+          "mean": 2.2864281667181707,
+          "median": 2.252686264775548,
+          "stdev": 0.10847492826538971,
+          "iqr": 0.10130140688403078,
+          "p95": 2.415573108778343,
+          "min": 2.147515571892734,
+          "max": 2.4317843834252613
+        },
+        "local_per_effective_thread": {
+          "count": 5.0,
+          "mean": 1.7783337915677928,
+          "median": 1.7621783754758833,
+          "stdev": 0.09903509917148398,
+          "iqr": 0.09562143470714779,
+          "p95": 1.9082873274489127,
+          "min": 1.683399026155603,
+          "max": 1.9344514690820718
+        },
+        "remote_per_effective_thread": {
+          "count": 5.0,
+          "mean": 2.105945714833568,
+          "median": 1.9976823264732455,
+          "stdev": 0.35783379174499547,
+          "iqr": 0.2644139940152155,
+          "p95": 2.5930384758928535,
+          "min": 1.819473648769562,
+          "max": 2.707628309426898
+        },
+        "remote_busy_fraction": {
+          "count": 5.0,
+          "mean": 1.0300325587514667,
+          "median": 0.9964852068976531,
+          "stdev": 0.08003731665299406,
+          "iqr": 0.07421246188188202,
+          "p95": 1.13757901723058,
+          "min": 0.9588225661934038,
+          "max": 1.158103241393949
+        },
+        "ratios": {
+          "raw": {
+            "count": 5.0,
+            "mean": 1.9335268834791133,
+            "median": 1.9433928956651891,
+            "stdev": 0.12634190849867735,
+            "iqr": 0.19828119691670754,
+            "p95": 2.0797230759842633,
+            "min": 1.8062120892458127,
+            "max": 2.0972743043487663
+          },
+          "per_thread": {
+            "count": 5.0,
+            "mean": 1.2890179223194087,
+            "median": 1.295595263776793,
+            "stdev": 0.08422793899911828,
+            "iqr": 0.13218746461113828,
+            "p95": 1.3864820506561757,
+            "min": 1.2041413928305418,
+            "max": 1.3981828695658443
+          },
+          "per_effective_thread": {
+            "count": 5.0,
+            "mean": 1.186101232332469,
+            "median": 1.1035061751999466,
+            "stdev": 0.2057664990666556,
+            "iqr": 0.09169862992635713,
+            "p95": 1.4665578532032206,
+            "min": 1.0087838864786476,
+            "max": 1.5365234003031574
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "No dominant bottleneck detected; behavior appears balanced for current runs.",
+        "findings": [
+          "No dominant bottleneck detected; behavior appears balanced for current runs."
+        ],
+        "opportunities": [
+          {
+            "action": "Increase workload size and re-profile",
+            "reason": "Small-N runs can hide or distort true scaling trends."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/unified_local_vs_marvin_N128_rep1.json",
+        "benchmark_results/unified_local_vs_marvin_N128_rep2.json",
+        "benchmark_results/unified_local_vs_marvin_N128_rep3.json",
+        "benchmark_results/unified_local_vs_marvin_N128_rep4.json",
+        "benchmark_results/unified_local_vs_marvin_N128_rep5.json"
+      ]
+    },
+    "256": {
+      "records": 5,
+      "summary": {
+        "local_throughput": {
+          "count": 5.0,
+          "mean": 17.381200322584103,
+          "median": 17.456410635881607,
+          "stdev": 0.5802591947906515,
+          "iqr": 1.112432513767903,
+          "p95": 17.945169967664675,
+          "min": 16.748113065070907,
+          "max": 17.94825560727298
+        },
+        "remote_throughput": {
+          "count": 5.0,
+          "mean": 26.3098365737148,
+          "median": 24.632907824004455,
+          "stdev": 4.413881538399905,
+          "iqr": 5.096338341363413,
+          "p95": 31.74106689421084,
+          "min": 21.3074873985081,
+          "max": 32.38650613638336
+        },
+        "local_per_thread": {
+          "count": 5.0,
+          "mean": 1.0863250201615064,
+          "median": 1.0910256647426004,
+          "stdev": 0.03626619967441572,
+          "iqr": 0.06952703211049394,
+          "p95": 1.1215731229790422,
+          "min": 1.0467570665669317,
+          "max": 1.1217659754545612
+        },
+        "remote_per_thread": {
+          "count": 5.0,
+          "mean": 1.09624319057145,
+          "median": 1.026371159333519,
+          "stdev": 0.1839117307666627,
+          "iqr": 0.2123474308901423,
+          "p95": 1.3225444539254516,
+          "min": 0.8878119749378376,
+          "max": 1.34943775568264
+        },
+        "local_per_effective_thread": {
+          "count": 5.0,
+          "mean": 1.0624267652727708,
+          "median": 1.1013193343341192,
+          "stdev": 0.07319836379689429,
+          "iqr": 0.05455034312242901,
+          "p95": 1.113027066957554,
+          "min": 0.9392459625097119,
+          "max": 1.1148788281332982
+        },
+        "remote_per_effective_thread": {
+          "count": 5.0,
+          "mean": 1.1007603309635305,
+          "median": 1.0466177960978045,
+          "stdev": 0.30545936315153416,
+          "iqr": 0.40064279465093644,
+          "p95": 1.424190848003655,
+          "min": 0.6913885022441643,
+          "max": 1.43935290412999
+        },
+        "remote_busy_fraction": {
+          "count": 5.0,
+          "mean": 1.0056175698615926,
+          "median": 0.9718166621976886,
+          "stdev": 0.11893865000808472,
+          "iqr": 0.1288928246236406,
+          "p95": 1.1617827788272281,
+          "min": 0.8930956426815488,
+          "max": 1.1893942027457025
+        },
+        "ratios": {
+          "raw": {
+            "count": 5.0,
+            "mean": 1.5113127461049831,
+            "median": 1.4305830352798135,
+            "stdev": 0.23153560202524331,
+            "iqr": 0.25358948018684435,
+            "p95": 1.8094288676347714,
+            "min": 1.2722321204617382,
+            "max": 1.8552786601967863
+          },
+          "per_thread": {
+            "count": 5.0,
+            "mean": 1.0075418307366555,
+            "median": 0.9537220235198757,
+            "stdev": 0.15435706801682889,
+            "iqr": 0.1690596534578963,
+            "p95": 1.2062859117565141,
+            "min": 0.8481547469744921,
+            "max": 1.2368524401311909
+          },
+          "per_effective_thread": {
+            "count": 5.0,
+            "mean": 1.046907355817322,
+            "median": 0.9503309017366989,
+            "stdev": 0.33855923207324573,
+            "iqr": 0.35212721073062736,
+            "p95": 1.4705728431681402,
+            "min": 0.657795116699621,
+            "max": 1.5324557800429266
+          }
+        }
+      },
+      "diagnosis": {
+        "primary_finding": "No dominant bottleneck detected; behavior appears balanced for current runs.",
+        "findings": [
+          "No dominant bottleneck detected; behavior appears balanced for current runs."
+        ],
+        "opportunities": [
+          {
+            "action": "Increase workload size and re-profile",
+            "reason": "Small-N runs can hide or distort true scaling trends."
+          }
+        ]
+      },
+      "sources": [
+        "benchmark_results/unified_local_vs_marvin_N256_rep1.json",
+        "benchmark_results/unified_local_vs_marvin_N256_rep2.json",
+        "benchmark_results/unified_local_vs_marvin_N256_rep3.json",
+        "benchmark_results/unified_local_vs_marvin_N256_rep4.json",
+        "benchmark_results/unified_local_vs_marvin_N256_rep5.json"
+      ]
+    }
+  },
+  "global_findings": [
+    "N=128: No dominant bottleneck detected; behavior appears balanced for current runs.",
+    "N=256: No dominant bottleneck detected; behavior appears balanced for current runs."
+  ],
+  "recommended_next_actions": [
+    {
+      "action": "Increase workload size and re-profile",
+      "reason": "Small-N runs can hide or distort true scaling trends."
+    }
+  ]
+}

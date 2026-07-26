@@ -1,0 +1,12 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/benchmark_orchestrator.toml",
+  "execution_mode": "sequential",
+  "cases": 2,
+  "outputs": [
+    "benchmark_results/profiles/local_baseline/unified_N16_rep1.json",
+    "benchmark_results/profiles/marvin_remote/unified_N16_rep1.json"
+  ],
+  "started_at": "2026-04-07 14:09:40",
+  "commit": "98df7c0"
+}

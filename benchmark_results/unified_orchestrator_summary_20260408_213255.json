@@ -1,0 +1,12 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/candidate_policy_probe_v1.toml",
+  "execution_mode": "sequential",
+  "cases": 2,
+  "outputs": [
+    "benchmark_results/profiles/candidate_policy_probe_v1/leaf_hybrid/unified_N512_rep1.json",
+    "benchmark_results/profiles/candidate_policy_probe_v1/leaf_score/unified_N512_rep1.json"
+  ],
+  "started_at": "2026-04-08 21:28:52",
+  "commit": "ce9aec5"
+}

@@ -1,0 +1,28 @@
+{
+  "benchmark": "unified_local_remote_orchestrator",
+  "config_path": "configs/gamma_expansion_hard_regime.toml",
+  "execution_mode": "sequential",
+  "cases": 18,
+  "outputs": [
+    "benchmark_results/profiles/gamma_expansion_hard_regime/baseline_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/baseline_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/baseline_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_conservative_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_conservative_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_conservative_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_moderate_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_moderate_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_moderate_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/bv_filter_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/bv_filter_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/bv_filter_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/ssa_filter_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/ssa_filter_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/ssa_filter_hard/unified_N128_rep3.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_conservative_bv_hard/unified_N128_rep1.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_conservative_bv_hard/unified_N128_rep2.json",
+    "benchmark_results/profiles/gamma_expansion_hard_regime/gamma_expand_conservative_bv_hard/unified_N128_rep3.json"
+  ],
+  "started_at": "2026-04-10 00:54:03",
+  "commit": "a4b1eb9"
+}

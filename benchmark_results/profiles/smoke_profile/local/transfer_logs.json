@@ -1,0 +1,103 @@
+{
+  "incoming": {
+    "tcp://127.0.0.1:40809": [],
+    "tcp://127.0.0.1:45741": []
+  },
+  "outgoing": {
+    "tcp://127.0.0.1:40809": [
+      {
+        "start": 1775067714.4112778,
+        "stop": 1775067714.4117663,
+        "middle": 1775067714.4105325,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-bebfc8cb-559d-497b-9bd4-c209a037599e": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775067714.5119636,
+        "stop": 1775067714.512474,
+        "middle": 1775067714.511229,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-82e40235-2c8b-41b7-a986-89c81411f34e": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775067714.9538803,
+        "stop": 1775067714.9553053,
+        "middle": 1775067714.9536033,
+        "duration": 0.001425027847290039,
+        "who": null,
+        "keys": {
+          "_timed_run-760c033b-ad1b-47fa-a800-1b3f491ae39d": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 447710.54910490214
+      },
+      {
+        "start": 1775067714.9575186,
+        "stop": 1775067714.9580553,
+        "middle": 1775067714.9567971,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-843a363e-cf94-4baa-8889-acd18366036f": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ],
+    "tcp://127.0.0.1:45741": [
+      {
+        "start": 1775067714.7645934,
+        "stop": 1775067714.76507,
+        "middle": 1775067714.7602339,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-71150700-0535-4b0c-85d4-cb7cf4de7d50": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775067714.9797013,
+        "stop": 1775067714.9808064,
+        "middle": 1775067714.975656,
+        "duration": 0.0011050701141357422,
+        "who": null,
+        "keys": {
+          "_timed_run-ba680413-0b81-48cf-adb2-940bbc9facc5": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 577338.9324703345
+      },
+      {
+        "start": 1775067714.9831061,
+        "stop": 1775067714.9835804,
+        "middle": 1775067714.9787455,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-a7ed79e5-20f6-4e7d-81b7-7d1011709b94": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ]
+  }
+}

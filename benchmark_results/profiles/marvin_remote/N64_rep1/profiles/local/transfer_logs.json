@@ -1,0 +1,35 @@
+{
+  "incoming": {
+    "tcp://127.0.0.1:46339": []
+  },
+  "outgoing": {
+    "tcp://127.0.0.1:46339": [
+      {
+        "start": 1775557325.334381,
+        "stop": 1775557325.3349626,
+        "middle": 1775557325.3301492,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-2b9c1036-5c0d-4cbb-9a20-699334837ab9": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      },
+      {
+        "start": 1775557325.4257097,
+        "stop": 1775557325.426186,
+        "middle": 1775557325.4214253,
+        "duration": 0.001,
+        "who": null,
+        "keys": {
+          "_timed_run-33688743-825a-4ce4-965a-c2c6bbc79584": 638
+        },
+        "total": 638,
+        "compressed": 540,
+        "bandwidth": 638000.0
+      }
+    ]
+  }
+}

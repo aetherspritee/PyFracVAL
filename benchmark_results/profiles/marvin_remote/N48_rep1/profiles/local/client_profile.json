@@ -1,0 +1,1790 @@
+{
+  "description": {
+    "filename": "",
+    "name": "",
+    "line_number": 0,
+    "line": ""
+  },
+  "children": {
+    "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/dask/_task_spec.py;753": {
+      "description": {
+        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/dask/_task_spec.py",
+        "name": "__call__",
+        "line_number": 768,
+        "line": "return self.func(*new_argspec)\n"
+      },
+      "children": {
+        "_timed_run;/home/mar/Development/PyFracVAL/benchmarks/unified_local_remote_benchmark.py;57": {
+          "description": {
+            "filename": "/home/mar/Development/PyFracVAL/benchmarks/unified_local_remote_benchmark.py",
+            "name": "_timed_run",
+            "line_number": 67,
+            "line": "success, _coords, _radii = run_simulation(\n"
+          },
+          "children": {
+            "run_simulation;/home/mar/Development/PyFracVAL/pyfracval/main_runner.py;18": {
+              "description": {
+                "filename": "/home/mar/Development/PyFracVAL/pyfracval/main_runner.py",
+                "name": "run_simulation",
+                "line_number": 141,
+                "line": "pca_success = subcluster_runner.run_subclustering()\n"
+              },
+              "children": {
+                "run_subclustering;/home/mar/Development/PyFracVAL/pyfracval/pca_subclusters.py;215": {
+                  "description": {
+                    "filename": "/home/mar/Development/PyFracVAL/pyfracval/pca_subclusters.py",
+                    "name": "run_subclustering",
+                    "line_number": 315,
+                    "line": "results = [_run_single_subcluster(args) for args in worker_args]\n"
+                  },
+                  "children": {
+                    "_run_single_subcluster;/home/mar/Development/PyFracVAL/pyfracval/pca_subclusters.py;23": {
+                      "description": {
+                        "filename": "/home/mar/Development/PyFracVAL/pyfracval/pca_subclusters.py",
+                        "name": "_run_single_subcluster",
+                        "line_number": 51,
+                        "line": "result = pca_runner.run()\n"
+                      },
+                      "children": {
+                        "run;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;917": {
+                          "description": {
+                            "filename": "/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py",
+                            "name": "run",
+                            "line_number": 1020,
+                            "line": "stick_result = self._sticking_process(\n"
+                          },
+                          "children": {
+                            "_sticking_process;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;566": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py",
+                                "name": "_sticking_process",
+                                "line_number": 607,
+                                "line": "utils.two_sphere_intersection(sphere1, sphere2, rng=self._rng)\n"
+                              },
+                              "children": {
+                                "two_sphere_intersection;/home/mar/Development/PyFracVAL/pyfracval/utils.py;988": {
+                                  "description": {
+                                    "filename": "/home/mar/Development/PyFracVAL/pyfracval/utils.py",
+                                    "name": "two_sphere_intersection",
+                                    "line_number": 1030,
+                                    "line": "_two_sphere_intersection_kernel(sphere_1, sphere_2, theta)\n"
+                                  },
+                                  "children": {
+                                    "_compile_for_args;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;344": {
+                                      "description": {
+                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py",
+                                        "name": "_compile_for_args",
+                                        "line_number": 352,
+                                        "line": "self._compilation_chain_init_hook()\n"
+                                      },
+                                      "children": {
+                                        "_compilation_chain_init_hook;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;237": {
+                                          "description": {
+                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py",
+                                            "name": "_compilation_chain_init_hook",
+                                            "line_number": 245,
+                                            "line": "entrypoints.init_all()\n"
+                                          },
+                                          "children": {
+                                            "init_all;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/entrypoints.py;11": {
+                                              "description": {
+                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/entrypoints.py",
+                                                "name": "init_all",
+                                                "line_number": 36,
+                                                "line": "eps = importlib_metadata.entry_points()\n"
+                                              },
+                                              "children": {
+                                                "entry_points;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;999": {
+                                                  "description": {
+                                                    "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py",
+                                                    "name": "entry_points",
+                                                    "line_number": 1011,
+                                                    "line": "return EntryPoints(eps).select(**params)\n"
+                                                  },
+                                                  "children": {
+                                                    "<genexpr>;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;1008": {
+                                                      "description": {
+                                                        "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py",
+                                                        "name": "<genexpr>",
+                                                        "line_number": 1009,
+                                                        "line": "dist.entry_points for dist in _unique(distributions())\n"
+                                                      },
+                                                      "children": {
+                                                        "unique_everseen;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/_itertools.py;4": {
+                                                          "description": {
+                                                            "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/_itertools.py",
+                                                            "name": "unique_everseen",
+                                                            "line_number": 19,
+                                                            "line": "yield element\n"
+                                                          },
+                                                          "children": {
+                                                            "<genexpr>;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;890": {
+                                                              "description": {
+                                                                "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py",
+                                                                "name": "<genexpr>",
+                                                                "line_number": 891,
+                                                                "line": "path.search(prepared) for path in map(FastPath, paths)\n"
+                                                              },
+                                                              "children": {
+                                                                "search;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;756": {
+                                                                  "description": {
+                                                                    "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py",
+                                                                    "name": "search",
+                                                                    "line_number": 757,
+                                                                    "line": "return self.lookup(self.mtime).search(name)\n"
+                                                                  },
+                                                                  "children": {
+                                                                    "mtime;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;759": {
+                                                                      "description": {
+                                                                        "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py",
+                                                                        "name": "mtime",
+                                                                        "line_number": 761,
+                                                                        "line": "with suppress(OSError):\n"
+                                                                      },
+                                                                      "children": {},
+                                                                      "count": 0,
+                                                                      "identifier": "mtime;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;759"
+                                                                    }
+                                                                  },
+                                                                  "count": 1,
+                                                                  "identifier": "search;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;756"
+                                                                }
+                                                              },
+                                                              "count": 1,
+                                                              "identifier": "<genexpr>;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;890"
+                                                            }
+                                                          },
+                                                          "count": 1,
+                                                          "identifier": "unique_everseen;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/_itertools.py;4"
+                                                        },
+                                                        "entry_points;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;488": {
+                                                          "description": {
+                                                            "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py",
+                                                            "name": "entry_points",
+                                                            "line_number": 496,
+                                                            "line": "return EntryPoints._from_text_for(self.read_text('entry_points.txt'), self)\n"
+                                                          },
+                                                          "children": {
+                                                            "read_text;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;907": {
+                                                              "description": {
+                                                                "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py",
+                                                                "name": "read_text",
+                                                                "line_number": 915,
+                                                                "line": "return self._path.joinpath(filename).read_text(encoding='utf-8')\n"
+                                                              },
+                                                              "children": {
+                                                                "read_text;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_local.py;539": {
+                                                                  "description": {
+                                                                    "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_local.py",
+                                                                    "name": "read_text",
+                                                                    "line_number": 546,
+                                                                    "line": "return PathBase.read_text(self, encoding, errors, newline)\n"
+                                                                  },
+                                                                  "children": {
+                                                                    "read_text;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_abc.py;628": {
+                                                                      "description": {
+                                                                        "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_abc.py",
+                                                                        "name": "read_text",
+                                                                        "line_number": 632,
+                                                                        "line": "with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:\n"
+                                                                      },
+                                                                      "children": {
+                                                                        "open;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_local.py;529": {
+                                                                          "description": {
+                                                                            "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_local.py",
+                                                                            "name": "open",
+                                                                            "line_number": 537,
+                                                                            "line": "return io.open(self, mode, buffering, encoding, errors, newline)\n"
+                                                                          },
+                                                                          "children": {},
+                                                                          "count": 0,
+                                                                          "identifier": "open;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_local.py;529"
+                                                                        }
+                                                                      },
+                                                                      "count": 1,
+                                                                      "identifier": "read_text;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_abc.py;628"
+                                                                    }
+                                                                  },
+                                                                  "count": 1,
+                                                                  "identifier": "read_text;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/pathlib/_local.py;539"
+                                                                }
+                                                              },
+                                                              "count": 1,
+                                                              "identifier": "read_text;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;907"
+                                                            }
+                                                          },
+                                                          "count": 1,
+                                                          "identifier": "entry_points;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;488"
+                                                        }
+                                                      },
+                                                      "count": 2,
+                                                      "identifier": "<genexpr>;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;1008"
+                                                    }
+                                                  },
+                                                  "count": 2,
+                                                  "identifier": "entry_points;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/metadata/__init__.py;999"
+                                                }
+                                              },
+                                              "count": 2,
+                                              "identifier": "init_all;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/entrypoints.py;11"
+                                            }
+                                          },
+                                          "count": 2,
+                                          "identifier": "_compilation_chain_init_hook;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;237"
+                                        },
+                                        "compile;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;862": {
+                                          "description": {
+                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py",
+                                            "name": "compile",
+                                            "line_number": 889,
+                                            "line": "cres = self._cache.load_overload(sig, self.targetctx)\n"
+                                          },
+                                          "children": {
+                                            "load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;713": {
+                                              "description": {
+                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                "name": "load_overload",
+                                                "line_number": 719,
+                                                "line": "target_context.refresh()\n"
+                                              },
+                                              "children": {
+                                                "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/base.py;261": {
+                                                  "description": {
+                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/base.py",
+                                                    "name": "refresh",
+                                                    "line_number": 267,
+                                                    "line": "self.load_additional_registries()\n"
+                                                  },
+                                                  "children": {
+                                                    "load_additional_registries;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/cpu.py;97": {
+                                                      "description": {
+                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/cpu.py",
+                                                        "name": "load_additional_registries",
+                                                        "line_number": 103,
+                                                        "line": "rtsys.initialize(self)\n"
+                                                      },
+                                                      "children": {
+                                                        "_acquire_compile_lock;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/compiler_lock.py;32": {
+                                                          "description": {
+                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/compiler_lock.py",
+                                                            "name": "_acquire_compile_lock",
+                                                            "line_number": 35,
+                                                            "line": "return func(*args, **kwargs)\n"
+                                                          },
+                                                          "children": {
+                                                            "initialize;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/runtime/nrt.py;19": {
+                                                              "description": {
+                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/runtime/nrt.py",
+                                                                "name": "initialize",
+                                                                "line_number": 45,
+                                                                "line": "self._library = nrtdynmod.compile_nrt_functions(ctx)\n"
+                                                              },
+                                                              "children": {
+                                                                "compile_nrt_functions;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/runtime/nrtdynmod.py;205": {
+                                                                  "description": {
+                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/runtime/nrtdynmod.py",
+                                                                    "name": "compile_nrt_functions",
+                                                                    "line_number": 213,
+                                                                    "line": "library.finalize()\n"
+                                                                  },
+                                                                  "children": {
+                                                                    "finalize;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;748": {
+                                                                      "description": {
+                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                        "name": "finalize",
+                                                                        "line_number": 773,
+                                                                        "line": "self._optimize_final_module()\n"
+                                                                      },
+                                                                      "children": {
+                                                                        "_optimize_final_module;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;667": {
+                                                                          "description": {
+                                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                            "name": "_optimize_final_module",
+                                                                            "line_number": 691,
+                                                                            "line": "mpm_full.run(self._final_module, mpb_full)\n"
+                                                                          },
+                                                                          "children": {
+                                                                            "run;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/newpassmanagers.py;120": {
+                                                                              "description": {
+                                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/newpassmanagers.py",
+                                                                                "name": "run",
+                                                                                "line_number": 122,
+                                                                                "line": "ffi.lib.LLVMPY_RunNewModulePassManager(self, IR, pb)\n"
+                                                                              },
+                                                                              "children": {
+                                                                                "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py;210": {
+                                                                                  "description": {
+                                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py",
+                                                                                    "name": "__call__",
+                                                                                    "line_number": 212,
+                                                                                    "line": "return self._cfn(*args, **kwargs)\n"
+                                                                                  },
+                                                                                  "children": {},
+                                                                                  "count": 0,
+                                                                                  "identifier": "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py;210"
+                                                                                }
+                                                                              },
+                                                                              "count": 1,
+                                                                              "identifier": "run;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/newpassmanagers.py;120"
+                                                                            }
+                                                                          },
+                                                                          "count": 1,
+                                                                          "identifier": "_optimize_final_module;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;667"
+                                                                        },
+                                                                        "_finalize_final_module;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;792": {
+                                                                          "description": {
+                                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                            "name": "_finalize_final_module",
+                                                                            "line_number": 808,
+                                                                            "line": "self._finalize_specific()\n"
+                                                                          },
+                                                                          "children": {
+                                                                            "_finalize_specific;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1007": {
+                                                                              "description": {
+                                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                                "name": "_finalize_specific",
+                                                                                "line_number": 1010,
+                                                                                "line": "self._codegen._engine.finalize_object()\n"
+                                                                              },
+                                                                              "children": {
+                                                                                "wrapper;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1069": {
+                                                                                  "description": {
+                                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                                    "name": "wrapper",
+                                                                                    "line_number": 1071,
+                                                                                    "line": "return old(self._ee, *args, **kwargs)\n"
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "finalize_object;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/executionengine.py;94": {
+                                                                                      "description": {
+                                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/executionengine.py",
+                                                                                        "name": "finalize_object",
+                                                                                        "line_number": 99,
+                                                                                        "line": "ffi.lib.LLVMPY_FinalizeObject(self)\n"
+                                                                                      },
+                                                                                      "children": {
+                                                                                        "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py;210": {
+                                                                                          "description": {
+                                                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py",
+                                                                                            "name": "__call__",
+                                                                                            "line_number": 211,
+                                                                                            "line": "with self._lock:\n"
+                                                                                          },
+                                                                                          "children": {},
+                                                                                          "count": 0,
+                                                                                          "identifier": "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py;210"
+                                                                                        }
+                                                                                      },
+                                                                                      "count": 1,
+                                                                                      "identifier": "finalize_object;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/executionengine.py;94"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 1,
+                                                                                  "identifier": "wrapper;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1069"
+                                                                                }
+                                                                              },
+                                                                              "count": 1,
+                                                                              "identifier": "_finalize_specific;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1007"
+                                                                            }
+                                                                          },
+                                                                          "count": 1,
+                                                                          "identifier": "_finalize_final_module;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;792"
+                                                                        }
+                                                                      },
+                                                                      "count": 2,
+                                                                      "identifier": "finalize;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;748"
+                                                                    }
+                                                                  },
+                                                                  "count": 2,
+                                                                  "identifier": "compile_nrt_functions;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/runtime/nrtdynmod.py;205"
+                                                                }
+                                                              },
+                                                              "count": 2,
+                                                              "identifier": "initialize;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/runtime/nrt.py;19"
+                                                            }
+                                                          },
+                                                          "count": 2,
+                                                          "identifier": "_acquire_compile_lock;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/compiler_lock.py;32"
+                                                        },
+                                                        "_handle_fromlist;<frozen importlib._bootstrap>;1390": {
+                                                          "description": {
+                                                            "filename": "<frozen importlib._bootstrap>",
+                                                            "name": "_handle_fromlist",
+                                                            "line_number": 1415,
+                                                            "line": ""
+                                                          },
+                                                          "children": {
+                                                            "_call_with_frames_removed;<frozen importlib._bootstrap>;480": {
+                                                              "description": {
+                                                                "filename": "<frozen importlib._bootstrap>",
+                                                                "name": "_call_with_frames_removed",
+                                                                "line_number": 488,
+                                                                "line": ""
+                                                              },
+                                                              "children": {
+                                                                "_find_and_load;<frozen importlib._bootstrap>;1349": {
+                                                                  "description": {
+                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                    "name": "_find_and_load",
+                                                                    "line_number": 1360,
+                                                                    "line": ""
+                                                                  },
+                                                                  "children": {
+                                                                    "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304": {
+                                                                      "description": {
+                                                                        "filename": "<frozen importlib._bootstrap>",
+                                                                        "name": "_find_and_load_unlocked",
+                                                                        "line_number": 1331,
+                                                                        "line": ""
+                                                                      },
+                                                                      "children": {
+                                                                        "_load_unlocked;<frozen importlib._bootstrap>;911": {
+                                                                          "description": {
+                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                            "name": "_load_unlocked",
+                                                                            "line_number": 935,
+                                                                            "line": ""
+                                                                          },
+                                                                          "children": {
+                                                                            "exec_module;<frozen importlib._bootstrap_external>;1017": {
+                                                                              "description": {
+                                                                                "filename": "<frozen importlib._bootstrap_external>",
+                                                                                "name": "exec_module",
+                                                                                "line_number": 1023,
+                                                                                "line": ""
+                                                                              },
+                                                                              "children": {
+                                                                                "_call_with_frames_removed;<frozen importlib._bootstrap>;480": {
+                                                                                  "description": {
+                                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                                    "name": "_call_with_frames_removed",
+                                                                                    "line_number": 488,
+                                                                                    "line": ""
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "<module>;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/cpython/charseq.py;1": {
+                                                                                      "description": {
+                                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/cpython/charseq.py",
+                                                                                        "name": "<module>",
+                                                                                        "line_number": 10,
+                                                                                        "line": "from numba.cpython import unicode\n"
+                                                                                      },
+                                                                                      "children": {
+                                                                                        "_handle_fromlist;<frozen importlib._bootstrap>;1390": {
+                                                                                          "description": {
+                                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                                            "name": "_handle_fromlist",
+                                                                                            "line_number": 1424,
+                                                                                            "line": ""
+                                                                                          },
+                                                                                          "children": {
+                                                                                            "_call_with_frames_removed;<frozen importlib._bootstrap>;480": {
+                                                                                              "description": {
+                                                                                                "filename": "<frozen importlib._bootstrap>",
+                                                                                                "name": "_call_with_frames_removed",
+                                                                                                "line_number": 488,
+                                                                                                "line": ""
+                                                                                              },
+                                                                                              "children": {
+                                                                                                "_find_and_load;<frozen importlib._bootstrap>;1349": {
+                                                                                                  "description": {
+                                                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                                                    "name": "_find_and_load",
+                                                                                                    "line_number": 1357,
+                                                                                                    "line": ""
+                                                                                                  },
+                                                                                                  "children": {
+                                                                                                    "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304": {
+                                                                                                      "description": {
+                                                                                                        "filename": "<frozen importlib._bootstrap>",
+                                                                                                        "name": "_find_and_load_unlocked",
+                                                                                                        "line_number": 1343,
+                                                                                                        "line": ""
+                                                                                                      },
+                                                                                                      "children": {
+                                                                                                        "_load_unlocked;<frozen importlib._bootstrap>;911": {
+                                                                                                          "description": {
+                                                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                                                            "name": "_load_unlocked",
+                                                                                                            "line_number": 952,
+                                                                                                            "line": ""
+                                                                                                          },
+                                                                                                          "children": {
+                                                                                                            "exec_module;<frozen importlib._bootstrap_external>;1017": {
+                                                                                                              "description": {
+                                                                                                                "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                                "name": "exec_module",
+                                                                                                                "line_number": 1023,
+                                                                                                                "line": ""
+                                                                                                              },
+                                                                                                              "children": {
+                                                                                                                "_call_with_frames_removed;<frozen importlib._bootstrap>;480": {
+                                                                                                                  "description": {
+                                                                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                                                                    "name": "_call_with_frames_removed",
+                                                                                                                    "line_number": 488,
+                                                                                                                    "line": ""
+                                                                                                                  },
+                                                                                                                  "children": {
+                                                                                                                    "<module>;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/cpython/unicode.py;1": {
+                                                                                                                      "description": {
+                                                                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/cpython/unicode.py",
+                                                                                                                        "name": "<module>",
+                                                                                                                        "line_number": 2638,
+                                                                                                                        "line": "def iternext_unicode(context, builder, sig, args, result):\n"
+                                                                                                                      },
+                                                                                                                      "children": {
+                                                                                                                        "_handle_fromlist;<frozen importlib._bootstrap>;1390": {
+                                                                                                                          "description": {
+                                                                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                                                                            "name": "_handle_fromlist",
+                                                                                                                            "line_number": 1424,
+                                                                                                                            "line": ""
+                                                                                                                          },
+                                                                                                                          "children": {
+                                                                                                                            "_call_with_frames_removed;<frozen importlib._bootstrap>;480": {
+                                                                                                                              "description": {
+                                                                                                                                "filename": "<frozen importlib._bootstrap>",
+                                                                                                                                "name": "_call_with_frames_removed",
+                                                                                                                                "line_number": 488,
+                                                                                                                                "line": ""
+                                                                                                                              },
+                                                                                                                              "children": {
+                                                                                                                                "_find_and_load;<frozen importlib._bootstrap>;1349": {
+                                                                                                                                  "description": {
+                                                                                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                                                                                    "name": "_find_and_load",
+                                                                                                                                    "line_number": 1357,
+                                                                                                                                    "line": ""
+                                                                                                                                  },
+                                                                                                                                  "children": {
+                                                                                                                                    "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304": {
+                                                                                                                                      "description": {
+                                                                                                                                        "filename": "<frozen importlib._bootstrap>",
+                                                                                                                                        "name": "_find_and_load_unlocked",
+                                                                                                                                        "line_number": 1343,
+                                                                                                                                        "line": ""
+                                                                                                                                      },
+                                                                                                                                      "children": {
+                                                                                                                                        "_load_unlocked;<frozen importlib._bootstrap>;911": {
+                                                                                                                                          "description": {
+                                                                                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                                                                                            "name": "_load_unlocked",
+                                                                                                                                            "line_number": 952,
+                                                                                                                                            "line": ""
+                                                                                                                                          },
+                                                                                                                                          "children": {
+                                                                                                                                            "exec_module;<frozen importlib._bootstrap_external>;1017": {
+                                                                                                                                              "description": {
+                                                                                                                                                "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                                                                "name": "exec_module",
+                                                                                                                                                "line_number": 1023,
+                                                                                                                                                "line": ""
+                                                                                                                                              },
+                                                                                                                                              "children": {
+                                                                                                                                                "get_code;<frozen importlib._bootstrap_external>;1090": {
+                                                                                                                                                  "description": {
+                                                                                                                                                    "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                                                                    "name": "get_code",
+                                                                                                                                                    "line_number": 1152,
+                                                                                                                                                    "line": ""
+                                                                                                                                                  },
+                                                                                                                                                  "children": {
+                                                                                                                                                    "get_data;<frozen importlib._bootstrap_external>;1211": {
+                                                                                                                                                      "description": {
+                                                                                                                                                        "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                                                                        "name": "get_data",
+                                                                                                                                                        "line_number": 1214,
+                                                                                                                                                        "line": ""
+                                                                                                                                                      },
+                                                                                                                                                      "children": {},
+                                                                                                                                                      "count": 0,
+                                                                                                                                                      "identifier": "get_data;<frozen importlib._bootstrap_external>;1211"
+                                                                                                                                                    }
+                                                                                                                                                  },
+                                                                                                                                                  "count": 1,
+                                                                                                                                                  "identifier": "get_code;<frozen importlib._bootstrap_external>;1090"
+                                                                                                                                                }
+                                                                                                                                              },
+                                                                                                                                              "count": 1,
+                                                                                                                                              "identifier": "exec_module;<frozen importlib._bootstrap_external>;1017"
+                                                                                                                                            }
+                                                                                                                                          },
+                                                                                                                                          "count": 1,
+                                                                                                                                          "identifier": "_load_unlocked;<frozen importlib._bootstrap>;911"
+                                                                                                                                        }
+                                                                                                                                      },
+                                                                                                                                      "count": 1,
+                                                                                                                                      "identifier": "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304"
+                                                                                                                                    }
+                                                                                                                                  },
+                                                                                                                                  "count": 1,
+                                                                                                                                  "identifier": "_find_and_load;<frozen importlib._bootstrap>;1349"
+                                                                                                                                }
+                                                                                                                              },
+                                                                                                                              "count": 1,
+                                                                                                                              "identifier": "_call_with_frames_removed;<frozen importlib._bootstrap>;480"
+                                                                                                                            }
+                                                                                                                          },
+                                                                                                                          "count": 1,
+                                                                                                                          "identifier": "_handle_fromlist;<frozen importlib._bootstrap>;1390"
+                                                                                                                        }
+                                                                                                                      },
+                                                                                                                      "count": 1,
+                                                                                                                      "identifier": "<module>;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/cpython/unicode.py;1"
+                                                                                                                    }
+                                                                                                                  },
+                                                                                                                  "count": 1,
+                                                                                                                  "identifier": "_call_with_frames_removed;<frozen importlib._bootstrap>;480"
+                                                                                                                }
+                                                                                                              },
+                                                                                                              "count": 1,
+                                                                                                              "identifier": "exec_module;<frozen importlib._bootstrap_external>;1017"
+                                                                                                            }
+                                                                                                          },
+                                                                                                          "count": 1,
+                                                                                                          "identifier": "_load_unlocked;<frozen importlib._bootstrap>;911"
+                                                                                                        }
+                                                                                                      },
+                                                                                                      "count": 1,
+                                                                                                      "identifier": "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304"
+                                                                                                    }
+                                                                                                  },
+                                                                                                  "count": 1,
+                                                                                                  "identifier": "_find_and_load;<frozen importlib._bootstrap>;1349"
+                                                                                                }
+                                                                                              },
+                                                                                              "count": 1,
+                                                                                              "identifier": "_call_with_frames_removed;<frozen importlib._bootstrap>;480"
+                                                                                            }
+                                                                                          },
+                                                                                          "count": 1,
+                                                                                          "identifier": "_handle_fromlist;<frozen importlib._bootstrap>;1390"
+                                                                                        }
+                                                                                      },
+                                                                                      "count": 1,
+                                                                                      "identifier": "<module>;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/cpython/charseq.py;1"
+                                                                                    },
+                                                                                    "<module>;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/inline_closurecall.py;1": {
+                                                                                      "description": {
+                                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/inline_closurecall.py",
+                                                                                        "name": "<module>",
+                                                                                        "line_number": 41,
+                                                                                        "line": "from numba.np.unsafe.ndarray import empty_inferred as unsafe_empty_inferred\n"
+                                                                                      },
+                                                                                      "children": {
+                                                                                        "_find_and_load;<frozen importlib._bootstrap>;1349": {
+                                                                                          "description": {
+                                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                                            "name": "_find_and_load",
+                                                                                            "line_number": 1357,
+                                                                                            "line": ""
+                                                                                          },
+                                                                                          "children": {
+                                                                                            "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304": {
+                                                                                              "description": {
+                                                                                                "filename": "<frozen importlib._bootstrap>",
+                                                                                                "name": "_find_and_load_unlocked",
+                                                                                                "line_number": 1343,
+                                                                                                "line": ""
+                                                                                              },
+                                                                                              "children": {
+                                                                                                "_find_spec;<frozen importlib._bootstrap>;1240": {
+                                                                                                  "description": {
+                                                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                                                    "name": "_find_spec",
+                                                                                                    "line_number": 1280,
+                                                                                                    "line": ""
+                                                                                                  },
+                                                                                                  "children": {
+                                                                                                    "find_spec;<frozen importlib._bootstrap_external>;1548": {
+                                                                                                      "description": {
+                                                                                                        "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                        "name": "find_spec",
+                                                                                                        "line_number": 1570,
+                                                                                                        "line": ""
+                                                                                                      },
+                                                                                                      "children": {
+                                                                                                        "_get_spec;<frozen importlib._bootstrap_external>;1519": {
+                                                                                                          "description": {
+                                                                                                            "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                            "name": "_get_spec",
+                                                                                                            "line_number": 1534,
+                                                                                                            "line": ""
+                                                                                                          },
+                                                                                                          "children": {
+                                                                                                            "find_spec;<frozen importlib._bootstrap_external>;1621": {
+                                                                                                              "description": {
+                                                                                                                "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                                "name": "find_spec",
+                                                                                                                "line_number": 1663,
+                                                                                                                "line": ""
+                                                                                                              },
+                                                                                                              "children": {
+                                                                                                                "_fill_cache;<frozen importlib._bootstrap_external>;1672": {
+                                                                                                                  "description": {
+                                                                                                                    "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                                    "name": "_fill_cache",
+                                                                                                                    "line_number": 1700,
+                                                                                                                    "line": ""
+                                                                                                                  },
+                                                                                                                  "children": {},
+                                                                                                                  "count": 0,
+                                                                                                                  "identifier": "_fill_cache;<frozen importlib._bootstrap_external>;1672"
+                                                                                                                }
+                                                                                                              },
+                                                                                                              "count": 1,
+                                                                                                              "identifier": "find_spec;<frozen importlib._bootstrap_external>;1621"
+                                                                                                            }
+                                                                                                          },
+                                                                                                          "count": 1,
+                                                                                                          "identifier": "_get_spec;<frozen importlib._bootstrap_external>;1519"
+                                                                                                        }
+                                                                                                      },
+                                                                                                      "count": 1,
+                                                                                                      "identifier": "find_spec;<frozen importlib._bootstrap_external>;1548"
+                                                                                                    }
+                                                                                                  },
+                                                                                                  "count": 1,
+                                                                                                  "identifier": "_find_spec;<frozen importlib._bootstrap>;1240"
+                                                                                                }
+                                                                                              },
+                                                                                              "count": 1,
+                                                                                              "identifier": "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304"
+                                                                                            }
+                                                                                          },
+                                                                                          "count": 1,
+                                                                                          "identifier": "_find_and_load;<frozen importlib._bootstrap>;1349"
+                                                                                        }
+                                                                                      },
+                                                                                      "count": 1,
+                                                                                      "identifier": "<module>;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/inline_closurecall.py;1"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 2,
+                                                                                  "identifier": "_call_with_frames_removed;<frozen importlib._bootstrap>;480"
+                                                                                },
+                                                                                "get_code;<frozen importlib._bootstrap_external>;1090": {
+                                                                                  "description": {
+                                                                                    "filename": "<frozen importlib._bootstrap_external>",
+                                                                                    "name": "get_code",
+                                                                                    "line_number": 1115,
+                                                                                    "line": ""
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "get_data;<frozen importlib._bootstrap_external>;1211": {
+                                                                                      "description": {
+                                                                                        "filename": "<frozen importlib._bootstrap_external>",
+                                                                                        "name": "get_data",
+                                                                                        "line_number": 1215,
+                                                                                        "line": ""
+                                                                                      },
+                                                                                      "children": {},
+                                                                                      "count": 0,
+                                                                                      "identifier": "get_data;<frozen importlib._bootstrap_external>;1211"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 2,
+                                                                                  "identifier": "get_code;<frozen importlib._bootstrap_external>;1090"
+                                                                                }
+                                                                              },
+                                                                              "count": 4,
+                                                                              "identifier": "exec_module;<frozen importlib._bootstrap_external>;1017"
+                                                                            }
+                                                                          },
+                                                                          "count": 4,
+                                                                          "identifier": "_load_unlocked;<frozen importlib._bootstrap>;911"
+                                                                        },
+                                                                        "_find_spec;<frozen importlib._bootstrap>;1240": {
+                                                                          "description": {
+                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                            "name": "_find_spec",
+                                                                            "line_number": 1262,
+                                                                            "line": ""
+                                                                          },
+                                                                          "children": {
+                                                                            "find_spec;<frozen importlib._bootstrap_external>;1548": {
+                                                                              "description": {
+                                                                                "filename": "<frozen importlib._bootstrap_external>",
+                                                                                "name": "find_spec",
+                                                                                "line_number": 1556,
+                                                                                "line": ""
+                                                                              },
+                                                                              "children": {
+                                                                                "_get_spec;<frozen importlib._bootstrap_external>;1519": {
+                                                                                  "description": {
+                                                                                    "filename": "<frozen importlib._bootstrap_external>",
+                                                                                    "name": "_get_spec",
+                                                                                    "line_number": 1530,
+                                                                                    "line": ""
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "find_spec;<frozen importlib._bootstrap_external>;1621": {
+                                                                                      "description": {
+                                                                                        "filename": "<frozen importlib._bootstrap_external>",
+                                                                                        "name": "find_spec",
+                                                                                        "line_number": 1629,
+                                                                                        "line": ""
+                                                                                      },
+                                                                                      "children": {
+                                                                                        "_path_stat;<frozen importlib._bootstrap_external>;145": {
+                                                                                          "description": {
+                                                                                            "filename": "<frozen importlib._bootstrap_external>",
+                                                                                            "name": "_path_stat",
+                                                                                            "line_number": 152,
+                                                                                            "line": ""
+                                                                                          },
+                                                                                          "children": {},
+                                                                                          "count": 0,
+                                                                                          "identifier": "_path_stat;<frozen importlib._bootstrap_external>;145"
+                                                                                        }
+                                                                                      },
+                                                                                      "count": 1,
+                                                                                      "identifier": "find_spec;<frozen importlib._bootstrap_external>;1621"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 1,
+                                                                                  "identifier": "_get_spec;<frozen importlib._bootstrap_external>;1519"
+                                                                                }
+                                                                              },
+                                                                              "count": 1,
+                                                                              "identifier": "find_spec;<frozen importlib._bootstrap_external>;1548"
+                                                                            }
+                                                                          },
+                                                                          "count": 1,
+                                                                          "identifier": "_find_spec;<frozen importlib._bootstrap>;1240"
+                                                                        }
+                                                                      },
+                                                                      "count": 5,
+                                                                      "identifier": "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304"
+                                                                    }
+                                                                  },
+                                                                  "count": 5,
+                                                                  "identifier": "_find_and_load;<frozen importlib._bootstrap>;1349"
+                                                                }
+                                                              },
+                                                              "count": 5,
+                                                              "identifier": "_call_with_frames_removed;<frozen importlib._bootstrap>;480"
+                                                            },
+                                                            "__getattr__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/typed/__init__.py;10": {
+                                                              "description": {
+                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/typed/__init__.py",
+                                                                "name": "__getattr__",
+                                                                "line_number": 18,
+                                                                "line": "return importlib.import_module(f\".{name}\", __name__)\n"
+                                                              },
+                                                              "children": {
+                                                                "import_module;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/__init__.py;71": {
+                                                                  "description": {
+                                                                    "filename": "/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/__init__.py",
+                                                                    "name": "import_module",
+                                                                    "line_number": 88,
+                                                                    "line": "return _bootstrap._gcd_import(name[level:], package, level)\n"
+                                                                  },
+                                                                  "children": {
+                                                                    "_gcd_import;<frozen importlib._bootstrap>;1375": {
+                                                                      "description": {
+                                                                        "filename": "<frozen importlib._bootstrap>",
+                                                                        "name": "_gcd_import",
+                                                                        "line_number": 1387,
+                                                                        "line": ""
+                                                                      },
+                                                                      "children": {
+                                                                        "_find_and_load;<frozen importlib._bootstrap>;1349": {
+                                                                          "description": {
+                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                            "name": "_find_and_load",
+                                                                            "line_number": 1360,
+                                                                            "line": ""
+                                                                          },
+                                                                          "children": {
+                                                                            "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304": {
+                                                                              "description": {
+                                                                                "filename": "<frozen importlib._bootstrap>",
+                                                                                "name": "_find_and_load_unlocked",
+                                                                                "line_number": 1322,
+                                                                                "line": ""
+                                                                              },
+                                                                              "children": {
+                                                                                "_find_spec;<frozen importlib._bootstrap>;1240": {
+                                                                                  "description": {
+                                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                                    "name": "_find_spec",
+                                                                                    "line_number": 1262,
+                                                                                    "line": ""
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "find_spec;<frozen importlib._bootstrap_external>;1548": {
+                                                                                      "description": {
+                                                                                        "filename": "<frozen importlib._bootstrap_external>",
+                                                                                        "name": "find_spec",
+                                                                                        "line_number": 1556,
+                                                                                        "line": ""
+                                                                                      },
+                                                                                      "children": {
+                                                                                        "_get_spec;<frozen importlib._bootstrap_external>;1519": {
+                                                                                          "description": {
+                                                                                            "filename": "<frozen importlib._bootstrap_external>",
+                                                                                            "name": "_get_spec",
+                                                                                            "line_number": 1530,
+                                                                                            "line": ""
+                                                                                          },
+                                                                                          "children": {
+                                                                                            "_path_importer_cache;<frozen importlib._bootstrap_external>;1497": {
+                                                                                              "description": {
+                                                                                                "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                "name": "_path_importer_cache",
+                                                                                                "line_number": 1517,
+                                                                                                "line": ""
+                                                                                              },
+                                                                                              "children": {
+                                                                                                "_path_hooks;<frozen importlib._bootstrap_external>;1484": {
+                                                                                                  "description": {
+                                                                                                    "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                    "name": "_path_hooks",
+                                                                                                    "line_number": 1491,
+                                                                                                    "line": ""
+                                                                                                  },
+                                                                                                  "children": {
+                                                                                                    "__init__;<frozen zipimport>;68": {
+                                                                                                      "description": {
+                                                                                                        "filename": "<frozen zipimport>",
+                                                                                                        "name": "__init__",
+                                                                                                        "line_number": 92,
+                                                                                                        "line": ""
+                                                                                                      },
+                                                                                                      "children": {
+                                                                                                        "_path_stat;<frozen importlib._bootstrap_external>;145": {
+                                                                                                          "description": {
+                                                                                                            "filename": "<frozen importlib._bootstrap_external>",
+                                                                                                            "name": "_path_stat",
+                                                                                                            "line_number": 152,
+                                                                                                            "line": ""
+                                                                                                          },
+                                                                                                          "children": {},
+                                                                                                          "count": 0,
+                                                                                                          "identifier": "_path_stat;<frozen importlib._bootstrap_external>;145"
+                                                                                                        }
+                                                                                                      },
+                                                                                                      "count": 1,
+                                                                                                      "identifier": "__init__;<frozen zipimport>;68"
+                                                                                                    }
+                                                                                                  },
+                                                                                                  "count": 1,
+                                                                                                  "identifier": "_path_hooks;<frozen importlib._bootstrap_external>;1484"
+                                                                                                }
+                                                                                              },
+                                                                                              "count": 1,
+                                                                                              "identifier": "_path_importer_cache;<frozen importlib._bootstrap_external>;1497"
+                                                                                            }
+                                                                                          },
+                                                                                          "count": 1,
+                                                                                          "identifier": "_get_spec;<frozen importlib._bootstrap_external>;1519"
+                                                                                        }
+                                                                                      },
+                                                                                      "count": 1,
+                                                                                      "identifier": "find_spec;<frozen importlib._bootstrap_external>;1548"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 1,
+                                                                                  "identifier": "_find_spec;<frozen importlib._bootstrap>;1240"
+                                                                                }
+                                                                              },
+                                                                              "count": 1,
+                                                                              "identifier": "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304"
+                                                                            }
+                                                                          },
+                                                                          "count": 1,
+                                                                          "identifier": "_find_and_load;<frozen importlib._bootstrap>;1349"
+                                                                        }
+                                                                      },
+                                                                      "count": 1,
+                                                                      "identifier": "_gcd_import;<frozen importlib._bootstrap>;1375"
+                                                                    }
+                                                                  },
+                                                                  "count": 1,
+                                                                  "identifier": "import_module;/nix/store/3ds9f7vsqvd2lj829wj5m4rwc9vr6qz8-python3-3.13.12-env/lib/python3.13/importlib/__init__.py;71"
+                                                                }
+                                                              },
+                                                              "count": 1,
+                                                              "identifier": "__getattr__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/typed/__init__.py;10"
+                                                            }
+                                                          },
+                                                          "count": 6,
+                                                          "identifier": "_handle_fromlist;<frozen importlib._bootstrap>;1390"
+                                                        }
+                                                      },
+                                                      "count": 8,
+                                                      "identifier": "load_additional_registries;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/cpu.py;97"
+                                                    },
+                                                    "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;232": {
+                                                      "description": {
+                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py",
+                                                        "name": "refresh",
+                                                        "line_number": 237,
+                                                        "line": "self.load_additional_registries()\n"
+                                                      },
+                                                      "children": {
+                                                        "load_additional_registries;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;811": {
+                                                          "description": {
+                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py",
+                                                            "name": "load_additional_registries",
+                                                            "line_number": 812,
+                                                            "line": "from . import (\n"
+                                                          },
+                                                          "children": {
+                                                            "_handle_fromlist;<frozen importlib._bootstrap>;1390": {
+                                                              "description": {
+                                                                "filename": "<frozen importlib._bootstrap>",
+                                                                "name": "_handle_fromlist",
+                                                                "line_number": 1415,
+                                                                "line": ""
+                                                              },
+                                                              "children": {
+                                                                "_call_with_frames_removed;<frozen importlib._bootstrap>;480": {
+                                                                  "description": {
+                                                                    "filename": "<frozen importlib._bootstrap>",
+                                                                    "name": "_call_with_frames_removed",
+                                                                    "line_number": 488,
+                                                                    "line": ""
+                                                                  },
+                                                                  "children": {
+                                                                    "_find_and_load;<frozen importlib._bootstrap>;1349": {
+                                                                      "description": {
+                                                                        "filename": "<frozen importlib._bootstrap>",
+                                                                        "name": "_find_and_load",
+                                                                        "line_number": 1360,
+                                                                        "line": ""
+                                                                      },
+                                                                      "children": {
+                                                                        "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304": {
+                                                                          "description": {
+                                                                            "filename": "<frozen importlib._bootstrap>",
+                                                                            "name": "_find_and_load_unlocked",
+                                                                            "line_number": 1331,
+                                                                            "line": ""
+                                                                          },
+                                                                          "children": {
+                                                                            "_load_unlocked;<frozen importlib._bootstrap>;911": {
+                                                                              "description": {
+                                                                                "filename": "<frozen importlib._bootstrap>",
+                                                                                "name": "_load_unlocked",
+                                                                                "line_number": 935,
+                                                                                "line": ""
+                                                                              },
+                                                                              "children": {
+                                                                                "exec_module;<frozen importlib._bootstrap_external>;1017": {
+                                                                                  "description": {
+                                                                                    "filename": "<frozen importlib._bootstrap_external>",
+                                                                                    "name": "exec_module",
+                                                                                    "line_number": 1019,
+                                                                                    "line": ""
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "get_code;<frozen importlib._bootstrap_external>;1090": {
+                                                                                      "description": {
+                                                                                        "filename": "<frozen importlib._bootstrap_external>",
+                                                                                        "name": "get_code",
+                                                                                        "line_number": 1115,
+                                                                                        "line": ""
+                                                                                      },
+                                                                                      "children": {
+                                                                                        "get_data;<frozen importlib._bootstrap_external>;1211": {
+                                                                                          "description": {
+                                                                                            "filename": "<frozen importlib._bootstrap_external>",
+                                                                                            "name": "get_data",
+                                                                                            "line_number": 1214,
+                                                                                            "line": ""
+                                                                                          },
+                                                                                          "children": {},
+                                                                                          "count": 0,
+                                                                                          "identifier": "get_data;<frozen importlib._bootstrap_external>;1211"
+                                                                                        }
+                                                                                      },
+                                                                                      "count": 1,
+                                                                                      "identifier": "get_code;<frozen importlib._bootstrap_external>;1090"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 1,
+                                                                                  "identifier": "exec_module;<frozen importlib._bootstrap_external>;1017"
+                                                                                }
+                                                                              },
+                                                                              "count": 1,
+                                                                              "identifier": "_load_unlocked;<frozen importlib._bootstrap>;911"
+                                                                            }
+                                                                          },
+                                                                          "count": 1,
+                                                                          "identifier": "_find_and_load_unlocked;<frozen importlib._bootstrap>;1304"
+                                                                        }
+                                                                      },
+                                                                      "count": 1,
+                                                                      "identifier": "_find_and_load;<frozen importlib._bootstrap>;1349"
+                                                                    }
+                                                                  },
+                                                                  "count": 1,
+                                                                  "identifier": "_call_with_frames_removed;<frozen importlib._bootstrap>;480"
+                                                                }
+                                                              },
+                                                              "count": 1,
+                                                              "identifier": "_handle_fromlist;<frozen importlib._bootstrap>;1390"
+                                                            }
+                                                          },
+                                                          "count": 1,
+                                                          "identifier": "load_additional_registries;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;811"
+                                                        },
+                                                        "_load_builtins;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;482": {
+                                                          "description": {
+                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py",
+                                                            "name": "_load_builtins",
+                                                            "line_number": 488,
+                                                            "line": "self.install_registry(templates.builtin_registry)\n"
+                                                          },
+                                                          "children": {
+                                                            "install_registry;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;495": {
+                                                              "description": {
+                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py",
+                                                                "name": "install_registry",
+                                                                "line_number": 548,
+                                                                "line": "self.insert_function(ftcls(self))\n"
+                                                              },
+                                                              "children": {
+                                                                "_gc_callback;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/distributed/gc.py;199": {
+                                                                  "description": {
+                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/distributed/gc.py",
+                                                                    "name": "_gc_callback",
+                                                                    "line_number": 199,
+                                                                    "line": "def _gc_callback(self, phase, info):\n"
+                                                                  },
+                                                                  "children": {},
+                                                                  "count": 0,
+                                                                  "identifier": "_gc_callback;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/distributed/gc.py;199"
+                                                                },
+                                                                "__init__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py;1054": {
+                                                                  "description": {
+                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py",
+                                                                    "name": "__init__",
+                                                                    "line_number": 1057,
+                                                                    "line": "self._init_once()\n"
+                                                                  },
+                                                                  "children": {
+                                                                    "_init_once;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py;1100": {
+                                                                      "description": {
+                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py",
+                                                                        "name": "_init_once",
+                                                                        "line_number": 1109,
+                                                                        "line": "def method_impl(context, builder, sig, args):\n"
+                                                                      },
+                                                                      "children": {
+                                                                        "_get_target_registry;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py;907": {
+                                                                          "description": {
+                                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py",
+                                                                            "name": "_get_target_registry",
+                                                                            "line_number": 954,
+                                                                            "line": "return reg\n"
+                                                                          },
+                                                                          "children": {
+                                                                            "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/base.py;261": {
+                                                                              "description": {
+                                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/base.py",
+                                                                                "name": "refresh",
+                                                                                "line_number": 277,
+                                                                                "line": "self.typing_context.refresh()\n"
+                                                                              },
+                                                                              "children": {
+                                                                                "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;232": {
+                                                                                  "description": {
+                                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py",
+                                                                                    "name": "refresh",
+                                                                                    "line_number": 239,
+                                                                                    "line": "self._load_builtins()\n"
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "load_additional_registries;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;811": {
+                                                                                      "description": {
+                                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py",
+                                                                                        "name": "load_additional_registries",
+                                                                                        "line_number": 829,
+                                                                                        "line": "self.install_registry(dictdecl.registry)\n"
+                                                                                      },
+                                                                                      "children": {
+                                                                                        "install_registry;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;495": {
+                                                                                          "description": {
+                                                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py",
+                                                                                            "name": "install_registry",
+                                                                                            "line_number": 553,
+                                                                                            "line": "for gv, gty in loader.new_registrations('globals'):\n"
+                                                                                          },
+                                                                                          "children": {
+                                                                                            "get_local_target;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/target_extension.py;53": {
+                                                                                              "description": {
+                                                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/target_extension.py",
+                                                                                                "name": "get_local_target",
+                                                                                                "line_number": 68,
+                                                                                                "line": "return target\n"
+                                                                                              },
+                                                                                              "children": {},
+                                                                                              "count": 0,
+                                                                                              "identifier": "get_local_target;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/target_extension.py;53"
+                                                                                            }
+                                                                                          },
+                                                                                          "count": 1,
+                                                                                          "identifier": "install_registry;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;495"
+                                                                                        }
+                                                                                      },
+                                                                                      "count": 1,
+                                                                                      "identifier": "load_additional_registries;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;811"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 1,
+                                                                                  "identifier": "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;232"
+                                                                                }
+                                                                              },
+                                                                              "count": 1,
+                                                                              "identifier": "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/base.py;261"
+                                                                            }
+                                                                          },
+                                                                          "count": 1,
+                                                                          "identifier": "_get_target_registry;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py;907"
+                                                                        }
+                                                                      },
+                                                                      "count": 1,
+                                                                      "identifier": "_init_once;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py;1100"
+                                                                    }
+                                                                  },
+                                                                  "count": 1,
+                                                                  "identifier": "__init__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/templates.py;1054"
+                                                                }
+                                                              },
+                                                              "count": 2,
+                                                              "identifier": "install_registry;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;495"
+                                                            }
+                                                          },
+                                                          "count": 2,
+                                                          "identifier": "_load_builtins;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;482"
+                                                        }
+                                                      },
+                                                      "count": 3,
+                                                      "identifier": "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/typing/context.py;232"
+                                                    }
+                                                  },
+                                                  "count": 11,
+                                                  "identifier": "refresh;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/base.py;261"
+                                                },
+                                                "_load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;724": {
+                                                  "description": {
+                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                    "name": "_load_overload",
+                                                    "line_number": 730,
+                                                    "line": "data = self._impl.rebuild(target_context, data)\n"
+                                                  },
+                                                  "children": {
+                                                    "rebuild;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;477": {
+                                                      "description": {
+                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                        "name": "rebuild",
+                                                        "line_number": 481,
+                                                        "line": "return compiler.CompileResult._rebuild(target_context, *payload)\n"
+                                                      },
+                                                      "children": {
+                                                        "_rebuild;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/compiler.py;227": {
+                                                          "description": {
+                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/compiler.py",
+                                                            "name": "_rebuild",
+                                                            "line_number": 236,
+                                                            "line": "library = target_context.codegen().unserialize_library(libdata)\n"
+                                                          },
+                                                          "children": {
+                                                            "unserialize_library;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1168": {
+                                                              "description": {
+                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                "name": "unserialize_library",
+                                                                "line_number": 1169,
+                                                                "line": "return self._library_class._unserialize(self, serialized)\n"
+                                                              },
+                                                              "children": {
+                                                                "_unserialize;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;936": {
+                                                                  "description": {
+                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                    "name": "_unserialize",
+                                                                    "line_number": 954,
+                                                                    "line": "return self\n"
+                                                                  },
+                                                                  "children": {
+                                                                    "_finalize_final_module;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;792": {
+                                                                      "description": {
+                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                        "name": "_finalize_final_module",
+                                                                        "line_number": 815,
+                                                                        "line": "if config.DUMP_ASSEMBLY:\n"
+                                                                      },
+                                                                      "children": {
+                                                                        "_finalize_specific;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1007": {
+                                                                          "description": {
+                                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                            "name": "_finalize_specific",
+                                                                            "line_number": 1009,
+                                                                            "line": "with self._recorded_timings.record_legacy(\"Finalize object\"):\n"
+                                                                          },
+                                                                          "children": {
+                                                                            "wrapper;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1069": {
+                                                                              "description": {
+                                                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py",
+                                                                                "name": "wrapper",
+                                                                                "line_number": 1071,
+                                                                                "line": "return old(self._ee, *args, **kwargs)\n"
+                                                                              },
+                                                                              "children": {
+                                                                                "finalize_object;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/executionengine.py;94": {
+                                                                                  "description": {
+                                                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/executionengine.py",
+                                                                                    "name": "finalize_object",
+                                                                                    "line_number": 99,
+                                                                                    "line": "ffi.lib.LLVMPY_FinalizeObject(self)\n"
+                                                                                  },
+                                                                                  "children": {
+                                                                                    "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py;210": {
+                                                                                      "description": {
+                                                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py",
+                                                                                        "name": "__call__",
+                                                                                        "line_number": 211,
+                                                                                        "line": "with self._lock:\n"
+                                                                                      },
+                                                                                      "children": {},
+                                                                                      "count": 0,
+                                                                                      "identifier": "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/ffi.py;210"
+                                                                                    }
+                                                                                  },
+                                                                                  "count": 1,
+                                                                                  "identifier": "finalize_object;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/llvmlite/binding/executionengine.py;94"
+                                                                                }
+                                                                              },
+                                                                              "count": 1,
+                                                                              "identifier": "wrapper;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1069"
+                                                                            }
+                                                                          },
+                                                                          "count": 1,
+                                                                          "identifier": "_finalize_specific;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1007"
+                                                                        }
+                                                                      },
+                                                                      "count": 1,
+                                                                      "identifier": "_finalize_final_module;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;792"
+                                                                    }
+                                                                  },
+                                                                  "count": 1,
+                                                                  "identifier": "_unserialize;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;936"
+                                                                }
+                                                              },
+                                                              "count": 1,
+                                                              "identifier": "unserialize_library;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/codegen.py;1168"
+                                                            }
+                                                          },
+                                                          "count": 1,
+                                                          "identifier": "_rebuild;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/compiler.py;227"
+                                                        }
+                                                      },
+                                                      "count": 1,
+                                                      "identifier": "rebuild;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;477"
+                                                    }
+                                                  },
+                                                  "count": 1,
+                                                  "identifier": "_load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;724"
+                                                }
+                                              },
+                                              "count": 12,
+                                              "identifier": "load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;713"
+                                            }
+                                          },
+                                          "count": 12,
+                                          "identifier": "compile;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;862"
+                                        }
+                                      },
+                                      "count": 14,
+                                      "identifier": "_compile_for_args;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;344"
+                                    }
+                                  },
+                                  "count": 14,
+                                  "identifier": "two_sphere_intersection;/home/mar/Development/PyFracVAL/pyfracval/utils.py;988"
+                                }
+                              },
+                              "count": 14,
+                              "identifier": "_sticking_process;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;566"
+                            },
+                            "_search_and_select_candidate;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;415": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py",
+                                "name": "_search_and_select_candidate",
+                                "line_number": 472,
+                                "line": "f\"PCA search k={k}: Found {len(candidates)} candidates: {candidates}\"\n"
+                              },
+                              "children": {
+                                "_array_str_implementation;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py;1708": {
+                                  "description": {
+                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py",
+                                    "name": "_array_str_implementation",
+                                    "line_number": 1725,
+                                    "line": "return array2string(a, max_line_width, precision, suppress_small, ' ', \"\")\n"
+                                  },
+                                  "children": {
+                                    "array2string;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py;635": {
+                                      "description": {
+                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py",
+                                        "name": "array2string",
+                                        "line_number": 802,
+                                        "line": "return _array2string(a, options, separator, prefix)\n"
+                                      },
+                                      "children": {
+                                        "_make_options_dict;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py;57": {
+                                          "description": {
+                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py",
+                                            "name": "_make_options_dict",
+                                            "line_number": 119,
+                                            "line": "return options\n"
+                                          },
+                                          "children": {},
+                                          "count": 0,
+                                          "identifier": "_make_options_dict;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py;57"
+                                        }
+                                      },
+                                      "count": 1,
+                                      "identifier": "array2string;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py;635"
+                                    }
+                                  },
+                                  "count": 1,
+                                  "identifier": "_array_str_implementation;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/_core/arrayprint.py;1708"
+                                }
+                              },
+                              "count": 1,
+                              "identifier": "_search_and_select_candidate;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;415"
+                            },
+                            "_reintento;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;648": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py",
+                                "name": "_reintento",
+                                "line_number": 693,
+                                "line": "np.array([x0, y0, z0])\n"
+                              },
+                              "children": {},
+                              "count": 0,
+                              "identifier": "_reintento;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;648"
+                            },
+                            "calculate_max_overlap_pca_auto;/home/mar/Development/PyFracVAL/pyfracval/utils.py;1464": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/utils.py",
+                                "name": "calculate_max_overlap_pca_auto",
+                                "line_number": 1464,
+                                "line": "def calculate_max_overlap_pca_auto(\n"
+                              },
+                              "children": {},
+                              "count": 0,
+                              "identifier": "calculate_max_overlap_pca_auto;/home/mar/Development/PyFracVAL/pyfracval/utils.py;1464"
+                            },
+                            "_first_two_monomers;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;151": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py",
+                                "name": "_first_two_monomers",
+                                "line_number": 197,
+                                "line": "dist_1_cm = np.linalg.norm(self.coords[1] - self.cm)\n"
+                              },
+                              "children": {
+                                "norm;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py;2598": {
+                                  "description": {
+                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py",
+                                    "name": "norm",
+                                    "line_number": 2767,
+                                    "line": "sqnorm = x.dot(x)\n"
+                                  },
+                                  "children": {},
+                                  "count": 0,
+                                  "identifier": "norm;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py;2598"
+                                }
+                              },
+                              "count": 1,
+                              "identifier": "_first_two_monomers;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;151"
+                            }
+                          },
+                          "count": 23,
+                          "identifier": "run;/home/mar/Development/PyFracVAL/pyfracval/pca_agg.py;917"
+                        }
+                      },
+                      "count": 23,
+                      "identifier": "_run_single_subcluster;/home/mar/Development/PyFracVAL/pyfracval/pca_subclusters.py;23"
+                    }
+                  },
+                  "count": 23,
+                  "identifier": "run_subclustering;/home/mar/Development/PyFracVAL/pyfracval/pca_subclusters.py;215"
+                },
+                "run_cca;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;1515": {
+                  "description": {
+                    "filename": "/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py",
+                    "name": "run_cca",
+                    "line_number": 1534,
+                    "line": "success = self._run_iteration()\n"
+                  },
+                  "children": {
+                    "_run_iteration;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;1372": {
+                      "description": {
+                        "filename": "/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py",
+                        "name": "_run_iteration",
+                        "line_number": 1454,
+                        "line": "stick_result = self._perform_cca_sticking(k, other, cluster_props_cache)\n"
+                      },
+                      "children": {
+                        "_perform_cca_sticking;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;927": {
+                          "description": {
+                            "filename": "/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py",
+                            "name": "_perform_cca_sticking",
+                            "line_number": 1118,
+                            "line": "stick_results = self._cca_sticking_v1(\n"
+                          },
+                          "children": {
+                            "_cca_sticking_v1;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;480": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py",
+                                "name": "_cca_sticking_v1",
+                                "line_number": 651,
+                                "line": "coords1_rel_rotated = utils.rodrigues_rotation(\n"
+                              },
+                              "children": {
+                                "rodrigues_rotation;/home/mar/Development/PyFracVAL/pyfracval/utils.py;321": {
+                                  "description": {
+                                    "filename": "/home/mar/Development/PyFracVAL/pyfracval/utils.py",
+                                    "name": "rodrigues_rotation",
+                                    "line_number": 361,
+                                    "line": "return _rodrigues_rotation_2d(vectors, axis, cos_a, sin_a)\n"
+                                  },
+                                  "children": {
+                                    "_compile_for_args;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;344": {
+                                      "description": {
+                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py",
+                                        "name": "_compile_for_args",
+                                        "line_number": 376,
+                                        "line": "return_val = self.compile(tuple(argtypes))\n"
+                                      },
+                                      "children": {
+                                        "compile;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;862": {
+                                          "description": {
+                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py",
+                                            "name": "compile",
+                                            "line_number": 889,
+                                            "line": "cres = self._cache.load_overload(sig, self.targetctx)\n"
+                                          },
+                                          "children": {
+                                            "load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;713": {
+                                              "description": {
+                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                "name": "load_overload",
+                                                "line_number": 721,
+                                                "line": "return self._load_overload(sig, target_context)\n"
+                                              },
+                                              "children": {
+                                                "_load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;724": {
+                                                  "description": {
+                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                    "name": "_load_overload",
+                                                    "line_number": 730,
+                                                    "line": "data = self._impl.rebuild(target_context, data)\n"
+                                                  },
+                                                  "children": {
+                                                    "load;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;567": {
+                                                      "description": {
+                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                        "name": "load",
+                                                        "line_number": 576,
+                                                        "line": "return self._load_data(data_name)\n"
+                                                      },
+                                                      "children": {
+                                                        "_load_data;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;614": {
+                                                          "description": {
+                                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                            "name": "_load_data",
+                                                            "line_number": 620,
+                                                            "line": "return tup\n"
+                                                          },
+                                                          "children": {},
+                                                          "count": 0,
+                                                          "identifier": "_load_data;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;614"
+                                                        }
+                                                      },
+                                                      "count": 1,
+                                                      "identifier": "load;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;567"
+                                                    }
+                                                  },
+                                                  "count": 1,
+                                                  "identifier": "_load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;724"
+                                                }
+                                              },
+                                              "count": 1,
+                                              "identifier": "load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;713"
+                                            }
+                                          },
+                                          "count": 1,
+                                          "identifier": "compile;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;862"
+                                        }
+                                      },
+                                      "count": 1,
+                                      "identifier": "_compile_for_args;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;344"
+                                    },
+                                    "norm;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py;2598": {
+                                      "description": {
+                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py",
+                                        "name": "norm",
+                                        "line_number": 2767,
+                                        "line": "sqnorm = x.dot(x)\n"
+                                      },
+                                      "children": {},
+                                      "count": 0,
+                                      "identifier": "norm;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py;2598"
+                                    }
+                                  },
+                                  "count": 2,
+                                  "identifier": "rodrigues_rotation;/home/mar/Development/PyFracVAL/pyfracval/utils.py;321"
+                                }
+                              },
+                              "count": 2,
+                              "identifier": "_cca_sticking_v1;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;480"
+                            },
+                            "_cca_reintento;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;733": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py",
+                                "name": "_cca_reintento",
+                                "line_number": 751,
+                                "line": "coords2_out = utils._cca_reintento_kernel(\n"
+                              },
+                              "children": {
+                                "_compile_for_args;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;344": {
+                                  "description": {
+                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py",
+                                    "name": "_compile_for_args",
+                                    "line_number": 376,
+                                    "line": "return_val = self.compile(tuple(argtypes))\n"
+                                  },
+                                  "children": {
+                                    "compile;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;862": {
+                                      "description": {
+                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py",
+                                        "name": "compile",
+                                        "line_number": 889,
+                                        "line": "cres = self._cache.load_overload(sig, self.targetctx)\n"
+                                      },
+                                      "children": {
+                                        "load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;713": {
+                                          "description": {
+                                            "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                            "name": "load_overload",
+                                            "line_number": 721,
+                                            "line": "return self._load_overload(sig, target_context)\n"
+                                          },
+                                          "children": {
+                                            "_load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;724": {
+                                              "description": {
+                                                "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                "name": "_load_overload",
+                                                "line_number": 728,
+                                                "line": "data = self._cache_file.load(key)\n"
+                                              },
+                                              "children": {
+                                                "load;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;567": {
+                                                  "description": {
+                                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                    "name": "load",
+                                                    "line_number": 576,
+                                                    "line": "return self._load_data(data_name)\n"
+                                                  },
+                                                  "children": {
+                                                    "_load_data;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;614": {
+                                                      "description": {
+                                                        "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py",
+                                                        "name": "_load_data",
+                                                        "line_number": 616,
+                                                        "line": "with open(path, \"rb\") as f:\n"
+                                                      },
+                                                      "children": {},
+                                                      "count": 0,
+                                                      "identifier": "_load_data;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;614"
+                                                    }
+                                                  },
+                                                  "count": 1,
+                                                  "identifier": "load;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;567"
+                                                }
+                                              },
+                                              "count": 1,
+                                              "identifier": "_load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;724"
+                                            }
+                                          },
+                                          "count": 1,
+                                          "identifier": "load_overload;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/caching.py;713"
+                                        }
+                                      },
+                                      "count": 1,
+                                      "identifier": "compile;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;862"
+                                    }
+                                  },
+                                  "count": 1,
+                                  "identifier": "_compile_for_args;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numba/core/dispatcher.py;344"
+                                }
+                              },
+                              "count": 1,
+                              "identifier": "_cca_reintento;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;733"
+                            },
+                            "_candidate_score;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;834": {
+                              "description": {
+                                "filename": "/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py",
+                                "name": "_candidate_score",
+                                "line_number": 849,
+                                "line": "d2 = float(np.linalg.norm(coords2[cand2_idx] - cm2))\n"
+                              },
+                              "children": {
+                                "norm;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py;2598": {
+                                  "description": {
+                                    "filename": "/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py",
+                                    "name": "norm",
+                                    "line_number": 2767,
+                                    "line": "sqnorm = x.dot(x)\n"
+                                  },
+                                  "children": {},
+                                  "count": 0,
+                                  "identifier": "norm;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py;2598"
+                                }
+                              },
+                              "count": 1,
+                              "identifier": "_candidate_score;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;834"
+                            }
+                          },
+                          "count": 4,
+                          "identifier": "_perform_cca_sticking;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;927"
+                        }
+                      },
+                      "count": 4,
+                      "identifier": "_run_iteration;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;1372"
+                    }
+                  },
+                  "count": 4,
+                  "identifier": "run_cca;/home/mar/Development/PyFracVAL/pyfracval/cca_agg.py;1515"
+                },
+                "save_to_file;/home/mar/Development/PyFracVAL/pyfracval/schemas.py;161": {
+                  "description": {
+                    "filename": "/home/mar/Development/PyFracVAL/pyfracval/schemas.py",
+                    "name": "save_to_file",
+                    "line_number": 215,
+                    "line": "with open(filepath, \"w\", encoding=\"utf-8\") as f:\n"
+                  },
+                  "children": {},
+                  "count": 0,
+                  "identifier": "save_to_file;/home/mar/Development/PyFracVAL/pyfracval/schemas.py;161"
+                }
+              },
+              "count": 29,
+              "identifier": "run_simulation;/home/mar/Development/PyFracVAL/pyfracval/main_runner.py;18"
+            }
+          },
+          "count": 29,
+          "identifier": "_timed_run;/home/mar/Development/PyFracVAL/benchmarks/unified_local_remote_benchmark.py;57"
+        }
+      },
+      "count": 29,
+      "identifier": "__call__;/home/mar/Development/PyFracVAL/.devenv/state/venv/lib/python3.13/site-packages/dask/_task_spec.py;753"
+    }
+  },
+  "count": 29,
+  "identifier": "root"
+}
