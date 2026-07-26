@@ -7,99 +7,14 @@ from typing import Any
 import numpy as np
 
 # Import necessary modules from your library
-from . import config, particle_generation, utils
+from . import particle_generation, utils
 from .cca_agg import CCAggregator
+from .config import OrchestratorAlgorithmConfig
 from .densify import densify_aggregate
 from .pca_subclusters import Subclusterer
 from .schemas import AggregateProperties, GenerationInfo, Metadata, SimulationParameters
 
 logger = logging.getLogger(__name__)
-
-# Mapping from sim_config_dict keys to legacy config module attribute names.
-# Used so sweep configs can set e.g. "cca_retry_rotation_mode" = "alternate".
-_ALGORITHM_KEY_MAP: dict[str, str] = {
-    # --- retry / rotation -------------------------------------------------
-    "cca_retry_rotation_mode": "CCA_RETRY_ROTATION_MODE",
-    "cca_retry_escalate_after": "CCA_RETRY_ESCALATE_AFTER",
-    "cca_dual_jitter_interval": "CCA_DUAL_JITTER_INTERVAL",
-    "cca_dual_jitter_deg": "CCA_DUAL_JITTER_DEG",
-    "cca_coarse_sweep_steps": "CCA_COARSE_SWEEP_STEPS",
-    "cca_coarse_spin_anchor_steps": "CCA_COARSE_SPIN_ANCHOR_STEPS",
-    "cca_coarse_spin_moving_steps": "CCA_COARSE_SPIN_MOVING_STEPS",
-    "cca_coarse_fine_coarse_fraction": "CCA_COARSE_FINE_COARSE_FRACTION",
-    "cca_coarse_fine_spin_deg": "CCA_COARSE_FINE_SPIN_DEG",
-    # --- candidate / scoring ------------------------------------------------
-    "cca_candidate_policy": "CCA_CANDIDATE_POLICY",
-    "cca_score_topk_per_class": "CCA_SCORE_TOPK_PER_CLASS",
-    # --- sticking method ----------------------------------------------------
-    "cca_sticking_method": "CCA_STICKING_METHOD",
-    # --- gamma expansion ----------------------------------------------------
-    "cca_gamma_expansion_enabled": "CCA_GAMMA_EXPANSION_ENABLED",
-    "cca_gamma_expansion_step": "CCA_GAMMA_EXPANSION_STEP",
-    "cca_gamma_expansion_max_factor": "CCA_GAMMA_EXPANSION_MAX_FACTOR",
-    "cca_gamma_expansion_mass_exponent": "CCA_GAMMA_EXPANSION_MASS_EXPONENT",
-    "cca_gamma_expansion_max_attempts": "CCA_GAMMA_EXPANSION_MAX_ATTEMPTS",
-    # --- pair feasibility filter --------------------------------------------
-    "cca_pair_feasibility_filter": "CCA_PAIR_FEASIBILITY_FILTER",
-    "cca_bv_deep_penetration_factor": "CCA_BV_DEEP_PENETRATION_FACTOR",
-    "cca_ssa_min_exposure": "CCA_SSA_MIN_EXPOSURE",
-    # --- FFT docking --------------------------------------------------------
-    "cca_fft_grid_size": "CCA_FFT_GRID_SIZE",
-    "cca_fft_num_rotations": "CCA_FFT_NUM_ROTATIONS",
-    "cca_fft_top_k_peaks": "CCA_FFT_TOP_K_PEAKS",
-    "cca_fft_gamma_tolerance": "CCA_FFT_GAMMA_TOLERANCE",
-    "cca_fft_min_peak_distance": "CCA_FFT_MIN_PEAK_DISTANCE",
-    # --- soft relaxation ----------------------------------------------------
-    "cca_soft_relaxation_enabled": "CCA_SOFT_RELAXATION_ENABLED",
-    "cca_soft_relaxation_fallback_only": "CCA_SOFT_RELAXATION_FALLBACK_ONLY",
-    "cca_soft_relaxation_k_repulsion": "CCA_SOFT_RELAXATION_K_REPULSION",
-    "cca_soft_relaxation_k_gamma": "CCA_SOFT_RELAXATION_K_GAMMA",
-    "cca_soft_relaxation_gamma_tolerance": "CCA_SOFT_RELAXATION_GAMMA_TOLERANCE",
-    "cca_soft_relaxation_max_iters": "CCA_SOFT_RELAXATION_MAX_ITERS",
-    "cca_soft_relaxation_learning_rate": "CCA_SOFT_RELAXATION_LEARNING_RATE",
-    # --- densify ------------------------------------------------------------
-    "densify_enabled": "DENSIFY_ENABLED",
-    "densify_source_df": "DENSIFY_SOURCE_DF",
-    "densify_source_kf": "DENSIFY_SOURCE_KF",
-    "densify_max_push_iters": "DENSIFY_MAX_PUSH_ITERS",
-    "densify_max_densify_iters": "DENSIFY_MAX_DENSIFY_ITERS",
-    "densify_push_fraction": "DENSIFY_PUSH_FRACTION",
-    "densify_push_patience": "DENSIFY_PUSH_PATIENCE",
-    "densify_rtol": "DENSIFY_RTOL",
-    "densify_method": "DENSIFY_METHOD",
-    "densify_rtol_multiplier": "DENSIFY_RTOL_MULTIPLIER",
-    # --- profiling ----------------------------------------------------------
-    "profile_cca_retry_modes": "PROFILE_CCA_RETRY_MODES",
-    # --- incremental overlap ------------------------------------------------
-    "use_cca_incremental_overlap": "USE_CCA_INCREMENTAL_OVERLAP",
-    "cca_incremental_full_sync_period": "CCA_INCREMENTAL_FULL_SYNC_PERIOD",
-}
-
-
-def _apply_algorithm_overrides(sim_config_dict):
-    """Set algorithm keys from *sim_config_dict* on the global ``config`` module.
-
-    Returns a list of ``(attr, old_value)`` tuples that can be passed to
-    :func:`_restore_algorithm_overrides`.
-    """
-    previous: list[tuple[str, object]] = []
-    for key, attr in _ALGORITHM_KEY_MAP.items():
-        if key in sim_config_dict:
-            previous.append((attr, getattr(config, attr, None)))
-            setattr(config, attr, sim_config_dict[key])
-    return previous
-
-
-def _restore_algorithm_overrides(previous):
-    """Restore global config attributes to their previous values."""
-    for attr, old_val in previous:
-        if old_val is None:
-            try:
-                delattr(config, attr)
-            except (AttributeError, TypeError):
-                pass
-        else:
-            setattr(config, attr, old_val)
 
 
 def run_simulation(
@@ -166,18 +81,21 @@ def run_simulation(
         logger.error(f"Invalid simulation parameters provided: {e}", exc_info=True)
         return False, None, None
 
-    _previous_config = _apply_algorithm_overrides(sim_config_dict)
-    try:
-        return _run_simulation_core(
-            iteration,
-            sim_config_dict,
-            output_base_dir,
-            seed,
-            max_runtime_seconds,
-            sim_params,
-        )
-    finally:
-        _restore_algorithm_overrides(_previous_config)
+    # Algorithm-tuning keys (cca_*, densify_*, etc.) live flat alongside the
+    # simulation keys in sim_config_dict; OrchestratorAlgorithmConfig ignores
+    # whatever it doesn't recognize (N, Df, kf, ...), so this just picks out
+    # the algorithm subset with defaults for anything unset.
+    algorithm_config = OrchestratorAlgorithmConfig.model_validate(sim_config_dict)
+
+    return _run_simulation_core(
+        iteration,
+        sim_config_dict,
+        output_base_dir,
+        seed,
+        max_runtime_seconds,
+        sim_params,
+        algorithm_config,
+    )
 
 
 def _run_simulation_core(
@@ -187,8 +105,9 @@ def _run_simulation_core(
     seed,
     max_runtime_seconds,
     sim_params,
+    algorithm_config,
 ):
-    """Core simulation logic with algorithm config already applied."""
+    """Core simulation logic, given a resolved algorithm_config to pass through."""
     start_time = time.time()
 
     if sim_params.seed is not None:
@@ -247,6 +166,7 @@ def _run_simulation_core(
             rp_g=sim_params.rp_g,
             rp_gstd=sim_params.rp_gstd,
             rng=rng,
+            algorithm_config=algorithm_config,
         )
         pca_success = subcluster_runner.run_subclustering()
         pca_end_time = time.time()
@@ -280,22 +200,9 @@ def _run_simulation_core(
 
         # 4. Cluster-Cluster Aggregation
         # When densify is enabled, generate at source Df/kf for easier CCA
-        densify_enabled_gen = bool(
-            sim_config_dict.get(
-                "densify_enabled", getattr(config, "DENSIFY_ENABLED", False)
-            )
-        )
-        if densify_enabled_gen:
-            cca_df = float(
-                sim_config_dict.get(
-                    "densify_source_df", getattr(config, "DENSIFY_SOURCE_DF", 2.0)
-                )
-            )
-            cca_kf = float(
-                sim_config_dict.get(
-                    "densify_source_kf", getattr(config, "DENSIFY_SOURCE_KF", 1.0)
-                )
-            )
+        if algorithm_config.densify_enabled:
+            cca_df = algorithm_config.densify_source_df
+            cca_kf = algorithm_config.densify_source_kf
             logger.info(
                 f"Densify: generating at source Df/kf={cca_df}/{cca_kf} "
                 f"(target: {sim_params.Df}/{sim_params.kf})"
@@ -316,6 +223,7 @@ def _run_simulation_core(
             tol_ov=sim_params.tol_ov,
             ext_case=sim_params.ext_case,
             rng=rng,
+            algorithm_config=algorithm_config,
         )
         cca_result = cca_runner.run_cca()
         cca_end_time = time.time()
@@ -342,51 +250,15 @@ def _run_simulation_core(
     n_actual = final_coords.shape[0]
 
     # 5b. Post-aggregation densification (opt-in)
-    densify_enabled = bool(
-        sim_config_dict.get(
-            "densify_enabled", getattr(config, "DENSIFY_ENABLED", False)
-        )
-    )
-    if densify_enabled:
-        source_df = float(
-            sim_config_dict.get(
-                "densify_source_df", getattr(config, "DENSIFY_SOURCE_DF", 2.0)
-            )
-        )
-        source_kf = float(
-            sim_config_dict.get(
-                "densify_source_kf", getattr(config, "DENSIFY_SOURCE_KF", 1.0)
-            )
-        )
-        densify_method = str(
-            sim_config_dict.get(
-                "densify_method", getattr(config, "DENSIFY_METHOD", "radial")
-            )
-        )
-        densify_rtol = float(
-            sim_config_dict.get("densify_rtol", getattr(config, "DENSIFY_RTOL", 0.02))
-        )
-        densify_max_push = int(
-            sim_config_dict.get(
-                "densify_max_push_iters", getattr(config, "DENSIFY_MAX_PUSH_ITERS", 50)
-            )
-        )
-        densify_max_iters = int(
-            sim_config_dict.get(
-                "densify_max_densify_iters",
-                getattr(config, "DENSIFY_MAX_DENSIFY_ITERS", 20),
-            )
-        )
-        densify_push_frac = float(
-            sim_config_dict.get(
-                "densify_push_fraction", getattr(config, "DENSIFY_PUSH_FRACTION", 0.5)
-            )
-        )
-        densify_push_pat = int(
-            sim_config_dict.get(
-                "densify_push_patience", getattr(config, "DENSIFY_PUSH_PATIENCE", 10)
-            )
-        )
+    if algorithm_config.densify_enabled:
+        source_df = algorithm_config.densify_source_df
+        source_kf = algorithm_config.densify_source_kf
+        densify_method = algorithm_config.densify_method
+        densify_rtol = algorithm_config.densify_rtol
+        densify_max_push = algorithm_config.densify_max_push_iters
+        densify_max_iters = algorithm_config.densify_max_densify_iters
+        densify_push_frac = algorithm_config.densify_push_fraction
+        densify_push_pat = algorithm_config.densify_push_patience
         logger.info(
             f"Densification enabled: method={densify_method}, "
             f"source Df/kf={source_df}/{source_kf} -> "
