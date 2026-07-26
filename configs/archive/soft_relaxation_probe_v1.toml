@@ -1,0 +1,97 @@
+# Benchmark config for soft potential relaxation in hard regime
+# Tests soft relaxation as fallback when rigid docking fails
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/soft_relaxation_probe_v1"
+n_values = [128]
+repeats = 1
+n_aggregates = 10
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 600
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.25
+kf = 0.95
+rp_g = 100.0
+rp_gstd = 1.9
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_rotation_mode = "single"
+cca_retry_escalate_after = 120
+
+# Baseline: standard rigid docking (no soft relaxation)
+[[runs]]
+name = "baseline_rigid"
+scheduler = "local"
+[runs.algorithm]
+cca_soft_relaxation_enabled = false
+
+# Soft relaxation fallback with default parameters
+[[runs]]
+name = "soft_relaxation_fallback_default"
+scheduler = "local"
+[runs.algorithm]
+cca_soft_relaxation_enabled = true
+cca_soft_relaxation_fallback_only = true
+cca_soft_relaxation_k_repulsion = 10.0
+cca_soft_relaxation_k_gamma = 1.0
+cca_soft_relaxation_gamma_tolerance = 0.05
+
+# Soft relaxation with stronger repulsion
+[[runs]]
+name = "soft_relaxation_fallback_strong_repulsion"
+scheduler = "local"
+[runs.algorithm]
+cca_soft_relaxation_enabled = true
+cca_soft_relaxation_fallback_only = true
+cca_soft_relaxation_k_repulsion = 50.0
+cca_soft_relaxation_k_gamma = 5.0
+cca_soft_relaxation_gamma_tolerance = 0.05
+
+# Soft relaxation with weaker repulsion (more flexibility)
+[[runs]]
+name = "soft_relaxation_fallback_weak_repulsion"
+scheduler = "local"
+[runs.algorithm]
+cca_soft_relaxation_enabled = true
+cca_soft_relaxation_fallback_only = true
+cca_soft_relaxation_k_repulsion = 5.0
+cca_soft_relaxation_k_gamma = 0.5
+cca_soft_relaxation_gamma_tolerance = 0.10
+
+# Soft relaxation with larger gamma tolerance
+[[runs]]
+name = "soft_relaxation_fallback_loose_gamma"
+scheduler = "local"
+[runs.algorithm]
+cca_soft_relaxation_enabled = true
+cca_soft_relaxation_fallback_only = true
+cca_soft_relaxation_k_repulsion = 10.0
+cca_soft_relaxation_k_gamma = 1.0
+cca_soft_relaxation_gamma_tolerance = 0.10
+
+# Densify (for comparison)
+[[runs]]
+name = "densify_radial_df20"
+scheduler = "local"
+[runs.simulation]
+Df = 2.25
+kf = 0.95
+[runs.algorithm]
+densify_enabled = true
+densify_source_df = 2.0
+densify_source_kf = 1.0
+densify_method = "radial"
+densify_rtol = 0.05
+densify_max_push_iters = 50

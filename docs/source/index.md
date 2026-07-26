@@ -2,7 +2,7 @@
 
 <img src="_static/logo.png" alt="PyFracVAL Logo" width="50%">
 
-PyFracVAL generates fractal-like aggregates... (add a brief description)
+PyFracVAL generates 3D fractal-like aggregates of mono- and polydisperse primary particles using a PCA→CCA strategy. The implementation follows the FracVAL algorithm {cite:p}`Moran2019FracVAL` and related fractal morphology literature {cite:p}`Filippov2000Tunable`.
 
 ```{toctree}
 :maxdepth: 2
@@ -10,5 +10,6 @@ PyFracVAL generates fractal-like aggregates... (add a brief description)
 
 installation
 usage
+experiments
 references
 ```

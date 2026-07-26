@@ -1,0 +1,48 @@
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/retry_mode_matrix_completion"
+n_values = [256, 512]
+repeats = 2
+n_aggregates = 8
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 120
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.2
+kf = 1.0
+rp_g = 100.0
+rp_gstd = 1.8
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_escalate_after = 60
+cca_dual_jitter_interval = 4
+cca_dual_jitter_deg = 10.0
+profile_cca_retry_modes = false
+
+[[runs]]
+name = "single"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "single"
+
+[[runs]]
+name = "alternate"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "alternate"
+
+[[runs]]
+name = "dual_jitter"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "dual_jitter"

@@ -1,0 +1,53 @@
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/retry_soft_accept_probe_v1"
+n_values = [512]
+repeats = 1
+n_aggregates = 8
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 180
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.25
+kf = 0.95
+rp_g = 100.0
+rp_gstd = 1.9
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_rotation_mode = "single"
+profile_cca_retry_modes = true
+cca_soft_accept_enabled = false
+cca_soft_accept_overlap = 5.0e-5
+cca_repair_max_iters = 24
+cca_repair_step_deg = 2.0
+cca_repair_step_translation_frac = 0.02
+cca_repair_patience = 6
+
+[[runs]]
+name = "strict_single"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "single"
+cca_soft_accept_enabled = false
+
+[[runs]]
+name = "soft_single"
+scheduler = "local"
+[runs.algorithm]
+cca_retry_rotation_mode = "single"
+cca_soft_accept_enabled = true
+cca_soft_accept_overlap = 5.0e-5
+cca_repair_max_iters = 24
+cca_repair_step_deg = 2.0
+cca_repair_step_translation_frac = 0.02
+cca_repair_patience = 6

@@ -1,0 +1,91 @@
+# Benchmark config for FFT docking method in hard regime
+# Tests: baseline fibonacci vs FFT docking with various grid sizes
+
+[defaults]
+execution_mode = "sequential"
+output_root = "benchmark_results/profiles/fft_docking_probe_v1"
+n_values = [128]
+repeats = 3
+n_aggregates = 10
+warmup_tasks = 1
+seed_start = 1431354440
+trial_timeout = 300
+local_workers = 4
+profile = false
+
+[defaults.simulation]
+Df = 2.25
+kf = 0.95
+rp_g = 100.0
+rp_gstd = 1.9
+tol_ov = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_rotation_mode = "single"
+cca_retry_escalate_after = 120
+cca_dual_jitter_interval = 5
+cca_dual_jitter_deg = 8.0
+cca_coarse_sweep_steps = 10
+cca_coarse_spin_anchor_steps = 6
+cca_coarse_spin_moving_steps = 6
+cca_coarse_fine_coarse_fraction = 0.67
+cca_coarse_fine_spin_deg = 12.0
+cca_soft_accept_enabled = false
+profile_cca_retry_modes = true
+
+# Baseline: standard fibonacci method
+[[runs]]
+name = "baseline_fibonacci_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fibonacci"
+
+# FFT docking: small grid (32)
+[[runs]]
+name = "fft_docking_grid32_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fft_docking"
+cca_fft_grid_size = 32
+cca_fft_num_rotations = 70
+cca_fft_top_k_peaks = 10
+cca_fft_gamma_tolerance = 0.15
+
+# FFT docking: medium grid (64)
+[[runs]]
+name = "fft_docking_grid64_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fft_docking"
+cca_fft_grid_size = 64
+cca_fft_num_rotations = 70
+cca_fft_top_k_peaks = 10
+cca_fft_gamma_tolerance = 0.15
+
+# FFT docking: large grid (128)
+[[runs]]
+name = "fft_docking_grid128_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fft_docking"
+cca_fft_grid_size = 128
+cca_fft_num_rotations = 70
+cca_fft_top_k_peaks = 10
+cca_fft_gamma_tolerance = 0.15
+
+# FFT docking: more rotations (140)
+[[runs]]
+name = "fft_docking_rot140_hard"
+scheduler = "local"
+[runs.algorithm]
+cca_sticking_method = "fft_docking"
+cca_fft_grid_size = 64
+cca_fft_num_rotations = 140
+cca_fft_top_k_peaks = 10
+cca_fft_gamma_tolerance = 0.15

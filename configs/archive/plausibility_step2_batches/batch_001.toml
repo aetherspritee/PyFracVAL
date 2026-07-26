@@ -1,0 +1,279 @@
+[defaults]
+execution_mode = "sequential"
+local_workers = 4
+n_aggregates = 1
+n_values = [512, 1024]
+output_root = "benchmark_results/plausibility/step2_feature_matrix"
+profile = false
+repeats = 1
+seed_start = 1431354440
+trial_timeout = 300
+warmup_tasks = 1
+
+[defaults.simulation]
+rp_g = 1.0
+tol_ov = 1e-06
+n_subcl_percentage = 0.1
+ext_case = 0
+
+[defaults.algorithm]
+use_cca_incremental_overlap = true
+cca_incremental_full_sync_period = 8
+cca_candidate_policy = "leaf_hybrid"
+cca_score_topk_per_class = 32
+cca_retry_rotation_mode = "single"
+cca_retry_escalate_after = 120
+cca_dual_jitter_interval = 5
+cca_dual_jitter_deg = 8.0
+cca_coarse_sweep_steps = 10
+cca_coarse_spin_anchor_steps = 6
+cca_coarse_spin_moving_steps = 6
+cca_coarse_fine_coarse_fraction = 0.67
+cca_coarse_fine_spin_deg = 12.0
+profile_cca_retry_modes = true
+
+[[runs]]
+name = "t37_vanilla_single_s1p5_df2p2_kf1p0_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.2
+kf = 1.0
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t37_retry_alternate_s1p5_df2p2_kf1p0_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.2
+kf = 1.0
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "alternate"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t37_retry_coarse_to_fine_s1p5_df2p2_kf1p0_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.2
+kf = 1.0
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "coarse_to_fine"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t37_gamma_bv_s1p5_df2p2_kf1p0_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.2
+kf = 1.0
+rp_gstd = 1.5
+[runs.algorithm]
+cca_bv_deep_penetration_factor = 0.8
+cca_gamma_expansion_enabled = true
+cca_gamma_expansion_mass_exponent = -0.75
+cca_gamma_expansion_max_attempts = 3
+cca_gamma_expansion_max_factor = 1.05
+cca_gamma_expansion_step = 0.02
+cca_pair_feasibility_filter = "bounding_volume"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t37_fft_docking_s1p5_df2p2_kf1p0_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.2
+kf = 1.0
+rp_gstd = 1.5
+[runs.algorithm]
+cca_fft_gamma_tolerance = 0.1
+cca_fft_grid_size = 64
+cca_fft_num_rotations = 70
+cca_fft_top_k_peaks = 10
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fft_docking"
+densify_enabled = false
+
+[[runs]]
+name = "t37_soft_relaxation_fallback_s1p5_df2p2_kf1p0_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.2
+kf = 1.0
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = true
+cca_soft_relaxation_fallback_only = true
+cca_soft_relaxation_gamma_tolerance = 0.05
+cca_soft_relaxation_k_gamma = 1.0
+cca_soft_relaxation_k_repulsion = 10.0
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t37_densify_radial_s1p5_df2p2_kf1p0_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.2
+kf = 1.0
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = true
+densify_max_push_iters = 50
+densify_method = "radial"
+densify_rtol = 0.05
+densify_source_df = 2.0
+densify_source_kf = 1.0
+
+[[runs]]
+name = "t38_vanilla_single_s1p5_df2p0_kf1p4_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.0
+kf = 1.4
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t38_retry_alternate_s1p5_df2p0_kf1p4_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.0
+kf = 1.4
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "alternate"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t38_retry_coarse_to_fine_s1p5_df2p0_kf1p4_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.0
+kf = 1.4
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "coarse_to_fine"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t38_gamma_bv_s1p5_df2p0_kf1p4_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.0
+kf = 1.4
+rp_gstd = 1.5
+[runs.algorithm]
+cca_bv_deep_penetration_factor = 0.8
+cca_gamma_expansion_enabled = true
+cca_gamma_expansion_mass_exponent = -0.75
+cca_gamma_expansion_max_attempts = 3
+cca_gamma_expansion_max_factor = 1.05
+cca_gamma_expansion_step = 0.02
+cca_pair_feasibility_filter = "bounding_volume"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t38_fft_docking_s1p5_df2p0_kf1p4_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.0
+kf = 1.4
+rp_gstd = 1.5
+[runs.algorithm]
+cca_fft_gamma_tolerance = 0.1
+cca_fft_grid_size = 64
+cca_fft_num_rotations = 70
+cca_fft_top_k_peaks = 10
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fft_docking"
+densify_enabled = false
+
+[[runs]]
+name = "t38_soft_relaxation_fallback_s1p5_df2p0_kf1p4_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.0
+kf = 1.4
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = true
+cca_soft_relaxation_fallback_only = true
+cca_soft_relaxation_gamma_tolerance = 0.05
+cca_soft_relaxation_k_gamma = 1.0
+cca_soft_relaxation_k_repulsion = 10.0
+cca_sticking_method = "fibonacci"
+densify_enabled = false
+
+[[runs]]
+name = "t38_densify_radial_s1p5_df2p0_kf1p4_unstable"
+scheduler = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+[runs.simulation]
+Df = 2.0
+kf = 1.4
+rp_gstd = 1.5
+[runs.algorithm]
+cca_gamma_expansion_enabled = false
+cca_pair_feasibility_filter = "none"
+cca_retry_rotation_mode = "single"
+cca_soft_relaxation_enabled = false
+cca_sticking_method = "fibonacci"
+densify_enabled = true
+densify_max_push_iters = 50
+densify_method = "radial"
+densify_rtol = 0.05
+densify_source_df = 2.0
+densify_source_kf = 1.0

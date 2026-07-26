@@ -30,7 +30,7 @@
     A Python implementation of the FracVAL algorithm for generating 3D fractal-like aggregates with tunable properties (Df, kf) from mono- or polydisperse primary particles using Particle-Cluster and Cluster-Cluster Aggregation. Based on the work of Morán, J. et al. (2019).
     <br />
     <!-- Update the URL to point to your documentation once hosted -->
-    <a href="https://[your_docs_host_or_github_pages_url]"><strong>Explore the docs »</strong></a>
+    <a href="https://aetherspritee.github.io/PyFracVAL/"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <!-- <a href="https://github.com/aetherspritee/PyFracVAL">View Demo</a> --> <!-- Uncomment if you have a demo link -->
@@ -123,14 +123,14 @@ Follow these steps to set up `pyfracval` for use or development.
 
 ### Prerequisites
 
-- **Python:** Version 3.10 to 3.12 recommended (Numba does not yet support 3.13 as of early 2024). Check with `python --version`.
+- **Python:** Version 3.11+ supported (see `pyproject.toml`). Check with `python --version`.
 - **Pip or UV:** A Python package installer. Check with `pip --version` or `uv --version`. [`uv`](https://github.com/astral-sh/uv) is recommended for faster environment management.
 - **(Optional) Git:** Required for cloning the repository if installing from source.
 
 ### Installation
 
 1.  **From PyPI (Recommended):**
-    _(Once published)_
+    _(Available after each release to PyPI.)_
 
     ```bash
     pip install pyfracval
@@ -165,13 +165,13 @@ Follow these steps to set up `pyfracval` for use or development.
 
     ```bash
     # Using UV (recommended)
-    uv sync -e .[dev,test,docs]
+    uv sync --group test --group docs
 
     # Using pip
-    # pip install -e .[dev,test,docs]
+    # pip install -e . && pip install pytest sphinx myst-parser sphinx-autoapi sphinxcontrib-bibtex
     ```
 
-    _(Adjust optional dependencies `[dev,test,docs]` based on your `pyproject.toml`)_
+    _(Dependency groups are managed via `uv` groups in `pyproject.toml`.)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -205,7 +205,7 @@ pyfracval -n 100 --df 1.7 --kf 1.1 --num-aggregates 5 -p
 pyfracval --help
 ```
 
-_For more detailed examples and programmatic usage, please refer to the [Documentation](https://[your_docs_host_or_github_pages_url])_
+_For more detailed examples and programmatic usage, please refer to the [Documentation](https://aetherspritee.github.io/PyFracVAL/)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -213,18 +213,17 @@ _For more detailed examples and programmatic usage, please refer to the [Documen
 
 ## Roadmap & Known Issues
 
-- [ ] **Fix Known Issues:** (Inherited from original FracVAL and implementation details)
-  - [ ] Low fractal dimensions (e.g., Df < ~1.7) can fail during PCA, potentially due to geometric constraints in `Gamma_pc` calculation or sticking. _(Mitigation: try slightly higher kf)_.
-  - [ ] High fractal dimensions / prefactors (e.g., Df > ~2.1 or high kf) can fail during PCA, potentially due to `Gamma_pc` calculation instability or overlap impossibility. _(Mitigation: try slightly lower kf or Df)_.
-  - [ ] High fractal dimensions can be noticeably slow. _(Inherited behavior)_.
+- [ ] **Known Issues:** (Inherited from original FracVAL and implementation details)
+  - [ ] "Hard" parameter regimes (high `Df`, low `kf`, wide polydispersity — e.g. `Df=2.25, kf=0.95, rp_gstd=1.9`) cause CCA sticking success rates to collapse to ~17-20% due to geometric frustration: no orientation is overlap-free at the enforced contact distance. Several rotation-search and rigid-docking enhancements were tried and measured to make no difference — see [`docs/source/experiments.md`](docs/source/experiments.md) for the data. _(Mitigation that does work: enable densification — see `DENSIFY_*` config — which generates at an easier `Df`/`kf` and reshapes afterward: 100% success, ~20x faster than rigid retry in the tested hard regime.)_
+  - [ ] High fractal dimensions can be noticeably slow in the rigid-sticking path when densification is not used.
 - [ ] Allow different distribution functions for monomer radii (e.g., normal).
-- [ ] Further parallelization exploration (beyond Numba JIT).
+- [ ] Further parallelization exploration — Numba JIT is the current production backend; a JAX/GPU prototype for the overlap-check kernel is being evaluated as a research spike.
 - [ ] Add option for user-defined PCA parameters (Df_pca, kf_pca) via CLI.
 - [ ] Publish package to PyPI.
 - [ ] Add more examples and potentially tutorials to documentation.
 - [ ] Investigate remaining differences compared to original Fortran behavior for edge cases.
 
-See the [open issues](https://github.com/aetherspritee/PyFracVAL/issues) for a full list of proposed features and known issues.
+See [`PLAN.md`](PLAN.md) for the current codebase cleanup/refactor plan, and the [open issues](https://github.com/aetherspritee/PyFracVAL/issues) for a full list of proposed features and known issues.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

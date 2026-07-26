@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from pyfracval.fft_docking import (
+from pyfracval.experimental.fft_docking import (
     _overlap_check_kernel,
     _voxelize_kernel,
     compute_fft_correlation,
@@ -63,14 +63,18 @@ class TestVoxelizeCluster:
 
     def test_surface_mode_has_positive_voxels(self):
         coords, radii, cm = self._make_simple_cluster()
-        grid, _ = voxelize_cluster(coords, radii, cm, grid_size=32, voxel_size=1.0, mode=0)
+        grid, _ = voxelize_cluster(
+            coords, radii, cm, grid_size=32, voxel_size=1.0, mode=0
+        )
         assert np.sum(grid == 1) > 0
 
     def test_interior_mode_has_negative_voxels(self):
         coords = np.array([[0.0, 0.0, 0.0]])
         radii = np.array([5.0])
         cm = np.array([0.0, 0.0, 0.0])
-        grid, _ = voxelize_cluster(coords, radii, cm, grid_size=32, voxel_size=1.0, mode=1)
+        grid, _ = voxelize_cluster(
+            coords, radii, cm, grid_size=32, voxel_size=1.0, mode=1
+        )
         assert np.sum(grid < 0) > 0
         assert np.sum(grid > 0) > 0
 
@@ -173,8 +177,16 @@ class TestValidatePlacement:
         cm1 = np.array([0.5, 0.0, 0.0])
         cm2 = np.array([100.5, 0.0, 0.0])
         valid, dist, cov = validate_placement(
-            coords1, radii1, coords2, radii2, cm1, cm2,
-            gamma_pc=100.0, gamma_real=True, tol_ov=1e-4, gamma_tolerance=0.20,
+            coords1,
+            radii1,
+            coords2,
+            radii2,
+            cm1,
+            cm2,
+            gamma_pc=100.0,
+            gamma_real=True,
+            tol_ov=1e-4,
+            gamma_tolerance=0.20,
         )
         assert valid is True or valid is False  # depends on exact dist
 
@@ -186,8 +198,15 @@ class TestValidatePlacement:
         cm1 = np.array([0.0, 0.0, 0.0])
         cm2 = np.array([10.0, 0.0, 0.0])
         valid, _, _ = validate_placement(
-            coords1, radii1, coords2, radii2, cm1, cm2,
-            gamma_pc=10.0, gamma_real=False, tol_ov=1e-4,
+            coords1,
+            radii1,
+            coords2,
+            radii2,
+            cm1,
+            cm2,
+            gamma_pc=10.0,
+            gamma_real=False,
+            tol_ov=1e-4,
         )
         assert valid is False
 
@@ -207,9 +226,18 @@ class TestFFTDockSticking:
         gamma_pc = float(np.linalg.norm(cm2 - cm1))
 
         result = fft_dock_sticking(
-            coords1, radii1, coords2, radii2,
-            cm1, cm2, gamma_pc, gamma_real=True, tol_ov=1e-3,
-            grid_size=32, num_rotations=5, top_k_peaks=5,
+            coords1,
+            radii1,
+            coords2,
+            radii2,
+            cm1,
+            cm2,
+            gamma_pc,
+            gamma_real=True,
+            tol_ov=1e-3,
+            grid_size=32,
+            num_rotations=5,
+            top_k_peaks=5,
             gamma_tolerance=0.30,
         )
         # Well-separated small clusters should be dockable
@@ -223,8 +251,15 @@ class TestFFTDockSticking:
         cm1 = np.array([0.0, 0.0, 0.0])
         cm2 = np.array([10.0, 0.0, 0.0])
         result = fft_dock_sticking(
-            coords1, radii1, coords2, radii2,
-            cm1, cm2, gamma_pc=0.0, gamma_real=True, tol_ov=1e-4,
+            coords1,
+            radii1,
+            coords2,
+            radii2,
+            cm1,
+            cm2,
+            gamma_pc=0.0,
+            gamma_real=True,
+            tol_ov=1e-4,
         )
         assert result is None
 
@@ -236,7 +271,14 @@ class TestFFTDockSticking:
         cm1 = np.array([0.0, 0.0, 0.0])
         cm2 = np.array([10.0, 0.0, 0.0])
         result = fft_dock_sticking(
-            coords1, radii1, coords2, radii2,
-            cm1, cm2, gamma_pc=10.0, gamma_real=False, tol_ov=1e-4,
+            coords1,
+            radii1,
+            coords2,
+            radii2,
+            cm1,
+            cm2,
+            gamma_pc=10.0,
+            gamma_real=False,
+            tol_ov=1e-4,
         )
         assert result is None

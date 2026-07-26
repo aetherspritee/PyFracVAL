@@ -8,9 +8,9 @@ from typing import Set, Tuple
 import numpy as np
 
 from . import config, utils
-from .fft_docking import fft_dock_sticking
+from .experimental.fft_docking import fft_dock_sticking
+from .experimental.soft_relaxation import soft_sticking
 from .logs import TRACE_LEVEL_NUM
-from .soft_relaxation import soft_sticking
 
 logger = logging.getLogger(__name__)
 

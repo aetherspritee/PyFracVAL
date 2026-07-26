@@ -3,11 +3,11 @@
 import numpy as np
 import pytest
 
-from pyfracval.soft_relaxation import (
+from pyfracval.experimental.soft_relaxation import (
+    _compute_max_overlap_kernel,
     compute_forces,
     soft_relaxation,
     soft_sticking,
-    _compute_max_overlap_kernel,
 )
 
 
