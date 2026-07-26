@@ -12,13 +12,6 @@ from pydantic import BaseModel, Field, model_validator
 # Multi-format config loading
 # ---------------------------------------------------------------------------
 
-_CONFIG_LOADERS = {
-    ".toml": lambda fh: tomllib.load(fh),
-    ".yaml": lambda fh: yaml.safe_load(fh) or {},
-    ".yml": lambda fh: yaml.safe_load(fh) or {},
-    ".json": lambda fh: json.load(fh),
-}
-
 
 def load_config_dict(path: str | Path) -> dict[str, Any]:
     """Load a config file into a plain dict, auto-detecting format from extension.
@@ -46,19 +39,21 @@ def load_config_dict(path: str | Path) -> dict[str, Any]:
     matching TOML/JSON's data-only semantics.
     """
     path = Path(path)
-    suffix = path.suffix.lower()
-    try:
-        loader = _CONFIG_LOADERS[suffix]
-    except KeyError:
-        supported = ", ".join(sorted(_CONFIG_LOADERS))
-        raise ValueError(
-            f"Unrecognized config file extension '{suffix}' for {path} "
-            f"(supported: {supported})"
-        ) from None
-
-    mode = "rb" if suffix == ".toml" else "r"
-    with open(path, mode) as fh:
-        data = loader(fh)
+    match path.suffix.lower():
+        case ".toml":
+            with path.open("rb") as fh:
+                data = tomllib.load(fh)
+        case ".yaml" | ".yml":
+            with path.open() as fh:
+                data = yaml.safe_load(fh)
+        case ".json":
+            with path.open() as fh:
+                data = json.load(fh)
+        case suffix:
+            raise ValueError(
+                f"Unrecognized config file extension '{suffix}' for {path} "
+                "(supported: .json, .toml, .yaml, .yml)"
+            )
     return data if data is not None else {}
 
 
