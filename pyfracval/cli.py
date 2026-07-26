@@ -295,76 +295,111 @@ def cli(ctx, **kwargs) -> None:
         **run_cfg.algorithm.model_dump(),
     }
 
-    # --- Run Simulation Loop ---
+    # --- Run Simulation ---
     output_folder = Path(run_cfg.output_dir)
     output_folder.mkdir(parents=True, exist_ok=True)  # Ensure folder exists
 
-    aggregates_generated = 0
     global_start_time = time.time()
     base_seed = sim.seed
-    plotters = []  # Store plotters if plotting multiple aggregates
 
-    for i in range(run_cfg.num_aggregates):
-        agg_num = i + 1
-        attempt = 0
-        success = False
-        final_coords = None
-        final_radii = None
+    # results holds one (success, coords, radii) tuple per aggregate,
+    # index i corresponding to aggregate number i+1 - populated by whichever
+    # branch below runs.
+    results: list[tuple[bool, np.ndarray | None, np.ndarray | None]]
 
-        # Determine seed for this specific aggregate run
-        current_seed = (
-            base_seed + agg_num
-            if base_seed is not None
-            else int(time.time() * 1000) % (2**32)
+    if run_cfg.dask is not None:
+        # A [dask] table is present in the config - dispatch through a Dask
+        # cluster instead of running sequentially. No outer retry here (unlike
+        # the sequential path's --max-attempts): each aggregate is one Dask
+        # task calling run_simulation once, which already retries internally.
+        from .batch_runner import generate_aggregates_parallel
+
+        logger.info(
+            f"[dask] config present - generating {run_cfg.num_aggregates} "
+            f"aggregates via Dask (workers={run_cfg.dask.workers!r}, "
+            f"scheduler={run_cfg.dask.scheduler_address or 'local'})."
         )
+        results = generate_aggregates_parallel(
+            n_aggregates=run_cfg.num_aggregates,
+            config=sim_config,
+            output_base_dir=str(output_folder),
+            seed_start=base_seed if base_seed is not None else 1000,
+            n_workers=run_cfg.dask.workers,
+            scheduler_address=run_cfg.dask.scheduler_address,
+        )
+    else:
+        results = []
+        for i in range(run_cfg.num_aggregates):
+            agg_num = i + 1
+            attempt = 0
+            success = False
+            final_coords = None
+            final_radii = None
 
-        while not success and attempt < run_cfg.max_attempts:
-            attempt += 1
-            logger.info(
-                f"--- Generating Aggregate {agg_num}/{run_cfg.num_aggregates}, Attempt {attempt}/{run_cfg.max_attempts} ---"
+            # Determine seed for this specific aggregate run
+            current_seed = (
+                base_seed + agg_num
+                if base_seed is not None
+                else int(time.time() * 1000) % (2**32)
             )
-            success, final_coords, final_radii = run_simulation(
-                iteration=agg_num,
-                sim_config_dict=sim_config,
-                output_base_dir=str(output_folder),
-                seed=current_seed,  # Use specific seed for this run
-            )
-            if not success:
-                # Log the specific error from the runner first
-                logger.error(
-                    f"Aggregate {agg_num} generation failed on attempt {attempt}."
-                )
-                # Provide general retry advice (specific advice logged by runner)
+
+            while not success and attempt < run_cfg.max_attempts:
+                attempt += 1
                 logger.info(
-                    f"--- Retrying (up to {run_cfg.max_attempts} attempts)... ---"
+                    f"--- Generating Aggregate {agg_num}/{run_cfg.num_aggregates}, Attempt {attempt}/{run_cfg.max_attempts} ---"
                 )
-                # time.sleep(0.5)  # Small pause
-
-        if success:
-            aggregates_generated += 1
-            if run_cfg.plot and final_coords is not None and final_radii is not None:
-                try:
-                    import pyvista as pv  # Import only if needed
-
-                    pl = plot_particles(final_coords, final_radii)
-                    pl.add_text(
-                        f"Aggregate {agg_num}/{run_cfg.num_aggregates}\nN={sim_config['N']}, Df={sim_config['Df']:.2f}",
-                        position="upper_left",
-                        font_size=10,
+                success, final_coords, final_radii = run_simulation(
+                    iteration=agg_num,
+                    sim_config_dict=sim_config,
+                    output_base_dir=str(output_folder),
+                    seed=current_seed,  # Use specific seed for this run
+                )
+                if not success:
+                    # Log the specific error from the runner first
+                    logger.error(
+                        f"Aggregate {agg_num} generation failed on attempt {attempt}."
                     )
-                    plotters.append(pl)
-                except ImportError:
-                    logger.warning(
-                        "PyVista not installed. Cannot plot results. Install with 'pip install pyvista'"
+                    # Provide general retry advice (specific advice logged by runner)
+                    logger.info(
+                        f"--- Retrying (up to {run_cfg.max_attempts} attempts)... ---"
                     )
-                except Exception as e:
-                    logger.warning(f"Error during plotting: {e}")
-        else:
-            logger.critical(
-                f"FATAL: Failed to generate aggregate {agg_num} after {run_cfg.max_attempts} attempts."
-            )
-            # Optionally exit early on failure
-            # ctx.fail(f"Failed to generate aggregate {agg_num}")
+                    # time.sleep(0.5)  # Small pause
+
+            if not success:
+                logger.critical(
+                    f"FATAL: Failed to generate aggregate {agg_num} after {run_cfg.max_attempts} attempts."
+                )
+                # Optionally exit early on failure
+                # ctx.fail(f"Failed to generate aggregate {agg_num}")
+
+            results.append((success, final_coords, final_radii))
+
+    aggregates_generated = sum(1 for success, _, _ in results if success)
+
+    # --- Plotting (both branches share this) ---
+    plotters = []  # Store plotters if plotting multiple aggregates
+    if run_cfg.plot:
+        for i, (success, final_coords, final_radii) in enumerate(results):
+            if not (success and final_coords is not None and final_radii is not None):
+                continue
+            agg_num = i + 1
+            try:
+                import pyvista as pv  # Import only if needed
+
+                pl = plot_particles(final_coords, final_radii)
+                pl.add_text(
+                    f"Aggregate {agg_num}/{run_cfg.num_aggregates}\nN={sim_config['N']}, Df={sim_config['Df']:.2f}",
+                    position="upper_left",
+                    font_size=10,
+                )
+                plotters.append(pl)
+            except ImportError:
+                logger.warning(
+                    "PyVista not installed. Cannot plot results. Install with 'pip install pyvista'"
+                )
+                break
+            except Exception as e:
+                logger.warning(f"Error during plotting: {e}")
 
     # --- Final Summary ---
     global_end_time = time.time()

@@ -31,29 +31,17 @@ git history has the detail).
   of inline logic mixed into a monolith, which is exactly what makes this
   now tractable as small, independent, well-tested extractions.
 
-- [ ] **Phase 5 — Unify execution entry points, opt-in Dask via config presence** (priority: medium)
-  Direction from the author (2026-07-26):
-  - One simple, working example runner script (in the spirit of the old,
-    broken top-level `main.py` that Phase 0 deleted) showing how to use
-    `pyfracval` as a library — construct a `RunConfig`, call
-    `main_runner.run_simulation()`, done. This is the "easy" on-ramp for
-    someone writing their own custom runner.
-  - More complex use cases (sweeps, batches, distributed) stay in
-    `benchmarks/`/`batch_runner.py` — not everyone needs those, so they
-    shouldn't be in the way of the simple path.
-  - Keep Dask (worth having for this kind of embarrassingly-parallel
-    workload) but make it **opt-in via config presence**: only engage Dask
-    if the config actually has a `[dask]` table, rather than an
-    always-present `enable: bool` flag. Note `SweepConfig` already has a
-    `dask: DaskSettings` field with `DaskSettings.enable: bool = False` —
-    decide whether to keep that pattern (works, but "enable" flag can be
-    left stale/true by accident) or switch to `dask: DaskSettings | None
-    = None` (presence-implies-intent, closer to what was asked for) across
-    the config models that matter here.
-  - Rationalize `main_runner.py` (the actual shared core — already used by
-    CLI, batch_runner, and most benchmarks) / `batch_runner.py` /
-    `dask_runner.py` into one clear story once the above is decided.
-  See `PLAN.md` §9, §10 for the original analysis this refines.
+- [ ] **Phase 5 follow-up — consolidate `dask_runner.py`, decide `SweepConfig`'s dask pattern** (priority: low)
+  The CLI-facing piece landed (see Done, below). Left for a smaller
+  follow-up: `dask_runner.py` (worker deployment/wheel-install plumbing)
+  and `batch_runner.py` (sequential/parallel dispatch) are still separate
+  modules with some overlapping responsibility with `benchmarks/`'s own
+  Dask setup code. `SweepConfig.dask` still uses the older
+  `DaskSettings.enable: bool` pattern (untouched by this pass) rather than
+  the new presence-based `RunConfig.dask: DaskSettings | None` — worth
+  deciding whether to unify these or leave `SweepConfig` as its own
+  established convention (it's `benchmarks/`-only, different audience than
+  the CLI). See `PLAN.md` §9, §10 for the original analysis.
 
 - [ ] **Fix or document the `ext_case=1` / `random_point_sc` bug** (priority: low)
   Discovered during the Phase 4 utils.py migration: `cca/sticking.py`'s
@@ -87,6 +75,32 @@ git history has the detail).
 
 ## Done (recent)
 
+- [x] **Phase 5 — Unified execution entry points, opt-in Dask via config
+      presence.** Author direction (2026-07-26): a simple example runner,
+      Dask kept but opt-in by presence, `main_runner.run_simulation()`
+      confirmed as the one shared core (CLI/`batch_runner`/most
+      `benchmarks/` already all called it, so no core duplication to
+      unify there).
+      - Added `examples/generate_aggregate.py` — the minimal on-ramp for
+        writing a custom runner (construct a `RunConfig`, call
+        `run_simulation()`, done). Actually run end-to-end, not just
+        written.
+      - `RunConfig.dask: DaskSettings | None = None` — presence-based, no
+        separate `enable` flag to also remember (per your call: "presence
+        alone is enough"). Only `RunConfig`; `SweepConfig`'s existing
+        `enable`-flag pattern is untouched (separate, `benchmarks/`-only
+        config family — left as a decision for the follow-up item above).
+      - CLI's generation loop now branches: `[dask]` table present →
+        `batch_runner.generate_aggregates_parallel` (no outer
+        `--max-attempts` retry — each Dask task calls `run_simulation`
+        once, which already retries internally up to 20x; per your call
+        to keep Dask mode simple rather than add resubmission bookkeeping
+        for a re-run of failed tasks); absent → the existing sequential
+        loop, byte-for-byte behavior unchanged.
+      - Verified: full test suite, a real sequential CLI run (unchanged
+        output), a real Dask-config CLI run (3/3 aggregates via a local
+        2-worker cluster), the example script actually executed
+        end-to-end, and a clean docs build.
 - [x] **Phase 4 — Migrated internal `utils.py` shim callers to the real
       domain modules.** `cca/pairing.py`, `cca/fallbacks.py`,
       `cca/sticking.py`, `pca_agg.py`, `densify.py`, `main_runner.py` now

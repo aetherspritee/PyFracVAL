@@ -328,6 +328,12 @@ class RunConfig(BaseModel):
     typed take precedence over the file; the file takes precedence over
     these built-in defaults.
 
+    Dask is opt-in by *presence*: generation runs sequentially unless the
+    config file has a ``[dask]`` table, in which case it dispatches through
+    a Dask cluster instead (local by default, or a remote scheduler if
+    ``scheduler_address`` is set). There's no separate "enable" flag to
+    also remember to flip - writing the table is the switch.
+
     Example TOML::
 
         num_aggregates = 5
@@ -342,6 +348,11 @@ class RunConfig(BaseModel):
         [algorithm]
         cca_retry_rotation_mode = "alternate"
         densify_enabled = true
+
+        # Optional - omit this table entirely to run sequentially.
+        [dask]
+        workers = 4
+        # scheduler_address = "tcp://host:8786"  # omit to use a local cluster
     """
 
     simulation: OrchestratorSimulationConfig = Field(
@@ -354,6 +365,7 @@ class RunConfig(BaseModel):
     output_dir: str = "RESULTS"
     max_attempts: int = 5
     plot: bool = False
+    dask: DaskSettings | None = None
 
     @classmethod
     def from_file(cls, path: str | Path) -> "RunConfig":
