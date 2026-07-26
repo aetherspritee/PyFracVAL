@@ -13,8 +13,11 @@ from typing import Tuple
 import numpy as np
 
 from .. import cca_kernels, fractal, overlap
-from ..config import OrchestratorAlgorithmConfig
 from ..experimental.fft_docking import fft_dock_sticking
+from ..experimental.pair_prefilters import (
+    bounding_volume_precheck,
+    surface_accessible_mask,
+)
 from ..experimental.soft_relaxation import soft_sticking
 
 logger = logging.getLogger(__name__)
@@ -24,34 +27,6 @@ _GOLDEN_RATIO = (1.0 + math.sqrt(5.0)) / 2.0
 
 class _FallbacksMixin:
     """Gamma expansion, pair prechecks, and sticking fallback methods."""
-
-    @staticmethod
-    def _bounding_volume_precheck(
-        gamma_pc: float,
-        r_max1: float,
-        r_max2: float,
-        gamma_real: bool,
-        algorithm_config: OrchestratorAlgorithmConfig | None = None,
-    ) -> bool:
-        """Check if two clusters can physically stick at distance gamma_pc."""
-        if not gamma_real or gamma_pc <= 0.0:
-            return False
-        algorithm_config = algorithm_config or OrchestratorAlgorithmConfig()
-        factor = float(algorithm_config.cca_bv_deep_penetration_factor)
-        rmax_diff = abs(r_max1 - r_max2)
-        if gamma_pc < rmax_diff * factor:
-            logger.debug(
-                f"BV pre-check reject: gamma={gamma_pc:.3f} < "
-                f"|r_max1-r_max2|*{factor}={rmax_diff * factor:.3f}"
-            )
-            return False
-        if gamma_pc > r_max1 + r_max2:
-            logger.debug(
-                f"BV pre-check reject: gamma={gamma_pc:.3f} > "
-                f"r_max1+r_max2={r_max1 + r_max2:.3f}"
-            )
-            return False
-        return True
 
     def _perform_cca_sticking_with_expansion(
         self,
@@ -102,7 +77,7 @@ class _FallbacksMixin:
             props1_bv = (m1, rg1, cm1, r_max1, radii1_in)
             props2_bv = (m2, rg2, cm2, r_max2, radii2_in)
             gamma_real_bv, gamma_pc_bv = self._calculate_cca_gamma(props1_bv, props2_bv)
-            if not self._bounding_volume_precheck(
+            if not bounding_volume_precheck(
                 gamma_pc_bv,
                 r_max1,
                 r_max2,
@@ -329,14 +304,14 @@ class _FallbacksMixin:
         # Apply SSA filter if enabled
         pair_filter = str(self.algorithm_config.cca_pair_feasibility_filter).lower()
         if pair_filter == "ssa":
-            ssa_mask_1 = self._surface_accessible_mask(
+            ssa_mask_1 = surface_accessible_mask(
                 coords1_in,
                 radii1_in,
                 cm1,
                 r_max1,
                 algorithm_config=self.algorithm_config,
             )
-            ssa_mask_2 = self._surface_accessible_mask(
+            ssa_mask_2 = surface_accessible_mask(
                 coords2_in,
                 radii2_in,
                 cm2,

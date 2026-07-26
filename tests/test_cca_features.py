@@ -5,6 +5,10 @@ import pytest
 
 from pyfracval.cca_agg import CCAggregator
 from pyfracval.config import OrchestratorAlgorithmConfig
+from pyfracval.experimental.pair_prefilters import (
+    bounding_volume_precheck,
+    surface_accessible_mask,
+)
 
 
 def _make_aggregator(n=64, df=1.8, kf=1.3, seed=42):
@@ -28,50 +32,26 @@ class TestBoundingVolumePrecheck:
     """Tests for _bounding_volume_precheck static method."""
 
     def test_reject_when_gamma_below_rmax_diff_times_factor(self):
-        assert (
-            CCAggregator._bounding_volume_precheck(5.0, 100.0, 10.0, gamma_real=True)
-            is False
-        )
+        assert bounding_volume_precheck(5.0, 100.0, 10.0, gamma_real=True) is False
 
     def test_accept_when_gamma_above_rmax_diff_times_factor(self):
-        assert (
-            CCAggregator._bounding_volume_precheck(80.0, 100.0, 10.0, gamma_real=True)
-            is True
-        )
+        assert bounding_volume_precheck(80.0, 100.0, 10.0, gamma_real=True) is True
 
     def test_reject_when_gamma_above_sum_of_rmax(self):
-        assert (
-            CCAggregator._bounding_volume_precheck(200.0, 100.0, 10.0, gamma_real=True)
-            is False
-        )
+        assert bounding_volume_precheck(200.0, 100.0, 10.0, gamma_real=True) is False
 
     def test_accept_when_gamma_between_bounds(self):
-        assert (
-            CCAggregator._bounding_volume_precheck(40.0, 50.0, 30.0, gamma_real=True)
-            is True
-        )
+        assert bounding_volume_precheck(40.0, 50.0, 30.0, gamma_real=True) is True
 
     def test_reject_when_gamma_real_false(self):
-        assert (
-            CCAggregator._bounding_volume_precheck(50.0, 100.0, 30.0, gamma_real=False)
-            is False
-        )
+        assert bounding_volume_precheck(50.0, 100.0, 30.0, gamma_real=False) is False
 
     def test_reject_when_gamma_zero_or_negative(self):
-        assert (
-            CCAggregator._bounding_volume_precheck(0.0, 100.0, 30.0, gamma_real=True)
-            is False
-        )
-        assert (
-            CCAggregator._bounding_volume_precheck(-5.0, 100.0, 30.0, gamma_real=True)
-            is False
-        )
+        assert bounding_volume_precheck(0.0, 100.0, 30.0, gamma_real=True) is False
+        assert bounding_volume_precheck(-5.0, 100.0, 30.0, gamma_real=True) is False
 
     def test_equal_rmax_values(self):
-        assert (
-            CCAggregator._bounding_volume_precheck(10.0, 50.0, 50.0, gamma_real=True)
-            is True
-        )
+        assert bounding_volume_precheck(10.0, 50.0, 50.0, gamma_real=True) is True
 
 
 class TestSurfaceAccessibleMask:
@@ -82,7 +62,7 @@ class TestSurfaceAccessibleMask:
         radii = np.array([1.0])
         cm = np.array([0.0, 0.0, 0.0])
         r_max = 1.0
-        mask = CCAggregator._surface_accessible_mask(coords, radii, cm, r_max)
+        mask = surface_accessible_mask(coords, radii, cm, r_max)
         assert mask.shape == (1,)
         assert mask[0] is np.True_
 
@@ -91,9 +71,7 @@ class TestSurfaceAccessibleMask:
         radii = np.ones(5)
         cm = np.array([0.0, 0.0, 0.0])
         r_max = 5.0
-        mask = CCAggregator._surface_accessible_mask(
-            coords, radii, cm, r_max, min_exposure=0.0
-        )
+        mask = surface_accessible_mask(coords, radii, cm, r_max, min_exposure=0.0)
         assert np.all(mask)
 
     def test_none_accessible_with_high_threshold(self):
@@ -101,9 +79,7 @@ class TestSurfaceAccessibleMask:
         radii = np.ones(3)
         cm = np.mean(coords, axis=0)
         r_max = 1.0
-        mask = CCAggregator._surface_accessible_mask(
-            coords, radii, cm, r_max, min_exposure=0.99
-        )
+        mask = surface_accessible_mask(coords, radii, cm, r_max, min_exposure=0.99)
         assert np.all(~mask)
 
     def test_distant_particles_accessible(self):
@@ -111,9 +87,7 @@ class TestSurfaceAccessibleMask:
         radii = np.ones(2)
         cm = np.array([50.0, 0, 0])
         r_max = 50.0
-        mask = CCAggregator._surface_accessible_mask(
-            coords, radii, cm, r_max, min_exposure=0.3
-        )
+        mask = surface_accessible_mask(coords, radii, cm, r_max, min_exposure=0.3)
         assert mask.shape == (2,)
         assert mask[0] and mask[1]
 
@@ -124,10 +98,10 @@ class TestSurfaceAccessibleMask:
         r_max = 5.0
         algorithm_config = OrchestratorAlgorithmConfig(cca_ssa_min_exposure=0.42)
 
-        mask_via_config = CCAggregator._surface_accessible_mask(
+        mask_via_config = surface_accessible_mask(
             coords, radii, cm, r_max, algorithm_config=algorithm_config
         )
-        mask_via_explicit = CCAggregator._surface_accessible_mask(
+        mask_via_explicit = surface_accessible_mask(
             coords, radii, cm, r_max, min_exposure=0.42
         )
         assert mask_via_config.shape == (2,)

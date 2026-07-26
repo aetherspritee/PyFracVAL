@@ -11,8 +11,6 @@ from typing import Set, Tuple
 
 import numpy as np
 
-from ..config import OrchestratorAlgorithmConfig
-
 logger = logging.getLogger(__name__)
 
 _GOLDEN_RATIO = (1.0 + math.sqrt(5.0)) / 2.0
@@ -188,31 +186,3 @@ class _CandidatesMixin:
             self._cand_score_success_high += 1
         if score < 0.40:
             self._cand_score_success_low += 1
-
-    @staticmethod
-    def _surface_accessible_mask(
-        coords: np.ndarray,
-        radii: np.ndarray,
-        cm: np.ndarray,
-        r_max: float,
-        min_exposure: float | None = None,
-        algorithm_config: OrchestratorAlgorithmConfig | None = None,
-    ) -> np.ndarray:
-        """Compute surface accessibility mask for each monomer."""
-        n = coords.shape[0]
-        if n <= 1:
-            return np.ones(n, dtype=bool)
-        if min_exposure is None:
-            algorithm_config = algorithm_config or OrchestratorAlgorithmConfig()
-            min_exposure = float(algorithm_config.cca_ssa_min_exposure)
-        dist_to_cm = np.linalg.norm(coords - cm[np.newaxis, :], axis=1)
-        radial_fraction = dist_to_cm / max(r_max, 1.0e-12)
-        mean_r = float(np.mean(radii))
-        contact_dist_sq = (2.5 * mean_r) ** 2
-        diffs = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-        d_sq = np.sum(diffs * diffs, axis=2)
-        neighbor_count = np.sum((d_sq < contact_dist_sq) & (d_sq > 0), axis=1)
-        max_neighbors = max(n - 1, 1)
-        isolation_fraction = 1.0 - neighbor_count / max_neighbors
-        exposure = 0.5 * radial_fraction + 0.5 * isolation_fraction
-        return exposure >= min_exposure
