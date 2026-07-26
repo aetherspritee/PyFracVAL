@@ -8,6 +8,10 @@ rodrigues_rotation
     Rotate vectors around an axis using Rodrigues' formula.
 two_sphere_intersection
     Compute the intersection circle of two overlapping spheres.
+spherical_cap_angle
+    Critical polar angle of a spherical cap (``ext_case=1`` support).
+random_point_sc
+    Sample a random point on a spherical cap (``ext_case=1`` support).
 
 Constants
 ---------
@@ -307,3 +311,144 @@ def two_sphere_intersection(
         np.array([jx, jy, jz]),
         True,
     )
+
+
+def spherical_cap_angle(sphere_1: np.ndarray, sphere_2: np.ndarray) -> float:
+    """Critical polar angle of the spherical cap of ``sphere_1`` that lies
+    within ``sphere_2`` (Fortran ``Spherical_cap_angle``, see
+    ``docs/FracVAL/CCA_module.f90``).
+
+    Parameters
+    ----------
+    sphere_1, sphere_2 : np.ndarray
+        [x, y, z, r] for each sphere.
+
+    Returns
+    -------
+    float
+        The cap half-angle in radians, measured from the axis connecting
+        the two sphere centers.
+    """
+    x1, y1, z1, r1 = sphere_1
+    x2, y2, z2, r2 = sphere_2
+
+    a = 2.0 * (x2 - x1)
+    b = 2.0 * (y2 - y1)
+    c = 2.0 * (z2 - z1)
+    d = x1**2 - x2**2 + y1**2 - y2**2 + z1**2 - z2**2 - r1**2 + r2**2
+    t = (x1 * a + y1 * b + z1 * c + d) / (a * (x1 - x2) + b * (y1 - y2) + c * (z1 - z2))
+
+    distance = float(np.linalg.norm(sphere_2[:3] - sphere_1[:3]))
+    alpha_0 = np.arccos(
+        np.clip((r1**2 + distance**2 - r2**2) / (2.0 * r1 * distance), -1.0, 1.0)
+    )
+    r0 = r1 * np.sin(alpha_0)
+
+    lc_cm1 = abs(t) * distance
+    lp_cm1 = np.sqrt(lc_cm1**2 + r0**2)
+    if t < 0.0:
+        lp_cm1 = -lp_cm1
+
+    return float(np.arccos(np.clip(lc_cm1 / lp_cm1, -1.0, 1.0)))
+
+
+def random_point_sc(
+    case: int,
+    spheres_1_ext: np.ndarray,
+    spheres_2_ext: np.ndarray,
+    rng: np.random.Generator | None = None,
+) -> Tuple[float, float, float, bool]:
+    """Sample a random point on the appropriate spherical cap for CCA's
+    ``ext_case=1`` contact-point search (Fortran ``Random_point_SC``, see
+    ``docs/FracVAL/CCA_module.f90``).
+
+    Used when the "shell" spheres (defined by [Dmin, Dmax] distance from
+    each cluster's center of mass) overlap in a way that a single
+    Dmax/Dmax intersection circle (the ``ext_case=0`` path used by
+    :func:`two_sphere_intersection`) doesn't capture - see the ``case``
+    1/2/3 branch in ``cca/sticking.py::_cca_sticking_v1``.
+
+    Parameters
+    ----------
+    case : int
+        Which shell-overlap case applies (1, 2, or 3 - see caller).
+    spheres_1_ext, spheres_2_ext : np.ndarray
+        [x, y, z, d_min, d_max] for each cluster's shell.
+    rng : np.random.Generator, optional
+        Random generator to use; a fresh default one if not given.
+
+    Returns
+    -------
+    tuple[float, float, float, bool]
+        (x, y, z, valid) - a random point on the selected sphere's surface,
+        within the appropriate cap angle. ``valid`` is False for an
+        unrecognized case or a degenerate (coincident) center pair.
+    """
+    _rng = rng if rng is not None else np.random.default_rng()
+    invalid_ret = (0.0, 0.0, 0.0, False)
+
+    center1 = spheres_1_ext[:3]
+    r1_min, r1_max = float(spheres_1_ext[3]), float(spheres_1_ext[4])
+    center2 = spheres_2_ext[:3]
+    r2_min, r2_max = float(spheres_2_ext[3]), float(spheres_2_ext[4])
+
+    if float(np.linalg.norm(center2 - center1)) < FLOATING_POINT_ERROR:
+        return invalid_ret
+
+    if case == 1:
+        sphere_1 = np.array([*center1, r1_max])
+        phi_cr_max = spherical_cap_angle(sphere_1, np.array([*center2, r2_max]))
+        norm12 = float(np.linalg.norm(center1 - center2))
+        if (r1_max + r2_min) > norm12:
+            phi_cr_min = spherical_cap_angle(sphere_1, np.array([*center2, r2_min]))
+        else:
+            phi_cr_min = 0.0
+        r1 = r1_max
+    elif case == 2:
+        sphere_1 = np.array([*center1, r1_max])
+        phi_cr_max = spherical_cap_angle(sphere_1, np.array([*center2, r2_min]))
+        phi_cr_min = 0.0
+        r1 = r1_max
+    elif case == 3:
+        sphere_1 = np.array([*center1, r1_min])
+        phi_cr_max = spherical_cap_angle(sphere_1, np.array([*center2, r2_max]))
+        phi_cr_min = 0.0
+        r1 = r1_min
+    else:
+        return invalid_ret
+
+    theta_r = 2.0 * np.pi * _rng.random()
+    phi_r = phi_cr_min + (phi_cr_max - phi_cr_min) * _rng.random()
+
+    x1, y1, z1 = center1
+    x = x1 + r1 * np.cos(theta_r) * np.sin(phi_r)
+    y = y1 + r1 * np.sin(theta_r) * np.sin(phi_r)
+    z = z1 + r1 * np.cos(phi_r)
+
+    r12 = center2 - center1
+    norm_r12 = float(np.linalg.norm(r12))
+    if norm_r12 < FLOATING_POINT_ERROR:
+        return invalid_ret
+    r12 = r12 / norm_r12
+
+    v1 = np.array([0.0, 0.0, 1.0])
+    point_rel = np.array([x - x1, y - y1, z - z1])
+    cross_v1_r12 = np.cross(v1, r12)
+    cross_norm = float(np.linalg.norm(cross_v1_r12))
+    dot_v1_r12 = float(np.dot(v1, r12))
+
+    if cross_norm < FLOATING_POINT_ERROR:
+        # v1 and r12 are (anti-)parallel - Rodrigues' formula is
+        # ill-defined here, handle directly (mirrors the collinear-case
+        # handling in cca/sticking.py::_cca_sticking_v1).
+        if dot_v1_r12 > 0.0:
+            rotated = point_rel
+        else:
+            rotated = rodrigues_rotation(point_rel, np.array([1.0, 0.0, 0.0]), np.pi)
+    else:
+        axis = cross_v1_r12 / cross_norm
+        angle = float(np.arccos(np.clip(dot_v1_r12, -1.0, 1.0)))
+        rotated = rodrigues_rotation(point_rel, axis, angle)
+
+    x_final, y_final, z_final = center1 + rotated
+    return float(x_final), float(y_final), float(z_final), True

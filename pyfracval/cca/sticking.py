@@ -11,7 +11,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .. import cca_kernels, geometry, overlap, utils
+from .. import cca_kernels, geometry, overlap
 
 logger = logging.getLogger(__name__)
 
@@ -115,8 +115,8 @@ class _StickingMixin:
                     case = 3
 
             if case > 0:
-                x_cp, y_cp, z_cp, point_valid = utils.random_point_sc(
-                    case, spheres_1_ext, spheres_2_ext
+                x_cp, y_cp, z_cp, point_valid = geometry.random_point_sc(
+                    case, spheres_1_ext, spheres_2_ext, rng=self._rng
                 )
                 if point_valid:
                     contact_point = np.array([x_cp, y_cp, z_cp])

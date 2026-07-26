@@ -37,7 +37,9 @@ from .geometry import (
     FLOATING_POINT_ERROR,
     _rodrigues_rotation_2d,
     _two_sphere_intersection_kernel,
+    random_point_sc,
     rodrigues_rotation,
+    spherical_cap_angle,
     two_sphere_intersection,
 )
 from .overlap import (
@@ -165,6 +167,8 @@ __all__ = [
     "_rodrigues_rotation_2d",
     "two_sphere_intersection",
     "_two_sphere_intersection_kernel",
+    "spherical_cap_angle",
+    "random_point_sc",
     "calculate_mass",
     "calculate_rg",
     "gamma_calculation",
