@@ -7,3 +7,7 @@ inputs:
   nixpkgs:
     url: github:nixos/nixpkgs/nixpkgs-unstable
     # url: github:cachix/devenv-nixpkgs/rolling
+
+# Required for pkgs.cudaPackages_12.cudatoolkit (CUDA EULA is unfree) - needed
+# for numba's CUDA target and JAX's cuda12 plugin (see devenv.nix).
+allow_unfree: true

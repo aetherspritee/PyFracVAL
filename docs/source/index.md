@@ -11,5 +11,6 @@ PyFracVAL generates 3D fractal-like aggregates of mono- and polydisperse primary
 installation
 usage
 experiments
+gpu_acceleration
 references
 ```

@@ -38,6 +38,12 @@ docs = [
   "sphinxcontrib-napoleon>=0.7",
 ]
 test = ["py-spy>=0.4.0", "pytest>=8.3.3"]
+# Not auto-synced (see devenv.nix) - pulls ~1.5GB of CUDA wheels
+# (cudnn/nccl/nvshmem). Install explicitly for the JAX-vs-numba benchmark:
+#   uv run --group jax_bench python benchmarks/jax_vs_numba_benchmark.py
+# (use `uv run --group`, not `uv sync --group` - the latter replaces the
+# synced group set rather than extending it)
+jax_bench = ["jax[cuda12]>=0.4.34"]
 
 [project.scripts]
 pyfracval = "pyfracval.cli:cli"
