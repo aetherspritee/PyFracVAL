@@ -1,7 +1,9 @@
 import os
 import sys
+import tomllib
+from pathlib import Path
 
-from pyfracval import __version__, _authors
+from pyfracval import __version__
 
 # Adjust the path to go up two levels from docs/source/ to the project root
 sys.path.insert(0, os.path.abspath("../../"))
@@ -14,6 +16,10 @@ sys.path.insert(0, os.path.abspath("../../"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+with open(Path(__file__).parents[2] / "pyproject.toml", "rb") as _fh:
+    _authors = ",".join(
+        author["name"] for author in tomllib.load(_fh)["project"]["authors"]
+    )
 
 project = name = "PyFracVAL"
 author = _authors
@@ -46,6 +52,11 @@ myst_enable_extensions = [
     "linkify",  # Auto-detect URLs and make them links (use with caution)
     "tasklist",  # Enable checklists - [ ] / - [x]
 ]
+
+
+# Reduce noisy unresolved cross-reference warnings from AutoAPI-generated pages.
+# Keep strict docs checks useful without chasing low-value type/xref noise.
+suppress_warnings = ["ref.python", "ref.class", "ref.mod", "ref.func"]
 
 templates_path = ["_templates"]
 exclude_patterns = []

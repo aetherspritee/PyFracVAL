@@ -2,6 +2,9 @@
 
 JIT-compiled helper functions used during CCA sticking and retry operations.
 
+These kernels accelerate retry and overlap stages in the CCA procedure from
+:cite:p:`Moran2019FracVAL`.
+
 Constants
 ---------
 _GOLDEN_RATIO

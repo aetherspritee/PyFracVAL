@@ -1,6 +1,6 @@
 # Usage Guide
 
-This guide demonstrates the basic ways to use `pyfracval` to generate fractal aggregates.
+This guide demonstrates the basic ways to use `pyfracval` to generate fractal aggregates using the PCA→CCA workflow described by {cite:p}`Moran2019FracVAL`, with morphology context from {cite:p}`Filippov2000Tunable`.
 
 ## Command-Line Interface (CLI)
 

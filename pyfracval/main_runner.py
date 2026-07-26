@@ -15,6 +15,92 @@ from .schemas import AggregateProperties, GenerationInfo, Metadata, SimulationPa
 
 logger = logging.getLogger(__name__)
 
+# Mapping from sim_config_dict keys to legacy config module attribute names.
+# Used so sweep configs can set e.g. "cca_retry_rotation_mode" = "alternate".
+_ALGORITHM_KEY_MAP: dict[str, str] = {
+    # --- retry / rotation -------------------------------------------------
+    "cca_retry_rotation_mode": "CCA_RETRY_ROTATION_MODE",
+    "cca_retry_escalate_after": "CCA_RETRY_ESCALATE_AFTER",
+    "cca_dual_jitter_interval": "CCA_DUAL_JITTER_INTERVAL",
+    "cca_dual_jitter_deg": "CCA_DUAL_JITTER_DEG",
+    "cca_coarse_sweep_steps": "CCA_COARSE_SWEEP_STEPS",
+    "cca_coarse_spin_anchor_steps": "CCA_COARSE_SPIN_ANCHOR_STEPS",
+    "cca_coarse_spin_moving_steps": "CCA_COARSE_SPIN_MOVING_STEPS",
+    "cca_coarse_fine_coarse_fraction": "CCA_COARSE_FINE_COARSE_FRACTION",
+    "cca_coarse_fine_spin_deg": "CCA_COARSE_FINE_SPIN_DEG",
+    # --- candidate / scoring ------------------------------------------------
+    "cca_candidate_policy": "CCA_CANDIDATE_POLICY",
+    "cca_score_topk_per_class": "CCA_SCORE_TOPK_PER_CLASS",
+    # --- sticking method ----------------------------------------------------
+    "cca_sticking_method": "CCA_STICKING_METHOD",
+    # --- gamma expansion ----------------------------------------------------
+    "cca_gamma_expansion_enabled": "CCA_GAMMA_EXPANSION_ENABLED",
+    "cca_gamma_expansion_step": "CCA_GAMMA_EXPANSION_STEP",
+    "cca_gamma_expansion_max_factor": "CCA_GAMMA_EXPANSION_MAX_FACTOR",
+    "cca_gamma_expansion_mass_exponent": "CCA_GAMMA_EXPANSION_MASS_EXPONENT",
+    "cca_gamma_expansion_max_attempts": "CCA_GAMMA_EXPANSION_MAX_ATTEMPTS",
+    # --- pair feasibility filter --------------------------------------------
+    "cca_pair_feasibility_filter": "CCA_PAIR_FEASIBILITY_FILTER",
+    "cca_bv_deep_penetration_factor": "CCA_BV_DEEP_PENETRATION_FACTOR",
+    "cca_ssa_min_exposure": "CCA_SSA_MIN_EXPOSURE",
+    # --- FFT docking --------------------------------------------------------
+    "cca_fft_grid_size": "CCA_FFT_GRID_SIZE",
+    "cca_fft_num_rotations": "CCA_FFT_NUM_ROTATIONS",
+    "cca_fft_top_k_peaks": "CCA_FFT_TOP_K_PEAKS",
+    "cca_fft_gamma_tolerance": "CCA_FFT_GAMMA_TOLERANCE",
+    "cca_fft_min_peak_distance": "CCA_FFT_MIN_PEAK_DISTANCE",
+    # --- soft relaxation ----------------------------------------------------
+    "cca_soft_relaxation_enabled": "CCA_SOFT_RELAXATION_ENABLED",
+    "cca_soft_relaxation_fallback_only": "CCA_SOFT_RELAXATION_FALLBACK_ONLY",
+    "cca_soft_relaxation_k_repulsion": "CCA_SOFT_RELAXATION_K_REPULSION",
+    "cca_soft_relaxation_k_gamma": "CCA_SOFT_RELAXATION_K_GAMMA",
+    "cca_soft_relaxation_gamma_tolerance": "CCA_SOFT_RELAXATION_GAMMA_TOLERANCE",
+    "cca_soft_relaxation_max_iters": "CCA_SOFT_RELAXATION_MAX_ITERS",
+    "cca_soft_relaxation_learning_rate": "CCA_SOFT_RELAXATION_LEARNING_RATE",
+    # --- densify ------------------------------------------------------------
+    "densify_enabled": "DENSIFY_ENABLED",
+    "densify_source_df": "DENSIFY_SOURCE_DF",
+    "densify_source_kf": "DENSIFY_SOURCE_KF",
+    "densify_max_push_iters": "DENSIFY_MAX_PUSH_ITERS",
+    "densify_max_densify_iters": "DENSIFY_MAX_DENSIFY_ITERS",
+    "densify_push_fraction": "DENSIFY_PUSH_FRACTION",
+    "densify_push_patience": "DENSIFY_PUSH_PATIENCE",
+    "densify_rtol": "DENSIFY_RTOL",
+    "densify_method": "DENSIFY_METHOD",
+    "densify_rtol_multiplier": "DENSIFY_RTOL_MULTIPLIER",
+    # --- profiling ----------------------------------------------------------
+    "profile_cca_retry_modes": "PROFILE_CCA_RETRY_MODES",
+    # --- incremental overlap ------------------------------------------------
+    "use_cca_incremental_overlap": "USE_CCA_INCREMENTAL_OVERLAP",
+    "cca_incremental_full_sync_period": "CCA_INCREMENTAL_FULL_SYNC_PERIOD",
+}
+
+
+def _apply_algorithm_overrides(sim_config_dict):
+    """Set algorithm keys from *sim_config_dict* on the global ``config`` module.
+
+    Returns a list of ``(attr, old_value)`` tuples that can be passed to
+    :func:`_restore_algorithm_overrides`.
+    """
+    previous: list[tuple[str, object]] = []
+    for key, attr in _ALGORITHM_KEY_MAP.items():
+        if key in sim_config_dict:
+            previous.append((attr, getattr(config, attr, None)))
+            setattr(config, attr, sim_config_dict[key])
+    return previous
+
+
+def _restore_algorithm_overrides(previous):
+    """Restore global config attributes to their previous values."""
+    for attr, old_val in previous:
+        if old_val is None:
+            try:
+                delattr(config, attr)
+            except (AttributeError, TypeError):
+                pass
+        else:
+            setattr(config, attr, old_val)
+
 
 def run_simulation(
     iteration: int,
@@ -80,6 +166,29 @@ def run_simulation(
         logger.error(f"Invalid simulation parameters provided: {e}", exc_info=True)
         return False, None, None
 
+    _previous_config = _apply_algorithm_overrides(sim_config_dict)
+    try:
+        return _run_simulation_core(
+            iteration,
+            sim_config_dict,
+            output_base_dir,
+            seed,
+            max_runtime_seconds,
+            sim_params,
+        )
+    finally:
+        _restore_algorithm_overrides(_previous_config)
+
+
+def _run_simulation_core(
+    iteration,
+    sim_config_dict,
+    output_base_dir,
+    seed,
+    max_runtime_seconds,
+    sim_params,
+):
+    """Core simulation logic with algorithm config already applied."""
     start_time = time.time()
 
     if sim_params.seed is not None:

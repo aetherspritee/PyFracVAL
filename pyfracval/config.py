@@ -79,6 +79,16 @@ class SweepConfig(BaseModel):
     save_raw: bool = False
     output_dir: str = "benchmark_results"
 
+    # --- Algorithm defaults (optional) ------------------------------------
+    algorithm: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Algorithm-level overrides passed through to each simulation trial. "
+            "Keys use the OrchestratorAlgorithmConfig field names (lowercase, "
+            "e.g. 'densify_enabled', 'cca_retry_rotation_mode')."
+        ),
+    )
+
     # --- Sub-models ---------------------------------------------------------
     dask: DaskSettings = Field(default_factory=DaskSettings)
     simulation: SimulationDefaults = Field(default_factory=SimulationDefaults)
@@ -524,7 +534,7 @@ _LEGACY_DEPRECATED = {
     "CCA_GAMMA_EXPANSION_ENABLED",
     "CCA_GAMMA_EXPANSION_STEP",
     "CCA_GAMMA_EXPANSION_MAX_FACTOR",
-    "CAA_GAMMA_EXPANSION_MASS_EXPONENT",
+    "CCA_GAMMA_EXPANSION_MASS_EXPONENT",
     "CCA_GAMMA_EXPANSION_MAX_ATTEMPTS",
     "CCA_PAIR_FEASIBILITY_FILTER",
     "CCA_BV_DEEP_PENETRATION_FACTOR",

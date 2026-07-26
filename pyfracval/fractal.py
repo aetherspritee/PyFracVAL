@@ -51,7 +51,8 @@ def calculate_rg(radii: np.ndarray, npp: int, df: float, kf: float) -> float:
 
     Implements the formula Rg = a * (N / kf)^(1/Df), where 'a' is the
     geometric mean radius calculated from the input `radii` array.
-    See :cite:p:`Moran2019FracVAL`.
+    See :cite:p:`Moran2019FracVAL` and morphology context
+    :cite:p:`Filippov2000Tunable`.
 
     Parameters
     ----------
@@ -106,6 +107,9 @@ def gamma_calculation(
 ) -> tuple[bool, float]:
     """
     Calculates Gamma_pc for adding the next monomer (aggregate 2).
+
+    The Gamma_pc relation follows the FracVAL CCA/PCA formulation
+    :cite:p:`Moran2019FracVAL`.
 
     Parameters
     ----------
@@ -413,7 +417,7 @@ def validate_fractal_structure(
         theoretical_rg : float — Rg from scaling law Rg = a*(N/kf)^(1/Df)
         empirical_rg : float — Rg measured from coordinates
         rg_error_pct : float — (empirical - theoretical)/theoretical * 100
-        rg_ok : bool — |rg_error_pct| < rg_rtol * 100
+        rg_ok : bool — ``rg_error_pct`` < rg_rtol * 100
         empirical_Df : float — Df estimated from mass-radius scaling
         target_Df : float — target fractal dimension
         df_error : float — empirical_Df - target_Df

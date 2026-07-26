@@ -2,6 +2,9 @@
 
 JIT-compiled batch functions for PCA position calculation and overlap checking.
 
+These kernels support the PCA stage in the FracVAL-style aggregation pipeline
+:cite:p:`Moran2019FracVAL`.
+
 Functions
 ---------
 batch_calculate_positions_pca

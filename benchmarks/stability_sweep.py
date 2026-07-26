@@ -310,6 +310,10 @@ def _run_sweep_sequential(
                         "ext_case": sim.ext_case,
                         "description": label,
                     }
+                    # inject algorithm-level overrides if present
+                    if getattr(cfg, "algorithm", None):
+                        for ak, av in cfg.algorithm.items():
+                            params[ak] = av
 
                     case_results = []
                     for trial in range(cfg.trials):
@@ -385,6 +389,10 @@ def _run_sweep_dask(
                             "ext_case": sim.ext_case,
                             "description": label,
                         }
+                        # inject algorithm-level overrides if present
+                        if getattr(cfg, "algorithm", None):
+                            for ak, av in cfg.algorithm.items():
+                                params[ak] = av
                         combo_key = (n_val, rp_gstd, df_val, kf_val)
                         combo_params[combo_key] = params
 

@@ -51,7 +51,7 @@ def plot_particles(positions: np.ndarray, radii: np.ndarray) -> pv.Plotter:
         roughness=0.5,
     )
     pl.view_isometric()
-    pl.enable_anti_aliasing("fxaa")  # Nicer visuals
+    pl.enable_anti_aliasing("ssaa")  # Nicer visuals
     # pl.link_views() # Usually not needed for single view
     pl.background_color = "white"  # Or black, grey etc.
 

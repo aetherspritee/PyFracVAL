@@ -221,7 +221,18 @@ def _run_environment_benchmark(
 
         task_results: list[dict[str, Any]] = []
         for fut in as_completed(futures):
-            task_results.append(fut.result())
+            try:
+                task_results.append(fut.result())
+            except Exception as exc:
+                task_results.append(
+                    {
+                        "success": False,
+                        "wall_s": float(trial_timeout or 0.0),
+                        "cpu_s": 0.0,
+                        "worker": "error",
+                        "error": repr(exc),
+                    }
+                )
 
         bench_end = time.perf_counter()
         return calibration, worker_perf_index, bench_start, task_results, bench_end
@@ -467,31 +478,17 @@ def _run_one_case(case: RunCase) -> Path:
 
     local_result: dict[str, Any]
     remote_result: dict[str, Any] | None = None
+    case_error: str | None = None
 
-    with get_client(
-        scheduler_address=None,
-        n_workers=case.local_workers,
-        install_package=False,
-    ) as local_client:
-        local_result = _run_environment_benchmark(
-            "local",
-            local_client,
-            config,
-            case.n_aggregates,
-            case.warmup_tasks,
-            case.seed_start,
-            case.trial_timeout,
-            profile_output_dir=case.profile_dir,
-        )
-
-    if case.scheduler_address is not None:
+    try:
         with get_client(
-            scheduler_address=case.scheduler_address,
-            install_package=True,
-        ) as remote_client:
-            remote_result = _run_environment_benchmark(
-                "remote",
-                remote_client,
+            scheduler_address=None,
+            n_workers=case.local_workers,
+            install_package=False,
+        ) as local_client:
+            local_result = _run_environment_benchmark(
+                "local",
+                local_client,
                 config,
                 case.n_aggregates,
                 case.warmup_tasks,
@@ -499,6 +496,51 @@ def _run_one_case(case: RunCase) -> Path:
                 case.trial_timeout,
                 profile_output_dir=case.profile_dir,
             )
+
+        if case.scheduler_address is not None:
+            with get_client(
+                scheduler_address=case.scheduler_address,
+                install_package=True,
+            ) as remote_client:
+                remote_result = _run_environment_benchmark(
+                    "remote",
+                    remote_client,
+                    config,
+                    case.n_aggregates,
+                    case.warmup_tasks,
+                    case.seed_start,
+                    case.trial_timeout,
+                    profile_output_dir=case.profile_dir,
+                )
+
+    except Exception as exc:
+        case_error = repr(exc)
+        local_result = {
+            "environment": "local",
+            "workers": 0,
+            "total_threads": 0,
+            "effective_threads": 0.0,
+            "worker_threads": {},
+            "worker_metadata": {},
+            "worker_calibration_wall_s": {},
+            "worker_performance_index": {},
+            "n_aggregates": case.n_aggregates,
+            "successes": 0,
+            "success_rate": 0.0,
+            "total_wall_s": 0.0,
+            "throughput_agg_per_s": 0.0,
+            "throughput_per_thread": 0.0,
+            "throughput_per_effective_thread": 0.0,
+            "task_wall_mean_s": 0.0,
+            "task_wall_median_s": 0.0,
+            "task_cpu_mean_s": 0.0,
+            "task_cpu_median_s": 0.0,
+            "cpu_to_wall_ratio": 0.0,
+            "thread_busy_fraction": 0.0,
+            "profiling_artifacts": {},
+            "error": case_error,
+        }
+        remote_result = None
 
     comparison: dict[str, float] = {}
     if remote_result is not None:
@@ -536,6 +578,7 @@ def _run_one_case(case: RunCase) -> Path:
         "local": local_result,
         "remote": remote_result,
         "comparison": comparison,
+        "error": case_error,
     }
     case.output_json.parent.mkdir(parents=True, exist_ok=True)
     case.output_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")

@@ -3,6 +3,9 @@
 Functions for computing maximum overlap between particle clusters,
 with variants for PCA, CCA, fast, parallel, and auto-dispatch modes.
 
+The overlap tolerance and sticking feasibility checks are used in the
+PCA/CCA workflow of :cite:p:`Moran2019FracVAL`.
+
 Constants
 ---------
 PARALLEL_OVERLAP_THRESHOLD

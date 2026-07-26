@@ -19,7 +19,7 @@ dependencies = [
   "scipy>=1.14.1",
   "tqdm>=4.66.5",
   "dask[distributed]==2026.3.0",
-  "pyvista>=0.44.1",
+  "pyvista[all]>=0.44.1",
   "stpyvista>=0.1.4",
   "streamlit>=1.41.1",
   "pyqt5>=5.15.11",
@@ -42,9 +42,6 @@ test = ["py-spy>=0.4.0", "pytest>=8.3.3"]
 [project.scripts]
 pyfracval = "pyfracval.cli:cli"
 
-# [build-system]
-# requires = ["hatchling"]
-# build-backend = "hatchling.build"
 [build-system]
 requires = ["uv_build >= 0.8.0"]
 build-backend = "uv_build"

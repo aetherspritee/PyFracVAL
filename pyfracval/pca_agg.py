@@ -1,4 +1,9 @@
-"""Implements Particle-Cluster Aggregation (PCA) for initial subclusters."""
+"""Implements Particle-Cluster Aggregation (PCA) for initial subclusters.
+
+This module follows the PCA stage of the FracVAL workflow described in
+:cite:p:`Moran2019FracVAL`, with fractal scaling context from
+:cite:p:`Filippov2000Tunable`.
+"""
 
 import logging
 
