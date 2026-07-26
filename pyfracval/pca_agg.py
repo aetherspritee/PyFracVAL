@@ -10,7 +10,8 @@ import logging
 import numpy as np
 from scipy.spatial import cKDTree
 
-from . import config, utils
+from . import utils
+from .config import OrchestratorAlgorithmConfig
 from .logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
@@ -72,10 +73,16 @@ class PCAggregator:
         kf: float,
         tol_ov: float,
         rng: np.random.Generator | None = None,
+        algorithm_config: OrchestratorAlgorithmConfig | None = None,
     ):
         self.N = len(initial_radii)
         if self.N < 2:
             raise ValueError("PCA requires at least 2 particles.")
+        self.algorithm_config: OrchestratorAlgorithmConfig = (
+            algorithm_config
+            if algorithm_config is not None
+            else OrchestratorAlgorithmConfig()
+        )
 
         # Do NOT sort radii — use them in the order passed in (after shuffling in
         # main_runner). The Fortran processes subcluster particles in whatever
@@ -1059,9 +1066,9 @@ class PCAggregator:
                     trace_enabled = logger.isEnabledFor(TRACE_LEVEL_NUM)
 
                     # Choose rotation strategy based on configuration
-                    if config.USE_BATCH_ROTATION:
+                    if self.algorithm_config.use_batch_rotation:
                         # Batch rotation evaluation (Phase 3 - experimental, slower for N<1000)
-                        batch_size = config.ROTATION_BATCH_SIZE
+                        batch_size = self.algorithm_config.rotation_batch_size
                         golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
 
                         # If intersection radius is near zero, skip rotation attempts

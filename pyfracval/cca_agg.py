@@ -7,7 +7,8 @@ from typing import Set, Tuple
 
 import numpy as np
 
-from . import config, utils
+from . import utils
+from .config import OrchestratorAlgorithmConfig
 from .experimental.fft_docking import fft_dock_sticking
 from .experimental.soft_relaxation import soft_sticking
 from .logs import TRACE_LEVEL_NUM
@@ -86,6 +87,7 @@ class CCAggregator:
         tol_ov: float,
         ext_case: int,
         rng: np.random.Generator | None = None,
+        algorithm_config: OrchestratorAlgorithmConfig | None = None,
     ):
         if initial_coords.shape[0] != n_total or initial_radii.shape[0] != n_total:
             raise ValueError(
@@ -105,6 +107,11 @@ class CCAggregator:
         self.kf = kf
         self.tol_ov = tol_ov
         self.ext_case = ext_case  # 0 or 1
+        self.algorithm_config: OrchestratorAlgorithmConfig = (
+            algorithm_config
+            if algorithm_config is not None
+            else OrchestratorAlgorithmConfig()
+        )
 
         self._rng: np.random.Generator = (
             rng if rng is not None else np.random.default_rng()
@@ -118,7 +125,7 @@ class CCAggregator:
 
         self.not_able_cca = False
 
-        # Timing accumulators (used when config.PROFILE_TIMING is True)
+        # Timing accumulators (used when self.algorithm_config.profile_timing is True)
         self._t_cluster_props: float = 0.0
         self._t_select_candidates: float = 0.0
         self._t_sticking_v1: float = 0.0
@@ -837,7 +844,7 @@ class CCAggregator:
         intento: int,
     ) -> tuple[np.ndarray, np.ndarray, str]:
         """Generate next retry pose according to configured retry mode."""
-        mode_cfg = str(getattr(config, "CCA_RETRY_ROTATION_MODE", "single")).lower()
+        mode_cfg = str(self.algorithm_config.cca_retry_rotation_mode).lower()
         if mode_cfg not in {
             "single",
             "alternate",
@@ -848,12 +855,12 @@ class CCAggregator:
             mode_cfg = "single"
 
         if mode_cfg == "coarse_grid":
-            sweep_steps = int(max(1, getattr(config, "CCA_COARSE_SWEEP_STEPS", 10)))
+            sweep_steps = int(max(1, self.algorithm_config.cca_coarse_sweep_steps))
             spin_anchor_steps = int(
-                max(1, getattr(config, "CCA_COARSE_SPIN_ANCHOR_STEPS", 6))
+                max(1, self.algorithm_config.cca_coarse_spin_anchor_steps)
             )
             spin_moving_steps = int(
-                max(1, getattr(config, "CCA_COARSE_SPIN_MOVING_STEPS", 6))
+                max(1, self.algorithm_config.cca_coarse_spin_moving_steps)
             )
             total = sweep_steps * spin_anchor_steps * spin_moving_steps
             idx = (int(intento) - 1) % total
@@ -899,16 +906,16 @@ class CCAggregator:
             return coords1_next, coords2_next, "coarse_grid"
 
         if mode_cfg == "coarse_to_fine":
-            sweep_steps = int(max(1, getattr(config, "CCA_COARSE_SWEEP_STEPS", 10)))
+            sweep_steps = int(max(1, self.algorithm_config.cca_coarse_sweep_steps))
             spin_anchor_steps = int(
-                max(1, getattr(config, "CCA_COARSE_SPIN_ANCHOR_STEPS", 6))
+                max(1, self.algorithm_config.cca_coarse_spin_anchor_steps)
             )
             spin_moving_steps = int(
-                max(1, getattr(config, "CCA_COARSE_SPIN_MOVING_STEPS", 6))
+                max(1, self.algorithm_config.cca_coarse_spin_moving_steps)
             )
             total = sweep_steps * spin_anchor_steps * spin_moving_steps
             coarse_fraction = float(
-                getattr(config, "CCA_COARSE_FINE_COARSE_FRACTION", 0.67)
+                self.algorithm_config.cca_coarse_fine_coarse_fraction
             )
             coarse_fraction = min(max(coarse_fraction, 0.05), 0.95)
             coarse_budget = max(1, min(total - 1, int(round(total * coarse_fraction))))
@@ -964,9 +971,7 @@ class CCAggregator:
                 return coords1_next, coords2_next, "coarse_to_fine_coarse"
 
             refine_idx = int(intento) - coarse_budget
-            refine_deg = float(
-                max(0.0, getattr(config, "CCA_COARSE_FINE_SPIN_DEG", 12.0))
-            )
+            refine_deg = float(max(0.0, self.algorithm_config.cca_coarse_fine_spin_deg))
             refine_rad = np.deg2rad(refine_deg)
             phi = 2.0 * math.pi * float(refine_idx) / float(_GOLDEN_RATIO)
             angle_anchor = refine_rad * float(np.sin(phi))
@@ -985,7 +990,7 @@ class CCAggregator:
             )
             return coords1_next, coords2_next, "coarse_to_fine_refine"
 
-        escalate_after = int(max(0, getattr(config, "CCA_RETRY_ESCALATE_AFTER", 0)))
+        escalate_after = int(max(0, self.algorithm_config.cca_retry_escalate_after))
         use_mode = mode_cfg if intento > escalate_after else "single"
 
         coords1_next = coords1_stick
@@ -1036,9 +1041,9 @@ class CCAggregator:
             j_vec,
             attempt=intento,
         )
-        jitter_interval = int(max(1, getattr(config, "CCA_DUAL_JITTER_INTERVAL", 5)))
+        jitter_interval = int(max(1, self.algorithm_config.cca_dual_jitter_interval))
         if intento % jitter_interval == 0:
-            jitter_deg = float(max(0.0, getattr(config, "CCA_DUAL_JITTER_DEG", 8.0)))
+            jitter_deg = float(max(0.0, self.algorithm_config.cca_dual_jitter_deg))
             jitter_rad = np.deg2rad(jitter_deg)
             if jitter_rad > 0.0:
                 axis = self._rng.normal(size=3)
@@ -1223,11 +1228,13 @@ class CCAggregator:
         r_max1: float,
         r_max2: float,
         gamma_real: bool,
+        algorithm_config: OrchestratorAlgorithmConfig | None = None,
     ) -> bool:
         """Check if two clusters can physically stick at distance gamma_pc."""
         if not gamma_real or gamma_pc <= 0.0:
             return False
-        factor = float(getattr(config, "CCA_BV_DEEP_PENETRATION_FACTOR", 0.8))
+        algorithm_config = algorithm_config or OrchestratorAlgorithmConfig()
+        factor = float(algorithm_config.cca_bv_deep_penetration_factor)
         rmax_diff = abs(r_max1 - r_max2)
         if gamma_pc < rmax_diff * factor:
             logger.debug(
@@ -1250,13 +1257,15 @@ class CCAggregator:
         cm: np.ndarray,
         r_max: float,
         min_exposure: float | None = None,
+        algorithm_config: OrchestratorAlgorithmConfig | None = None,
     ) -> np.ndarray:
         """Compute surface accessibility mask for each monomer."""
         n = coords.shape[0]
         if n <= 1:
             return np.ones(n, dtype=bool)
         if min_exposure is None:
-            min_exposure = float(getattr(config, "CCA_SSA_MIN_EXPOSURE", 0.3))
+            algorithm_config = algorithm_config or OrchestratorAlgorithmConfig()
+            min_exposure = float(algorithm_config.cca_ssa_min_exposure)
         dist_to_cm = np.linalg.norm(coords - cm[np.newaxis, :], axis=1)
         radial_fraction = dist_to_cm / max(r_max, 1.0e-12)
         mean_r = float(np.mean(radii))
@@ -1292,7 +1301,7 @@ class CCAggregator:
             )
             return None
 
-        _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+        _t0 = perf_counter() if self.algorithm_config.profile_timing else 0.0
         if (
             cluster_props_cache is not None
             and cluster_idx1 in cluster_props_cache
@@ -1309,19 +1318,21 @@ class CCAggregator:
             m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
                 coords2_in, radii2_in, self.df, self.kf
             )
-        if config.PROFILE_TIMING:
+        if self.algorithm_config.profile_timing:
             self._t_cluster_props += perf_counter() - _t0
 
         # --- Pair Feasibility Pre-Filter ---
-        pair_filter = str(
-            getattr(config, "CCA_PAIR_FEASIBILITY_FILTER", "none")
-        ).lower()
+        pair_filter = str(self.algorithm_config.cca_pair_feasibility_filter).lower()
         if pair_filter == "bounding_volume":
             props1_bv = (m1, rg1, cm1, r_max1, radii1_in)
             props2_bv = (m2, rg2, cm2, r_max2, radii2_in)
             gamma_real_bv, gamma_pc_bv = self._calculate_cca_gamma(props1_bv, props2_bv)
             if not self._bounding_volume_precheck(
-                gamma_pc_bv, r_max1, r_max2, gamma_real_bv
+                gamma_pc_bv,
+                r_max1,
+                r_max2,
+                gamma_real_bv,
+                algorithm_config=self.algorithm_config,
             ):
                 self._bv_filter_rejects += 1
                 logger.info(
@@ -1331,9 +1342,7 @@ class CCAggregator:
                 return None
 
         # --- FFT Docking Method (opt-in) ---
-        sticking_method = str(
-            getattr(config, "CCA_STICKING_METHOD", "fibonacci")
-        ).lower()
+        sticking_method = str(self.algorithm_config.cca_sticking_method).lower()
         if sticking_method == "fft_docking":
             props1_fft = (m1, rg1, cm1, r_max1, radii1_in)
             props2_fft = (m2, rg2, cm2, r_max2, radii2_in)
@@ -1357,11 +1366,11 @@ class CCAggregator:
                 gamma_pc=gamma_pc_fft,
                 gamma_real=gamma_real_fft,
                 tol_ov=self.tol_ov,
-                grid_size=int(getattr(config, "CCA_FFT_GRID_SIZE", 64)),
-                num_rotations=int(getattr(config, "CCA_FFT_NUM_ROTATIONS", 70)),
-                top_k_peaks=int(getattr(config, "CCA_FFT_TOP_K_PEAKS", 10)),
-                gamma_tolerance=float(getattr(config, "CCA_FFT_GAMMA_TOLERANCE", 0.10)),
-                min_peak_distance=int(getattr(config, "CCA_FFT_MIN_PEAK_DISTANCE", 3)),
+                grid_size=int(self.algorithm_config.cca_fft_grid_size),
+                num_rotations=int(self.algorithm_config.cca_fft_num_rotations),
+                top_k_peaks=int(self.algorithm_config.cca_fft_top_k_peaks),
+                gamma_tolerance=float(self.algorithm_config.cca_fft_gamma_tolerance),
+                min_peak_distance=int(self.algorithm_config.cca_fft_min_peak_distance),
             )
             if fft_result is not None:
                 self._fft_docking_successes += 1
@@ -1383,20 +1392,20 @@ class CCAggregator:
 
         # --- Gamma Expansion ---
         gamma_expansion_enabled = bool(
-            getattr(config, "CCA_GAMMA_EXPANSION_ENABLED", False)
+            self.algorithm_config.cca_gamma_expansion_enabled
         )
         if not gamma_expansion_enabled:
             return None
 
-        gamma_expansion_step = float(getattr(config, "CCA_GAMMA_EXPANSION_STEP", 0.02))
+        gamma_expansion_step = float(self.algorithm_config.cca_gamma_expansion_step)
         gamma_expansion_max_factor = float(
-            getattr(config, "CCA_GAMMA_EXPANSION_MAX_FACTOR", 1.05)
+            self.algorithm_config.cca_gamma_expansion_max_factor
         )
         gamma_expansion_mass_exponent = float(
-            getattr(config, "CCA_GAMMA_EXPANSION_MASS_EXPONENT", -0.75)
+            self.algorithm_config.cca_gamma_expansion_mass_exponent
         )
         gamma_expansion_max_attempts = int(
-            getattr(config, "CCA_GAMMA_EXPANSION_MAX_ATTEMPTS", 3)
+            self.algorithm_config.cca_gamma_expansion_max_attempts
         )
         n_total = n1 + n2
         self._gamma_expansion_hits += 1
@@ -1508,7 +1517,7 @@ class CCAggregator:
 
         # --- Calculate Properties and Gamma ---
         # FIX (PyFracVAL-58z): use cached props from _generate_pairs when available
-        _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+        _t0 = perf_counter() if self.algorithm_config.profile_timing else 0.0
         if (
             cluster_props_cache is not None
             and cluster_idx1 in cluster_props_cache
@@ -1525,7 +1534,7 @@ class CCAggregator:
             m2, rg2, cm2, r_max2 = utils.calculate_cluster_properties(
                 coords2_in, radii2_in, self.df, self.kf
             )
-        if config.PROFILE_TIMING:
+        if self.algorithm_config.profile_timing:
             self._t_cluster_props += perf_counter() - _t0
         props1 = (m1, rg1, cm1, r_max1, radii1_in)
         props2 = (m2, rg2, cm2, r_max2, radii2_in)
@@ -1537,21 +1546,27 @@ class CCAggregator:
             gamma_real = self._gamma_real_override
 
         # --- Generate Candidate List ---
-        _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+        _t0 = perf_counter() if self.algorithm_config.profile_timing else 0.0
         list_matrix = self._cca_select_candidates(
             coords1_in, radii1_in, cm1, coords2_in, radii2_in, cm2, gamma_pc, gamma_real
         )
 
         # Apply SSA filter if enabled
-        pair_filter = str(
-            getattr(config, "CCA_PAIR_FEASIBILITY_FILTER", "none")
-        ).lower()
+        pair_filter = str(self.algorithm_config.cca_pair_feasibility_filter).lower()
         if pair_filter == "ssa":
             ssa_mask_1 = self._surface_accessible_mask(
-                coords1_in, radii1_in, cm1, r_max1
+                coords1_in,
+                radii1_in,
+                cm1,
+                r_max1,
+                algorithm_config=self.algorithm_config,
             )
             ssa_mask_2 = self._surface_accessible_mask(
-                coords2_in, radii2_in, cm2, r_max2
+                coords2_in,
+                radii2_in,
+                cm2,
+                r_max2,
+                algorithm_config=self.algorithm_config,
             )
             original_count = int(np.sum(list_matrix > 0))
             for i_loc in range(list_matrix.shape[0]):
@@ -1570,7 +1585,7 @@ class CCAggregator:
 
         leaf_mask_1 = self._leaf_mask_for_cluster(coords1_in, radii1_in)
         leaf_mask_2 = self._leaf_mask_for_cluster(coords2_in, radii2_in)
-        if config.PROFILE_TIMING:
+        if self.algorithm_config.profile_timing:
             self._t_select_candidates += perf_counter() - _t0
 
         if np.sum(list_matrix) == 0:
@@ -1588,7 +1603,7 @@ class CCAggregator:
         _candidate_indices = np.argwhere(list_matrix > 0)
         self._rng.shuffle(_candidate_indices)
 
-        candidate_policy = str(config.CCA_CANDIDATE_POLICY).lower()
+        candidate_policy = str(self.algorithm_config.cca_candidate_policy).lower()
 
         # Optional soft leaf-priority policy: LL first, then LN, then NN.
         if candidate_policy == "leaf_soft":
@@ -1625,7 +1640,7 @@ class CCAggregator:
                 else:
                     nn.append(pair)
 
-            topk = int(getattr(config, "CCA_SCORE_TOPK_PER_CLASS", 0))
+            topk = int(self.algorithm_config.cca_score_topk_per_class)
 
             def _score_and_sort(pairs: list[np.ndarray], cls: str) -> list[np.ndarray]:
                 if not pairs:
@@ -1696,7 +1711,7 @@ class CCAggregator:
             # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): Trying pair ({cand1_idx}, {cand2_idx}). Attempt {attempt+1}/{len(_candidate_indices)}")
 
             # Perform initial sticking placement
-            _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+            _t0 = perf_counter() if self.algorithm_config.profile_timing else 0.0
             stick_results = self._cca_sticking_v1(
                 (coords1_in, radii1_in, cm1),
                 (coords2_in, radii2_in, cm2),
@@ -1705,7 +1720,7 @@ class CCAggregator:
                 gamma_pc,
                 gamma_real,
             )
-            if config.PROFILE_TIMING:
+            if self.algorithm_config.profile_timing:
                 self._t_sticking_v1 += perf_counter() - _t0
             coords1_stick, coords2_stick, cm2_stick, theta_a, vec_0, i_vec, j_vec = (
                 stick_results
@@ -1723,14 +1738,17 @@ class CCAggregator:
             # )
             # Phase 3B: Auto-dispatch to parallel overlap for large N
             use_incremental = (
-                config.USE_CCA_INCREMENTAL_OVERLAP and not config.USE_BATCH_ROTATION
+                self.algorithm_config.use_cca_incremental_overlap
+                and not self.algorithm_config.use_batch_rotation
             )
-            full_sync_period = max(config.CCA_INCREMENTAL_FULL_SYNC_PERIOD, 1)
+            full_sync_period = max(
+                self.algorithm_config.cca_incremental_full_sync_period, 1
+            )
 
             active_collisions: set[int] = set()
             n2_local = radii2_in.shape[0]
 
-            _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+            _t0 = perf_counter() if self.algorithm_config.profile_timing else 0.0
             if use_incremental:
                 cov_max = self._full_overlap_check(
                     coords1_stick, radii1_in, coords2_stick, radii2_in
@@ -1744,20 +1762,18 @@ class CCAggregator:
                     radii2_in,
                     tolerance=self.tol_ov,
                 )
-            if config.PROFILE_TIMING:
+            if self.algorithm_config.profile_timing:
                 self._t_overlap_check += perf_counter() - _t0
                 self._n_overlap_calls += 1
 
             # Rotation attempts
             intento = 0
-            retry_mode_cfg = str(
-                getattr(config, "CCA_RETRY_ROTATION_MODE", "single")
-            ).lower()
+            retry_mode_cfg = str(self.algorithm_config.cca_retry_rotation_mode).lower()
             if retry_mode_cfg in {"coarse_grid", "coarse_to_fine"}:
                 max_rotations = int(
-                    max(1, getattr(config, "CCA_COARSE_SWEEP_STEPS", 10))
-                    * max(1, getattr(config, "CCA_COARSE_SPIN_ANCHOR_STEPS", 6))
-                    * max(1, getattr(config, "CCA_COARSE_SPIN_MOVING_STEPS", 6))
+                    max(1, self.algorithm_config.cca_coarse_sweep_steps)
+                    * max(1, self.algorithm_config.cca_coarse_spin_anchor_steps)
+                    * max(1, self.algorithm_config.cca_coarse_spin_moving_steps)
                 )
             else:
                 max_rotations = 360  # From Fortran
@@ -1780,9 +1796,9 @@ class CCAggregator:
             last_retry_mode = "single"
 
             # Choose rotation strategy based on configuration
-            if config.USE_BATCH_ROTATION:
+            if self.algorithm_config.use_batch_rotation:
                 # Batch rotation (Phase 3 - experimental, slower for N<1000)
-                batch_size = config.ROTATION_BATCH_SIZE
+                batch_size = self.algorithm_config.rotation_batch_size
                 golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
 
                 while cov_max > self.tol_ov and intento < max_rotations:
@@ -1865,7 +1881,9 @@ class CCAggregator:
                 # target angle, threading current_coords2 through the loop.
                 while cov_max > self.tol_ov and intento < max_rotations:
                     intento += 1
-                    _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+                    _t0 = (
+                        perf_counter() if self.algorithm_config.profile_timing else 0.0
+                    )
                     coords1_rotated, coords2_rotated, retry_mode = (
                         self._apply_retry_rotation_mode(
                             coords1_stick,
@@ -1888,11 +1906,13 @@ class CCAggregator:
                         self._retry_mode_counts.get(retry_mode, 0) + 1
                     )
                     last_retry_mode = retry_mode
-                    if config.PROFILE_TIMING:
+                    if self.algorithm_config.profile_timing:
                         self._t_rotation += perf_counter() - _t0
                         self._n_rotation_calls += 1
 
-                    _t0 = perf_counter() if config.PROFILE_TIMING else 0.0
+                    _t0 = (
+                        perf_counter() if self.algorithm_config.profile_timing else 0.0
+                    )
                     if use_incremental:
                         self._active_calls += 1
                         self._active_pairs_checked += len(active_collisions)
@@ -1927,7 +1947,7 @@ class CCAggregator:
                             tolerance=self.tol_ov,
                         )
 
-                    if config.PROFILE_TIMING:
+                    if self.algorithm_config.profile_timing:
                         self._t_overlap_check += perf_counter() - _t0
                         self._n_overlap_calls += 1
 
@@ -2052,11 +2072,11 @@ class CCAggregator:
         candidate_idx2 = int(np.argmin(dists2))
 
         # Get config parameters
-        k_repulsion = float(getattr(config, "CCA_SOFT_RELAXATION_K_REPULSION", 10.0))
-        k_gamma = float(getattr(config, "CCA_SOFT_RELAXATION_K_GAMMA", 1.0))
-        gamma_tol = float(getattr(config, "CCA_SOFT_RELAXATION_GAMMA_TOLERANCE", 0.05))
-        max_iters = int(getattr(config, "CCA_SOFT_RELAXATION_MAX_ITERS", 100))
-        learning_rate = float(getattr(config, "CCA_SOFT_RELAXATION_LEARNING_RATE", 0.1))
+        k_repulsion = float(self.algorithm_config.cca_soft_relaxation_k_repulsion)
+        k_gamma = float(self.algorithm_config.cca_soft_relaxation_k_gamma)
+        gamma_tol = float(self.algorithm_config.cca_soft_relaxation_gamma_tolerance)
+        max_iters = int(self.algorithm_config.cca_soft_relaxation_max_iters)
+        learning_rate = float(self.algorithm_config.cca_soft_relaxation_learning_rate)
 
         try:
             new_coords1, new_coords2, success, info = soft_sticking(
@@ -2190,8 +2210,8 @@ class CCAggregator:
                 # Try soft relaxation fallback if enabled and rigid sticking failed
                 if (
                     stick_result is None
-                    and getattr(config, "CCA_SOFT_RELAXATION_ENABLED", False)
-                    and getattr(config, "CCA_SOFT_RELAXATION_FALLBACK_ONLY", True)
+                    and self.algorithm_config.cca_soft_relaxation_enabled
+                    and self.algorithm_config.cca_soft_relaxation_fallback_only
                 ):
                     self._soft_relaxation_attempts += 1
                     logger.info(
@@ -2313,7 +2333,7 @@ class CCAggregator:
             return None
 
         logger.info("CCA aggregation completed successfully.")
-        if config.PROFILE_TIMING:
+        if self.algorithm_config.profile_timing:
             t_total = (
                 self._t_cluster_props
                 + self._t_select_candidates
@@ -2352,7 +2372,7 @@ class CCAggregator:
                     f"  periodic full   : {self._full_periodic_syncs:7d}\n"
                     f"  final full val  : {self._full_final_validations:7d}"
                 )
-            if config.PROFILE_CCA_LEAF_STATS:
+            if self.algorithm_config.profile_cca_leaf_stats:
                 attempts_total = (
                     self._cand_attempts_ll
                     + self._cand_attempts_ln
@@ -2381,7 +2401,7 @@ class CCAggregator:
                     f"    LN success    : {self._cand_success_ln:7d} (rate={_rate(self._cand_success_ln, self._cand_attempts_ln):5.1f}%)\n"
                     f"    NN success    : {self._cand_success_nn:7d} (rate={_rate(self._cand_success_nn, self._cand_attempts_nn):5.1f}%)"
                 )
-            if config.PROFILE_CCA_CANDIDATE_SCORE:
+            if self.algorithm_config.profile_cca_candidate_score:
                 att_n = self._cand_score_attempt_count
                 suc_n = self._cand_score_success_count
                 att_mean = self._cand_score_attempt_sum / att_n if att_n else 0.0
@@ -2401,7 +2421,10 @@ class CCAggregator:
                     f"  high-score (>=0.70): attempts={high_att:7d}, success={high_suc:7d}, rate={_rate(high_suc, high_att):5.1f}%\n"
                     f"  low-score  (<0.40): attempts={low_att:7d}, success={low_suc:7d}, rate={_rate(low_suc, low_att):5.1f}%"
                 )
-            if config.PROFILE_CCA_RETRY_MODES and self._retry_mode_counts:
+            if (
+                self.algorithm_config.profile_cca_retry_modes
+                and self._retry_mode_counts
+            ):
                 mode_items = sorted(
                     self._retry_mode_counts.items(), key=lambda item: item[0]
                 )

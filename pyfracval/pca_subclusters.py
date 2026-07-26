@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pyfracval.environments import get_env_config
 
 from . import particle_generation
+from .config import OrchestratorAlgorithmConfig
 from .pca_agg import PCAggregator
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def _run_single_subcluster(args: tuple[Any, ...]) -> tuple[int, np.ndarray | Non
     ----------
     args : tuple
         ``(idx, radii, pca_df, pca_kf, tol_ov, seed,
-           rp_gstd, rp_g, max_retries, can_retry)``
+           rp_gstd, rp_g, max_retries, can_retry, algorithm_config)``
 
     Returns
     -------
@@ -36,9 +37,19 @@ def _run_single_subcluster(args: tuple[Any, ...]) -> tuple[int, np.ndarray | Non
         ``(idx, subcluster_data)`` where *subcluster_data* is the Nx4
         ``[X, Y, Z, R]`` array on success or ``None`` on failure.
     """
-    idx, radii, pca_df, pca_kf, tol_ov, seed, rp_gstd, rp_g, max_retries, can_retry = (
-        args
-    )
+    (
+        idx,
+        radii,
+        pca_df,
+        pca_kf,
+        tol_ov,
+        seed,
+        rp_gstd,
+        rp_g,
+        max_retries,
+        can_retry,
+        algorithm_config,
+    ) = args
     rng = np.random.default_rng(seed)
     num_particles = len(radii)
     total_attempts = 1 + (max_retries if can_retry else 0)
@@ -48,7 +59,9 @@ def _run_single_subcluster(args: tuple[Any, ...]) -> tuple[int, np.ndarray | Non
             radii = particle_generation.lognormal_pp_radii(
                 rp_gstd, rp_g, num_particles, rng=rng
             )
-        pca_runner = PCAggregator(radii, pca_df, pca_kf, tol_ov, rng=rng)
+        pca_runner = PCAggregator(
+            radii, pca_df, pca_kf, tol_ov, rng=rng, algorithm_config=algorithm_config
+        )
         result = pca_runner.run()
         if result is not None and not pca_runner.not_able_pca:
             return idx, result
@@ -112,6 +125,9 @@ class Subclusterer(BaseModel):
     rp_g: float = Field(default=100.0, gt=0.0)
     rp_gstd: float = Field(default=1.0, ge=1.0)
     max_subcluster_retries: int = Field(default=200, ge=0)
+    algorithm_config: OrchestratorAlgorithmConfig = Field(
+        default_factory=OrchestratorAlgorithmConfig
+    )
 
     N: int = Field(default=0)
     all_coords: np.ndarray = Field(default=np.zeros(0))
@@ -218,8 +234,10 @@ class Subclusterer(BaseModel):
 
         Determines subcluster sizes, then runs `PCAggregator` on each subset of
         radii — in parallel (via ``multiprocessing.Pool``) when
-        ``config.PARALLEL_SUBCLUSTERS`` is ``True`` and the number of subclusters
-        exceeds ``config.PARALLEL_SUBCLUSTERS_MIN_COUNT``, otherwise sequentially.
+        ``self.algorithm_config.parallel_subclusters`` is ``True`` and the
+        number of subclusters exceeds
+        ``self.algorithm_config.parallel_subclusters_min_count``, otherwise
+        sequentially.
 
         Returns
         -------
@@ -227,8 +245,6 @@ class Subclusterer(BaseModel):
             True if all subclusters were generated successfully, False otherwise.
             Sets `self.not_able_pca` to True on failure.
         """
-        from . import config  # local import avoids circular dep at module level
-
         env_config = get_env_config()
         subcluster_sizes = self._determine_subcluster_sizes()
 
@@ -281,6 +297,7 @@ class Subclusterer(BaseModel):
                     self.rp_g,
                     self.max_subcluster_retries,
                     can_retry_with_fresh_radii,
+                    self.algorithm_config,
                 )
             )
             current_n_start_idx += n
@@ -296,8 +313,9 @@ class Subclusterer(BaseModel):
 
         # --- Dispatch: parallel or sequential ---
         use_parallel = (
-            config.PARALLEL_SUBCLUSTERS
-            and self.number_clusters >= config.PARALLEL_SUBCLUSTERS_MIN_COUNT
+            self.algorithm_config.parallel_subclusters
+            and self.number_clusters
+            >= self.algorithm_config.parallel_subclusters_min_count
             and not env_config.disable_parallel_subclusters
         )
 
