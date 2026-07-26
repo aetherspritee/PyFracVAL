@@ -2,6 +2,12 @@
 .direnv
 RESULTS*/
 *.speedscope.json
+cluster_data/
+
+# Benchmark aggregate data (per AGENTS.md hygiene rules):
+# DO commit summary JSON/CSV/PNG/HTML analysis outputs under benchmark_results/.
+# DO NOT commit individual per-run aggregate coordinate dumps (regenerable, huge).
+benchmark_results/**/aggregates/
 
 *.csv
 
