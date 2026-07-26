@@ -113,7 +113,7 @@ class PCAggregator:
         """Generates random angles (theta, phi) for a point on a sphere."""
         u, v = self._rng.random(2)
         # Use constant from config
-        theta = 2.0 * config.PI * u
+        theta = 2.0 * np.pi * u
         phi = np.arccos(2.0 * v - 1.0)
         return theta, phi
 
@@ -689,7 +689,7 @@ class PCAggregator:
         # Generate angle using Fibonacci spiral for optimal coverage
         # Golden ratio provides quasi-uniform distribution without repetition
         golden_ratio = (1.0 + np.sqrt(5.0)) / 2.0
-        theta_a_new = 2.0 * config.PI * attempt / golden_ratio
+        theta_a_new = 2.0 * np.pi * attempt / golden_ratio
 
         # Calculate new position using the circle equation
         coord_k_new = np.zeros(3)
@@ -1083,7 +1083,7 @@ class PCAggregator:
 
                                 # Generate batch of angles using Fibonacci spiral
                                 attempts = np.arange(batch_start, batch_end)
-                                angles = 2.0 * config.PI * attempts / golden_ratio
+                                angles = 2.0 * np.pi * attempts / golden_ratio
 
                                 # Calculate all positions in batch (parallel)
                                 candidate_positions = (

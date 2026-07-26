@@ -14,6 +14,8 @@ from .logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
 
+_GOLDEN_RATIO = (1.0 + math.sqrt(5.0)) / 2.0
+
 
 def _pair_key(i: int, j: int, n2: int) -> int:
     """Pack pair indices (i,j) into a single integer key."""
@@ -875,10 +877,10 @@ class CCAggregator:
                 attempt=sweep_attempt,
             )
 
-            anchor_angle = (2.0 * config.PI * float(anchor_idx)) / float(
+            anchor_angle = (2.0 * math.pi * float(anchor_idx)) / float(
                 spin_anchor_steps
             )
-            moving_angle = (2.0 * config.PI * float(moving_idx)) / float(
+            moving_angle = (2.0 * math.pi * float(moving_idx)) / float(
                 spin_moving_steps
             )
 
@@ -941,10 +943,10 @@ class CCAggregator:
                     attempt=sweep_attempt,
                 )
 
-                anchor_angle = (2.0 * config.PI * float(anchor_idx)) / float(
+                anchor_angle = (2.0 * math.pi * float(anchor_idx)) / float(
                     spin_anchor_steps
                 )
-                moving_angle = (2.0 * config.PI * float(moving_idx)) / float(
+                moving_angle = (2.0 * math.pi * float(moving_idx)) / float(
                     spin_moving_steps
                 )
                 coords1_next = self._rotate_cluster_about_cm(
@@ -966,7 +968,7 @@ class CCAggregator:
                 max(0.0, getattr(config, "CCA_COARSE_FINE_SPIN_DEG", 12.0))
             )
             refine_rad = np.deg2rad(refine_deg)
-            phi = 2.0 * config.PI * float(refine_idx) / float(config.GOLDEN_RATIO)
+            phi = 2.0 * math.pi * float(refine_idx) / float(_GOLDEN_RATIO)
             angle_anchor = refine_rad * float(np.sin(phi))
             angle_moving = refine_rad * float(np.cos(phi))
             coords1_next = self._rotate_cluster_about_cm(
@@ -1003,7 +1005,7 @@ class CCAggregator:
 
         if use_mode == "alternate":
             if intento % 2 == 0:
-                phi = 2.0 * config.PI * float(intento) / float(config.GOLDEN_RATIO)
+                phi = 2.0 * math.pi * float(intento) / float(_GOLDEN_RATIO)
                 axis = np.array([i_vec[0], i_vec[1], i_vec[2]], dtype=float)
                 axis = self._normalize_axis(axis, fallback=np.array([1.0, 0.0, 0.0]))
                 coords1_next = self._rotate_cluster_about_cm(
@@ -1794,7 +1796,7 @@ class CCAggregator:
 
                     # Generate batch of angles using Fibonacci spiral
                     attempts = np.arange(batch_start, batch_end)
-                    angles = 2.0 * config.PI * attempts / golden_ratio
+                    angles = 2.0 * math.pi * attempts / golden_ratio
 
                     # Batch rotate cluster2 for all angles (parallel computation)
                     coords2_batch = utils.batch_rotate_cluster_cca(

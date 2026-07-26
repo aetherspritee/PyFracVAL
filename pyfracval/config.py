@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import tomllib
-from math import sqrt
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
@@ -226,6 +224,28 @@ class OrchestratorAlgorithmConfig(BaseModel):
     densify_method: str = "radial"
     densify_rtol_multiplier: float = 2.0
     profile_cca_retry_modes: bool = False
+
+    # --- Soft potential relaxation (archived to pyfracval/experimental/,
+    # not on the production path - confirmed no improvement over baseline,
+    # see docs/source/experiments.md) -------------------------------------
+    cca_soft_relaxation_enabled: bool = False
+    cca_soft_relaxation_k_repulsion: float = 10.0
+    cca_soft_relaxation_k_gamma: float = 1.0
+    cca_soft_relaxation_gamma_tolerance: float = 0.05
+    cca_soft_relaxation_max_iters: int = 100
+    cca_soft_relaxation_learning_rate: float = 0.1
+    cca_soft_relaxation_fallback_only: bool = True
+
+    # --- PCA tuning ----------------------------------------------------------
+    parallel_subclusters: bool = True
+    parallel_subclusters_min_count: int = 4
+    use_batch_rotation: bool = False
+    rotation_batch_size: int = 32
+
+    # --- Profiling / debug toggles -------------------------------------------
+    profile_timing: bool = False
+    profile_cca_leaf_stats: bool = False
+    profile_cca_candidate_score: bool = False
 
 
 class OrchestratorDefaultsConfig(BaseModel):
@@ -500,10 +520,6 @@ PARALLEL_SUBCLUSTERS_MIN_COUNT: int = (
     4  # Only parallelise when number_clusters >= this threshold
 )
 
-# --- Constants ---
-PI: float = np.pi
-GOLDEN_RATIO: float = (1.0 + sqrt(5.0)) / 2.0  # Fibonacci spiral constant
-
 # --- Derived Parameters (can be calculated later if needed) ---
 # N_SUBCL: int = ... # Calculated in pca_subclusters.py
 
@@ -578,8 +594,6 @@ _LEGACY_DEPRECATED = {
     "TOL_OVERLAP",
     "PROFILE_CCA_LEAF_STATS",
     "PROFILE_CCA_CANDIDATE_SCORE",
-    "PI",
-    "GOLDEN_RATIO",
 }
 
 
