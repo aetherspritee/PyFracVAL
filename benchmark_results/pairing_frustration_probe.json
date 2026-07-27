@@ -1,0 +1,1220 @@
+[
+  {
+    "regime": "hard",
+    "params": {
+      "N": 128,
+      "Df": 2.25,
+      "kf": 0.95,
+      "rp_gstd": 1.9
+    },
+    "n_seeds": 40,
+    "elapsed_s": 94.98858404159546,
+    "outcomes": {
+      "success": 1,
+      "cca_failed": 39,
+      "pca_failed": 0
+    },
+    "success_rate": 0.025,
+    "n_cca_failed": 39,
+    "n_census_valid": 39,
+    "n_rescuable_by_pairing": 38,
+    "n_universally_frustrated": 1,
+    "n_rescuable_killed_mispaired": 38,
+    "n_rescuable_but_killed_stranded": 0,
+    "n_rescue_needs_different_partner": 20,
+    "rescuable_fraction_of_failures": 0.9743589743589743,
+    "censuses": [
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 49,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          9,
+          8
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 41,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          4,
+          5
+        ],
+        "killing_pair_degrees": [
+          7,
+          4
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 37,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          5,
+          2
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 34,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          4,
+          4
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 40,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          6,
+          5
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 43,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          6,
+          7
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 46,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          9,
+          8
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 37,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          9,
+          3
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 41,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          8,
+          10
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 23,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          6,
+          1
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 37,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          7,
+          10
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 48,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          8,
+          9
+        ],
+        "killing_pair_degrees": [
+          8,
+          6
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 37,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          6,
+          7
+        ],
+        "killing_pair_degrees": [
+          4,
+          4
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 38,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          8,
+          9
+        ],
+        "killing_pair_degrees": [
+          2,
+          8
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 45,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          7,
+          9
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 6,
+        "sizes": {
+          "0": 24,
+          "1": 24,
+          "2": 24,
+          "3": 24,
+          "4": 24,
+          "5": 8
+        },
+        "n_edges": 14,
+        "n_possible_edges": 15,
+        "max_matching_pairs": 3,
+        "unmatched_after_max_matching": 0,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          4,
+          5
+        ],
+        "killing_pair_degrees": [
+          5,
+          4
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 48,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          7,
+          10
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 36,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          10,
+          3
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 29,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          3,
+          7
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 22,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 4,
+        "unmatched_after_max_matching": 3,
+        "perfect_matching_possible": false,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          1,
+          4
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 52,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          7,
+          10
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 45,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          4,
+          5
+        ],
+        "killing_pair_degrees": [
+          5,
+          6
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 49,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          6,
+          7
+        ],
+        "killing_pair_degrees": [
+          10,
+          8
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 29,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          4,
+          2
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 30,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          3,
+          8
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 42,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          9,
+          3
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 38,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          5,
+          10
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 46,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          7,
+          7
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 36,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          6,
+          2
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 36,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          6,
+          2
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 35,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          7,
+          1
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 39,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          8,
+          6
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 32,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          3,
+          3
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 43,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          7,
+          9
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 45,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          7,
+          9
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 22,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          1,
+          4
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 51,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          10,
+          10
+        ],
+        "killing_pair_edge_confirmed": true
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 36,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          2,
+          3
+        ],
+        "killing_pair_degrees": [
+          7,
+          2
+        ],
+        "killing_pair_edge_confirmed": false
+      },
+      {
+        "n_clusters": 11,
+        "sizes": {
+          "0": 12,
+          "1": 12,
+          "2": 12,
+          "3": 12,
+          "4": 12,
+          "5": 12,
+          "6": 12,
+          "7": 12,
+          "8": 12,
+          "9": 12,
+          "10": 8
+        },
+        "n_edges": 43,
+        "n_possible_edges": 55,
+        "max_matching_pairs": 5,
+        "unmatched_after_max_matching": 1,
+        "perfect_matching_possible": true,
+        "killing_pair": [
+          0,
+          1
+        ],
+        "killing_pair_degrees": [
+          7,
+          3
+        ],
+        "killing_pair_edge_confirmed": true
+      }
+    ]
+  },
+  {
+    "regime": "easy_control",
+    "params": {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5
+    },
+    "n_seeds": 40,
+    "elapsed_s": 3.691157579421997,
+    "outcomes": {
+      "success": 40,
+      "cca_failed": 0,
+      "pca_failed": 0
+    },
+    "success_rate": 1.0,
+    "n_cca_failed": 0,
+    "n_census_valid": 0,
+    "n_rescuable_by_pairing": 0,
+    "n_universally_frustrated": 0,
+    "n_rescuable_killed_mispaired": 0,
+    "n_rescuable_but_killed_stranded": 0,
+    "n_rescue_needs_different_partner": 0,
+    "rescuable_fraction_of_failures": null,
+    "censuses": []
+  }
+]
