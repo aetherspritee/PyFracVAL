@@ -234,6 +234,17 @@ def get_client(
             _register_package(client)
         return client
 
+    if n_workers is None:
+        # LocalCluster(n_workers=None) does NOT simply use all CPU cores -
+        # Dask's own default heuristic also factors in currently-available
+        # system memory and can pick far fewer workers than cores on a
+        # machine with other things running (observed: 4 workers on a
+        # 16-core/64GB desktop with a few GB already committed to unrelated
+        # apps). Resolve explicitly to the actual core count so a
+        # compute-bound batch workload (a parameter sweep) gets what the
+        # docstring above promises, rather than a memory-conservative guess.
+        n_workers = os.cpu_count() or 1
+
     logger.info(f"Starting local Dask cluster with n_workers={n_workers!r}")
     cluster = LocalCluster(n_workers=n_workers)
     return Client(cluster)
