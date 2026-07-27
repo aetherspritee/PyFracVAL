@@ -3349,6 +3349,7 @@ plot = [
 [package.dev-dependencies]
 docs = [
     { name = "furo" },
+    { name = "linkify-it-py" },
     { name = "myst-parser" },
     { name = "pydata-sphinx-theme" },
     { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -3389,6 +3390,7 @@ provides-extras = ["plot"]
 [package.metadata.requires-dev]
 docs = [
     { name = "furo", specifier = ">=2024.8.6" },
+    { name = "linkify-it-py", specifier = ">=2.0.3" },
     { name = "myst-parser", specifier = ">=4.0.1" },
     { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
     { name = "sphinx", specifier = ">=8.1.3" },

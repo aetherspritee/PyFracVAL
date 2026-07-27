@@ -26,6 +26,7 @@ plot = ["pyvista[all]>=0.44.1", "stpyvista>=0.1.4", "streamlit>=1.41.1", "pandas
 docs = [
   "furo>=2024.8.6",
   "myst-parser>=4.0.1",
+  "linkify-it-py>=2.0.3",
   "pydata-sphinx-theme>=0.16.1",
   "sphinx-autoapi>=3.6.0",
   "sphinx-autodoc-typehints>=3.0.1",
