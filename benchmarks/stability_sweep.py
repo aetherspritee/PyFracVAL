@@ -345,6 +345,8 @@ def _run_sweep_dask(
     cfg, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
 ):
     """Inner loop for the Dask-distributed sweep."""
+    import os
+
     from dask.distributed import as_completed as dask_as_completed
 
     from pyfracval.dask_runner import get_client
@@ -365,6 +367,18 @@ def _run_sweep_dask(
         n_workers=dask_cfg.workers,
         install_package=dask_cfg.scheduler_address is not None,
     ) as client:
+        # Dask workers are daemonic processes; pca_subclusters.py's
+        # run_subclustering() spawns its own multiprocessing.Pool() for
+        # parallel subcluster generation when enabled, which daemonic
+        # processes cannot do ("daemonic processes are not allowed to have
+        # children"). Disable it on every worker before submitting tasks -
+        # mirrors batch_runner.py's generate_aggregates_parallel().
+        client.run(
+            lambda: os.environ.__setitem__(
+                "PYFRACVAL_DISABLE_PARALLEL_SUBCLUSTERS", "1"
+            )
+        )
+
         combo_futures: dict = {}  # future → (combo_key, trial_index)
         combo_params: dict = {}  # combo_key → params dict
 
