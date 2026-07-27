@@ -26,7 +26,6 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from pyfracval.main_runner import run_simulation
-from pyfracval.schemas import SimulationParameters
 
 
 @dataclass
@@ -290,12 +289,13 @@ class StickingBenchmark:
         trial_num: int,
         category: str,
         trial_timeout: Optional[int] = None,
+        seed: Optional[int] = None,
     ) -> BenchmarkResult:
         """Run a single benchmark trial.
 
         Args:
             params: Test case parameters
-            trial_num: Trial number (for seed generation)
+            trial_num: Trial number (for seed generation, if seed not given)
             category: Benchmark category name
             trial_timeout: Maximum wall-clock seconds allowed per trial
                 (None = no limit).  Passed as ``max_runtime_seconds`` to
@@ -304,6 +304,12 @@ class StickingBenchmark:
                 happens between attempts (not inside C-extension loops), an
                 individual attempt may still overshoot by the duration of one
                 CCA sticking phase.
+            seed: Explicit seed to use. When omitted (default), a
+                deterministic seed is hash-derived from
+                (category, description, trial_num) - unique per trial but
+                not a literal, trackable value. Pass this explicitly when
+                you want the same small set of seed values (e.g. 1..5)
+                reused identically across every parameter combination.
 
         Returns:
             BenchmarkResult with success status and metrics
@@ -317,8 +323,8 @@ class StickingBenchmark:
             **params,
         }
 
-        # Generate deterministic seed
-        seed = hash((category, params["description"], trial_num)) % (2**31)
+        if seed is None:
+            seed = hash((category, params["description"], trial_num)) % (2**31)
         full_params["seed"] = seed
 
         print(f"  Trial {trial_num + 1}: {params['description']} (seed={seed})")

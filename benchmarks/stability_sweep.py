@@ -322,6 +322,7 @@ def _run_sweep_sequential(
                             trial_num=trial,
                             category="stability_sweep",
                             trial_timeout=sim.trial_timeout,
+                            seed=trial + 1,
                         )
                         case_results.append(result)
 
@@ -341,6 +342,23 @@ def _run_sweep_sequential(
                     )
 
 
+def _timed_run_simulation(
+    iteration, sim_config_dict, output_base_dir, seed, max_runtime_seconds
+):
+    """Runs on the Dask worker; self-reports execution duration rather than
+    relying on submit-to-completion wall time (which includes queue wait
+    when many more tasks are submitted than there are workers)."""
+    import time as _time
+
+    from pyfracval.main_runner import run_simulation
+
+    t0 = _time.time()
+    result = run_simulation(
+        iteration, sim_config_dict, output_base_dir, seed, max_runtime_seconds
+    )
+    return result, _time.time() - t0
+
+
 def _run_sweep_dask(
     cfg, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
 ):
@@ -350,7 +368,6 @@ def _run_sweep_dask(
     from dask.distributed import as_completed as dask_as_completed
 
     from pyfracval.dask_runner import get_client
-    from pyfracval.main_runner import run_simulation
 
     sim = cfg.simulation
     dask_cfg = cfg.dask
@@ -411,11 +428,13 @@ def _run_sweep_dask(
                         combo_params[combo_key] = params
 
                         for trial in range(cfg.trials):
-                            seed = abs(
-                                hash((n_val, df_val, kf_val, rp_gstd, trial))
-                            ) % (2**31)
+                            # Literal, trackable seed (1, 2, 3, ...) reused
+                            # identically across every combo - not a
+                            # per-combo hash-derived value. Matches the
+                            # thesis's own methodology (Seed 1/2/3).
+                            seed = trial + 1
                             fut = client.submit(
-                                run_simulation,
+                                _timed_run_simulation,
                                 trial,
                                 params,
                                 "/tmp/dask_sweep_output",
@@ -424,10 +443,13 @@ def _run_sweep_dask(
                             )
                             combo_futures[fut] = (combo_key, trial)
 
-        # Collect results — track wall-clock time per completed future
+        # Collect results. Per-trial duration is self-reported by the worker
+        # (_timed_run_simulation), not measured as submit-to-completion wall
+        # time - with thousands of tasks submitted up front against a
+        # handful of workers, submit-to-completion is dominated by queue
+        # wait for tasks scheduled late, not actual execution cost.
         combo_results: dict = {k: [] for k in combo_params}  # → list[bool]
         combo_runtimes: dict = {k: [] for k in combo_params}  # → list[float]
-        future_submit_time: dict = {fut: time.time() for fut in combo_futures}
 
         try:
             from tqdm import tqdm as _tqdm
@@ -442,15 +464,13 @@ def _run_sweep_dask(
 
         for future in completed_iter:
             combo_key, _trial = combo_futures[future]
-            t_done = time.time()
-            t_submit = future_submit_time[future]
-            elapsed = t_done - t_submit
             try:
-                success, _coords, _radii = future.result()
+                (success, _coords, _radii), duration = future.result()
             except Exception:
                 success = False
+                duration = 0.0
             combo_results[combo_key].append(success)
-            combo_runtimes[combo_key].append(elapsed)
+            combo_runtimes[combo_key].append(duration)
 
         # Build sweep rows in original order
         combo_index = 0

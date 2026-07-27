@@ -3340,6 +3340,7 @@ dependencies = [
 
 [package.optional-dependencies]
 plot = [
+    { name = "matplotlib" },
     { name = "pandas" },
     { name = "pyvista", extra = ["all"] },
     { name = "stpyvista" },
@@ -3374,6 +3375,7 @@ test = [
 requires-dist = [
     { name = "click", specifier = ">=8.1.7" },
     { name = "dask", extras = ["distributed"], specifier = "==2026.3.0" },
+    { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.9.0" },
     { name = "numba", specifier = ">=0.60.0" },
     { name = "numpy", specifier = ">=1.26.4" },
     { name = "pandas", marker = "extra == 'plot'", specifier = ">=2.2.3" },

@@ -20,7 +20,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-plot = ["pyvista[all]>=0.44.1", "stpyvista>=0.1.4", "streamlit>=1.41.1", "pandas>=2.2.3"]
+plot = [
+  "pyvista[all]>=0.44.1",
+  "stpyvista>=0.1.4",
+  "streamlit>=1.41.1",
+  "pandas>=2.2.3",
+  # benchmarks/create_visualizations.py and other benchmark plotting
+  # scripts import this directly - previously only available by transitive
+  # luck via pyvista's own dependency on it.
+  "matplotlib>=3.9.0",
+]
 
 [dependency-groups]
 docs = [
