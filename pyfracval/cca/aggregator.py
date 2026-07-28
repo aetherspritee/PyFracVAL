@@ -172,6 +172,13 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         # docs/source/overlap_failure_census.md. None when disabled or
         # before any failure has been censused.
         self._last_overlap_census = None
+        self._last_overlap_failure_geometry = None
+
+        # Drop-rescue telemetry (cca_drop_rescue_enabled) - see
+        # docs/source/drop_rescue.md.
+        self._drop_rescue_attempts: int = 0
+        self._drop_rescue_successes: int = 0
+        self._particles_dropped_total: int = 0
 
         # FFT docking telemetry
         self._fft_docking_attempts: int = 0
@@ -324,6 +331,44 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
                             f"Soft relaxation succeeded for pair ({k}, {other})"
                         )
 
+                # Try drop-rescue if enabled and every prior fallback failed
+                # (docs/source/drop_rescue.md). Depends on the overlap
+                # census populated by _perform_cca_sticking_with_expansion's
+                # failure path above - self.algorithm_config's validator
+                # guarantees cca_overlap_census_enabled is also True
+                # whenever cca_drop_rescue_enabled is.
+                if (
+                    stick_result is None
+                    and self.algorithm_config.cca_drop_rescue_enabled
+                    and self._last_overlap_census is not None
+                    and self._last_overlap_failure_geometry is not None
+                ):
+                    from .rescue import (
+                        retry_sticking_with_drops,
+                        select_drop_candidates,
+                    )
+
+                    drop = select_drop_candidates(
+                        self._last_overlap_census,
+                        self.algorithm_config.cca_drop_rescue_max_particles,
+                        self.algorithm_config.cca_drop_rescue_max_fraction,
+                    )
+                    if drop is not None:
+                        self._drop_rescue_attempts += 1
+                        drop_idx1, drop_idx2 = drop
+                        c1, r1, c2, r2 = self._last_overlap_failure_geometry
+                        stick_result = retry_sticking_with_drops(
+                            c1, r1, c2, r2, drop_idx1, drop_idx2, self.tol_ov
+                        )
+                        if stick_result is not None:
+                            self._drop_rescue_successes += 1
+                            self._particles_dropped_total += len(drop_idx1) + len(
+                                drop_idx2
+                            )
+                            logger.info(
+                                f"Drop-rescue succeeded for pair ({k}, {other})"
+                            )
+
                 if stick_result is None:
                     logger.info(
                         f"Sticking failed for pair ({k}, {other}). Cannot continue."
@@ -373,6 +418,18 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
             # Adjust i_orden_next size if fewer clusters were formed
             i_orden_next = i_orden_next[:next_cluster_idx, :]
             num_clusters_next = next_cluster_idx  # Update expected count
+
+        # coords_next/radii_next are pre-sized to self.coords.shape[0] (the
+        # particle count entering this iteration), but fill_idx only
+        # reaches that full size when every particle from every processed
+        # cluster carries forward unchanged. Drop-rescue (docs/source/
+        # drop_rescue.md) can now legitimately produce num_added <
+        # combined original cluster sizes, leaving trailing all-zero rows
+        # here that must not be carried forward as if they were real
+        # particles. Trimming to fill_idx is a no-op whenever nothing was
+        # dropped (fill_idx == coords_next.shape[0] in that case).
+        coords_next = coords_next[:fill_idx]
+        radii_next = radii_next[:fill_idx]
 
         # Update state for the next iteration
         self.coords = coords_next

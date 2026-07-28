@@ -17,18 +17,38 @@ git history has the detail).
       actually-sticks. A backtracking approach that reacts to a real stick
       failure instead of trying to predict it upfront is the design the
       evidence now points to.
-- [ ] Drop-a-few-particles rescue fallback (Phase 3 of the paper-worthy
-      roadmap — see `/home/mar/.claude/plans/scalable-cooking-brooks.md`).
-      `docs/source/overlap_failure_census.md`'s real data is a caution,
-      not a green light: at N=128 hard regime, failures always happen at
-      CCA round 1 between ~12-particle subclusters, with a median 9/24
-      (~37.5%) particles implicated — not the "5 out of 512" scale the
-      idea was framed around. Needs checking whether late-round merges
-      between large, already-built clusters look different before
-      building the rescue mechanism around an assumption the N=128 data
-      doesn't support.
+- [ ] Check whether drop-rescue behaves differently at larger N / later
+      CCA rounds. `docs/source/drop_rescue.md`'s validation is entirely
+      round-1, N=128 data (every hard-regime failure at that N happens
+      there) — whether a late-round merge between two large,
+      already-built clusters is more "localized" (a smaller *fraction* of
+      particles implicated, even at similar absolute counts) than round-1
+      subcluster merges is untested. Needs a probe that samples N large
+      enough, and lucky enough in its round structure, for a late-round
+      failure to actually occur.
 
 ## Done (recent)
+
+- [x] **Drop-a-few-particles rescue fallback** (Phase 3 of the roadmap,
+      closes the item that used to be here). Added `pyfracval/cca/rescue.py`
+      (`select_drop_candidates` with a combined absolute+relative budget,
+      `retry_sticking_with_drops` which reuses the exact already-censused
+      failing geometry rather than re-running a full search) wired into
+      `aggregator.py::_run_iteration` as a third fallback tier, gated on
+      `cca_drop_rescue_enabled` (auto-enables the Phase 2 census). No
+      backfill — `AggregateProperties.n_particles_dropped` reports any
+      shortfall. Also fixed two latent bugs this feature exposed:
+      `_run_iteration` never trimmed `coords_next`/`radii_next` to the
+      actual fill count (harmless until particles could be dropped
+      mid-round), and `_identify_monomers` sized its scratch array to
+      `self.N` instead of the current active count, spuriously logging
+      every dropped particle as "unassigned" every subsequent round.
+      Benchmarked (`benchmarks/drop_rescue_accuracy.py`, single-shot
+      hard-regime methodology): the conservative default budget has
+      **zero effect** (2.5% → 2.5%, budget too tight for N=128's
+      24-particle failing pairs), a relaxed budget triples single-shot
+      success (2.5% → 7.5%) with no obvious fractal-accuracy penalty on
+      the (small) sample rescued. See `docs/source/drop_rescue.md`.
 
 - [x] **Statistical overlap-failure census** (Phase 2 of the roadmap).
       Added `pyfracval/overlap_statistics.py` (`compute_overlap_census`,

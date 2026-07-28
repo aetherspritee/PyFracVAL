@@ -659,7 +659,13 @@ class _FallbacksMixin:
         candidate placement (whatever the sticking loop above left
         coords1_stick/current_coords2 as when it exhausted candidates) and
         stashes the result on self._last_overlap_census for the caller
-        (benchmark harness, or a future rescue fallback) to consume.
+        (benchmark harness, or the drop-rescue fallback, see
+        docs/source/drop_rescue.md) to consume. Also stashes the exact
+        geometry the census was computed against on
+        self._last_overlap_failure_geometry, since drop-rescue needs the
+        actual coordinate arrays, not just the census's summary stats, to
+        remove the offending particles and re-check.
+
         Silently no-ops if the very last attempt never got past initial
         placement (coords1_last/coords2_last still None) - there is no
         geometry to census in that case. Strictly additive: only runs when
@@ -667,6 +673,7 @@ class _FallbacksMixin:
         """
         if coords1_last is None or coords2_last is None:
             self._last_overlap_census = None
+            self._last_overlap_failure_geometry = None
             return
         from ..overlap_statistics import compute_overlap_census
 
@@ -676,6 +683,12 @@ class _FallbacksMixin:
             coords2_last,
             radii2,
             max_pairs=self.algorithm_config.cca_overlap_census_max_pairs,
+        )
+        self._last_overlap_failure_geometry = (
+            coords1_last,
+            radii1,
+            coords2_last,
+            radii2,
         )
 
     def _try_soft_relaxation_sticking(

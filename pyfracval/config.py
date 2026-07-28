@@ -271,6 +271,13 @@ class OrchestratorAlgorithmConfig(BaseModel):
     # success/fail signal pyfracval/overlap.py's scalar checks give.
     cca_overlap_census_enabled: bool = False
     cca_overlap_census_max_pairs: int = 4096
+    # --- Drop-a-few-particles rescue (docs/source/drop_rescue.md) ------------
+    # Opt-in; requires the overlap census above (auto-enabled when this is
+    # True, see _validate_algorithm below). No backfill: a rescued merge
+    # yields fewer than the requested N particles.
+    cca_drop_rescue_enabled: bool = False
+    cca_drop_rescue_max_particles: int = 5  # absolute safety cap, per side
+    cca_drop_rescue_max_fraction: float = 0.02  # relative cap, per side
     cca_score_topk_per_class: int = 32
     cca_retry_rotation_mode: str = "single"
     cca_coarse_fine_coarse_fraction: float = 0.67
@@ -328,6 +335,15 @@ class OrchestratorAlgorithmConfig(BaseModel):
     profile_timing: bool = False
     profile_cca_leaf_stats: bool = False
     profile_cca_candidate_score: bool = False
+
+    @model_validator(mode="after")
+    def _drop_rescue_requires_census(self) -> "OrchestratorAlgorithmConfig":
+        """cca_drop_rescue_enabled needs a populated overlap census to act
+        on - auto-enable it rather than silently no-op-ing if a caller sets
+        drop-rescue without also setting the census flag."""
+        if self.cca_drop_rescue_enabled and not self.cca_overlap_census_enabled:
+            self.cca_overlap_census_enabled = True
+        return self
 
 
 class RunConfig(BaseModel):

@@ -35,14 +35,25 @@ class _PairingMixin:
         )
 
     def _identify_monomers(self) -> np.ndarray | None:
-        """Creates an array mapping each monomer index (0..N-1) to its cluster index (0..i_t-1)."""
+        """Creates an array mapping each active monomer index to its
+        cluster index (0..i_t-1).
+
+        Sized to self.coords.shape[0] (the particle count *currently*
+        active), not self.N (the originally-requested total) - these
+        diverge once the opt-in drop-rescue fallback
+        (cca_drop_rescue_enabled, docs/source/drop_rescue.md) has removed
+        any particles. Using self.N here would spuriously flag every
+        dropped particle's index as "unassigned" on every subsequent
+        round even though nothing is actually wrong.
+        """
         try:
-            id_monomers = np.zeros(self.N, dtype=int) - 1  # Initialize with -1
+            n_active = self.coords.shape[0]
+            id_monomers = np.zeros(n_active, dtype=int) - 1  # Initialize with -1
             for cluster_idx in range(self.i_t):
                 start_idx = self.i_orden[cluster_idx, 0]
                 end_idx = self.i_orden[cluster_idx, 1] + 1
                 if (
-                    start_idx < end_idx and start_idx >= 0 and end_idx <= self.N
+                    start_idx < end_idx and start_idx >= 0 and end_idx <= n_active
                 ):  # Valid range check
                     id_monomers[start_idx:end_idx] = cluster_idx
             # Check if all monomers were assigned

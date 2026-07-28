@@ -368,6 +368,10 @@ def _run_simulation_core(
         N_particles_actual=n_actual,
         radius_of_gyration=final_rg,
         center_of_mass=final_cm,
+        # drop-rescue (cca_drop_rescue_enabled) is currently the only
+        # mechanism that can leave n_actual short of the requested N -
+        # densify repositions particles but never removes them.
+        n_particles_dropped=max(0, sim_params.N - n_actual),
     )
     metadata_instance = Metadata(
         generation_info=gen_info,

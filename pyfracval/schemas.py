@@ -74,6 +74,15 @@ class AggregateProperties(BaseModel):
     center_of_mass: list[float] | None = Field(
         None, description="Calculated center of mass [X, Y, Z]."
     )
+    n_particles_dropped: int = Field(
+        0,
+        description=(
+            "Particles removed by the opt-in drop-rescue fallback "
+            "(cca_drop_rescue_enabled) to resolve an otherwise-unrecoverable "
+            "sticking failure. N_particles_actual = requested N minus this "
+            "value; there is no backfill. See docs/source/drop_rescue.md."
+        ),
+    )
     # Add r_max etc. if calculated and needed
 
 
