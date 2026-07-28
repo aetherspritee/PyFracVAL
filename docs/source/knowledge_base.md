@@ -1,8 +1,7 @@
 # Knowledge Base
 
-Retrospectives, experiments, and parameter sweeps behind PyFracVAL's design
-decisions - what was tried, what worked, what didn't, and the data behind
-each call.
+Experimental retrospectives and parameter sweeps documenting the evidence
+behind PyFracVAL's algorithmic design decisions.
 
 ```{toctree}
 :maxdepth: 1

@@ -1,65 +1,62 @@
 # Installation
 
-This page provides instructions on how to install the `pyfracval` package.
+## Requirements
 
-## Prerequisites
+- Python 3.11 or later.
+- [`uv`](https://docs.astral.sh/uv/) for dependency management.
+- [`devenv`](https://devenv.sh/) (Nix-based), for the reproducible development
+  environment used by this project. Not required to use PyFracVAL as a
+  library.
 
-- Python 3.10 or higher (check your version with `python --version`).
-- `pip` (Python package installer)
+PyFracVAL is not yet published on PyPI; installation is from source.
 
-## Standard Installation
+## Development environment
 
-The recommended way to install `pyfracval` is using `pip` from the Python Package Index (PyPI) (once you publish it there):
+The project pins its toolchain (Python interpreter, `uv`, CUDA libraries for
+the optional GPU benchmarks) through `devenv.nix`. This is the supported
+setup for contributing to PyFracVAL:
 
 ```bash
-pip install pyfracval
+git clone https://github.com/aetherspritee/PyFracVAL.git
+cd PyFracVAL
+devenv shell
 ```
 
-This will install the package and its required dependencies (like NumPy, Pydantic, etc.).
+`devenv shell` provisions the pinned Python interpreter and installs the
+project along with its `test` and `docs` dependency groups. Run commands
+inside this shell, or prefix them with `devenv shell --`:
 
-## Installation from Source (for Development)
-
-If you want to contribute to the project or install the latest development version directly from the source code (e.g., after cloning from GitHub), follow these steps:
-
-1.  **Clone the Repository:**
-
-    ```bash
-    git clone https://github.com/your-username/pyfracval.git
-    cd pyfracval
-    ```
-
-    _(Replace with your actual repository URL)_
-
-2.  **Create a Virtual Environment (Recommended):**
-    It's highly recommended to use a virtual environment to manage dependencies:
-
-    ```bash
-    # Using venv (built-in)
-    python -m venv .venv
-    source .venv/bin/activate # On Linux/macOS
-    # .\venv\Scripts\activate # On Windows
-
-    # Or using conda
-    # conda create -n pyfracval-env python=3.11 # Or your preferred version
-    # conda activate pyfracval-env
-    ```
-
-3.  **Install in Editable Mode:**
-    Installing in editable mode (`-e`) links the installed package to your source code, so changes you make are immediately reflected without reinstalling.
-    ```bash
-    pip install -e .[dev,test,docs]
-    ```
-    - The `.` refers to the current directory (where `pyproject.toml` is).
-    - The `[dev,test,docs]` part installs optional dependencies needed for development, running tests, and building documentation (assuming you define these groups in your `pyproject.toml`). Adjust or remove this part as needed. If you don't have groups defined, you might just do `pip install -e .` and install dev tools separately.
-
-## Checking the Installation
-
-You can verify the installation by importing the package in a Python interpreter:
-
-```python
-import pyfracval
-# Optional: check version if you have defined __version__
-# print(pyfracval.__version__)
+```bash
+devenv shell -- uv run pytest
+devenv shell -- uv run python pyfracval/main_runner.py
 ```
 
-If no errors occur, the installation was successful.
+Two additional dependency groups are available and installed on demand:
+
+- `plot` (`pyvista`, `streamlit`, `pandas`, `matplotlib`) - interactive 3D
+  visualization and the Streamlit exploration app.
+- `jax_bench` - the JAX/CUDA benchmark harness described in the
+  [GPU acceleration evaluation](gpu_acceleration.md); not synced by default,
+  since it pulls several gigabytes of CUDA wheels.
+
+```bash
+uv sync --group test --group docs --group plot
+```
+
+## Without devenv
+
+`devenv` is not required to use the package. A plain `uv` or `pip` install
+from a clone of the repository works as well:
+
+```bash
+git clone https://github.com/aetherspritee/PyFracVAL.git
+cd PyFracVAL
+uv sync
+# or: pip install -e .
+```
+
+## Verifying the installation
+
+```bash
+python -c "import pyfracval; print(pyfracval.__version__)"
+```
