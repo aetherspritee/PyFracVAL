@@ -31,11 +31,9 @@ repository, kept locally outside version control given the data volume).
 
 ## Infrastructure issues found at this scale
 
-This sweep took roughly 20 hours wall-clock on a 16-core machine, well
-above the approximately 2-hour estimate a straightforward 5.5x scaling
-from the previous sweep's size would suggest. Two infrastructure issues,
-found only by running at this scale rather than a smaller smoke test,
-account for the gap:
+This sweep took roughly 20 hours wall-clock on a 16-core machine. Two
+infrastructure issues, found only by running at this scale rather than a
+smaller smoke test, account for most of that time:
 
 1. `get_client()`'s local cluster used only 4 of 16 cores. Its docstring
    states that it "defaults to the number of CPU cores when n_workers is

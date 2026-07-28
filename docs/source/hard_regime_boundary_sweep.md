@@ -95,14 +95,13 @@ bracketed by:
 | 2.3 | 1.0 | 0.00 (0/5) |
 
 A fully-successful corner and a fully-collapsed corner sit 0.05 apart in
-Df. This was not incidental to the original `experiments.md` regime
-choice; it is a deliberately hard stress point on the transition itself,
-which is why the pairing-frustration probe's single-shot methodology (no
-internal retry) measured only 2.5% success there: retry compounds a low
-per-attempt probability into a substantially higher eventual success
-rate near the boundary, while the per-attempt probability itself is what
-the probe's census explains (see
-[pairing_frustration.md](pairing_frustration.md)).
+Df. The `experiments.md` regime choice (Df=2.25, kf=0.95) is a
+deliberately hard stress point on this transition, which is why the
+pairing-frustration probe's single-shot methodology (no internal retry)
+measured only 2.5% success there: retry compounds a low per-attempt
+probability into a substantially higher eventual success rate near the
+boundary, while the per-attempt probability itself is what the probe's
+census explains (see [pairing_frustration.md](pairing_frustration.md)).
 
 N amplifies instability specifically at the boundary, with a cleaner
 signal here than a wide, non-boundary-focused sweep provides, since this

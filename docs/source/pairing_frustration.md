@@ -90,8 +90,8 @@ Raw data: `benchmark_results/pairing_frustration_probe.json`.
 
 The retrospective's conclusion that frustration is fundamental and no
 search strategy helps is correct for everything it tested, but pairing
-choice was outside its scope and turns out to be the relevant lever.
-Round sizes are small (~11 clusters), failures concentrate almost
+choice was outside its scope, and it is the relevant lever. Round sizes
+are small (~11 clusters), failures concentrate almost
 entirely at round 1, and the feasibility graph is dense enough that a
 smarter pairing strategy - a true matching in place of greedy first-fit,
 or backtracking to a different partner on merge failure instead of
