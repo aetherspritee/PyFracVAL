@@ -10,10 +10,6 @@ PyFracVAL generates 3D fractal-like aggregates of mono- and polydisperse primary
 
 installation
 usage
-experiments
-pairing_frustration
-hard_regime_boundary_sweep
-full_stability_sweep
-gpu_acceleration
+knowledge_base
 references
 ```
