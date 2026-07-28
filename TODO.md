@@ -17,15 +17,16 @@ git history has the detail).
       actually-sticks. A backtracking approach that reacts to a real stick
       failure instead of trying to predict it upfront is the design the
       evidence now points to.
-- [ ] Check whether drop-rescue behaves differently at larger N / later
-      CCA rounds. `docs/source/drop_rescue.md`'s validation is entirely
-      round-1, N=128 data (every hard-regime failure at that N happens
-      there) — whether a late-round merge between two large,
-      already-built clusters is more "localized" (a smaller *fraction* of
-      particles implicated, even at similar absolute counts) than round-1
-      subcluster merges is untested. Needs a probe that samples N large
-      enough, and lucky enough in its round structure, for a late-round
-      failure to actually occur.
+- [ ] Check whether drop-rescue behaves differently at a genuine
+      **late CCA round** (partial progress: N=512's round-1 failures show
+      a smaller relative offending-particle fraction than N=128's — 20%
+      vs 37.5% — a real trend, but every hard-regime failure at both N
+      still happens at round 1, so the original "two already-large
+      aggregates" scenario remains untested). Needs a probe that
+      specifically waits for or forces a later-round failure rather than
+      sampling whichever round fails first. See
+      `docs/source/overlap_failure_census.md`'s N=512 addendum and
+      `docs/source/drop_rescue.md`'s corresponding section.
 
 ## Done (recent)
 

@@ -63,6 +63,23 @@ failing pair. Overlap severity skews toward the high end: of 217 total
 overlapping pairs recorded across these 23 failures, 137 (63.1%) fall in
 the most severe bucket (overlap fraction > 0.3).
 
+### N=512, for comparison
+
+The same census at N=512 (same Df/kf/σ, 40 seeds):
+
+| Regime | Success rate | Failures censused |
+|---|---:|---:|
+| Hard, N=512 | 2.5% (1/40) | 10/39 |
+
+Cluster-pair size at failure is again a single fixed value (100, not
+24) - N=512 hard-regime failures also concentrate at round 1, same as
+N=128. Offending particles: mean 20.3, median 20, out of 100 - a smaller
+*relative* fraction (20%) than N=128's 37.5%, though a larger *absolute*
+count. Census coverage is much lower here (10/39, 25.6%, vs. N=128's
+85.2%): most N=512 failures never reach the rotation-search stage at
+all - see Limitations for what that means for the census's scope. Raw
+output: `benchmark_results/overlap_census_probe_n512.json`.
+
 ## Discussion
 
 The offending-particle counts above are a fraction of a *small* cluster
@@ -78,22 +95,30 @@ correction, and a fixed "drop <=5" budget (the scale suggested by the
 "two 512-particle aggregates" example) would not have covered 91.3% of
 the failures observed here.
 
-This is not necessarily true at every N or every round - the example that
-motivated Phase 3 describes a *late*-round merge of two already-large
-aggregates, which this probe did not sample (every hard-regime failure at
-N=128 happens at round 1, before any cluster gets large). Whether
-late-round failures between large clusters look different - fewer,
-more localized offending particles relative to cluster size - is an open
-question Phase 3 needs to check directly rather than assume, e.g. by
-running this same census at larger N where more CCA rounds occur before
-a failure can happen.
+The N=512 comparison answers part of the open question this raises, but
+not all of it: the *relative* offending fraction does shrink with N (20%
+vs. 37.5%), a real, if modest, trend in the direction the original "5 out
+of 512" framing hoped for - but the *absolute* count needed (median 20)
+is still far larger than a small fixed budget covers, and this is still
+round-1 data (larger initial subclusters, not a late-round merge of
+already-large aggregates). The example that motivated Phase 3 specifically
+describes a *late*-round merge, which neither N tested here samples -
+every hard-regime failure observed, at both N=128 and N=512, happens at
+round 1. Whether a genuinely late-round failure looks different again is
+still open; it would need a probe that specifically waits for (or forces)
+a later-round failure rather than sampling whichever round fails first.
 
 ## Limitations
 
-4 of 27 hard-regime failures produced no census: their last attempt never
-reached the rotation-search stage (initial rigid placement itself failed
-for that specific candidate pair), so there was no rotated geometry to
-scan. The census also only covers the *single* failing pair per round,
+4 of 27 hard-regime failures at N=128 produced no census (10/39 uncensused
+at N=512, a much larger share): their last attempt never reached the
+rotation-search stage (initial rigid placement itself failed for that
+specific candidate pair), so there was no rotated geometry to scan. That
+N=512's uncensused share is so much larger is itself worth noting - most
+large-cluster failures apparently fail even earlier in the attempt
+pipeline than small-cluster ones do, which the census as currently scoped
+can't say anything about. The census also only covers the *single*
+failing pair per round,
 not a full-pool feasibility census the way
 `pairing_frustration_probe.py`'s offline diagnostic does - this is
 deliberately cheaper and runs inside the real production retry loop

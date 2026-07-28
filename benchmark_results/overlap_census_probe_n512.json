@@ -1,0 +1,51 @@
+{
+  "regime": "hard_N512",
+  "params": {
+    "N": 512,
+    "Df": 2.25,
+    "kf": 0.95,
+    "rp_gstd": 1.9,
+    "description": "hard_N512",
+    "cca_overlap_census_enabled": true
+  },
+  "n_seeds": 40,
+  "n_success": 1,
+  "success_rate": 0.025,
+  "n_failures_with_census": 10,
+  "offending_particle_counts": [
+    29,
+    17,
+    20,
+    14,
+    14,
+    25,
+    30,
+    20,
+    16,
+    18
+  ],
+  "cluster_size_at_failure": [
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100
+  ],
+  "localized_buckets": {
+    ">20": 3,
+    "11-20": 7
+  },
+  "severity_histogram_totals": {
+    "0-0.05": 8,
+    "0.05-0.15": 19,
+    "0.15-0.3": 17,
+    "0.3+": 130
+  },
+  "mean_offending_particles": 20.3,
+  "median_offending_particles": 20
+}

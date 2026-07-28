@@ -89,19 +89,28 @@ difference either way).
 
 Raw output: `benchmark_results/drop_rescue_accuracy.json`.
 
-### Not yet tested: larger N, later rounds
+### Larger N: a real trend, but not the whole answer
 
-[overlap_failure_census.md](overlap_failure_census.md) already flagged
-that its N=128 census data - and by extension the budget conclusions
-above - comes entirely from round-1 failures between small (~12-particle)
-PCA subclusters, since that's where every N=128 hard-regime failure
-happens. Whether a late-round merge between two large, already-built
-clusters looks different (a smaller *fraction* of particles implicated,
-even if the absolute count is similar) is a real open question this page
-has not answered - it would require sampling N large enough, and lucky
-enough in its round structure, for a late-round failure to actually
-occur, which is a separate, more involved probe than reused here. Left as
-follow-up work rather than assumed either way.
+[overlap_failure_census.md](overlap_failure_census.md)'s N=512 comparison
+(added after this page's initial budget validation) shows the *relative*
+offending-particle fraction shrinking with N (20% at N=512 vs. 37.5% at
+N=128) - a real signal in the direction the "5 out of 512" framing hoped
+for. But the *absolute* count needed (median 20 at N=512) still exceeds
+what either budget tested above allows: at N=512's cluster-pair size of
+100, the relaxed budget's 25%-per-side cap is itself capped by the
+absolute `max_drop_particles=5` limit (`min(5, ceil(0.25*100))=5`), well
+under the ~10-15 per side a median failure likely needs. The config's two
+independent budget parameters would need to be tuned differently at
+different N for the relaxed setting to actually engage the relative cap
+rather than being bottlenecked by the absolute one - not evaluated here.
+
+Both N=128 and N=512 hard-regime failures observed happen at CCA round 1
+(merging PCA subclusters directly, before any cluster has had a chance to
+grow large) - neither samples the *late*-round merge between two already-
+large, already-built clusters that originally motivated this idea. That
+remains untested; it would need a probe that specifically waits for (or
+forces) a later-round failure rather than sampling whichever round fails
+first, which is a separate, more involved undertaking than reused here.
 
 ## Discussion
 
