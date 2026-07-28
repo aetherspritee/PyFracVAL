@@ -171,7 +171,7 @@ step if a tighter fit is warranted.
 :width: 600px
 ```
 
-Independent of the fitted model, the practical planning takeaway is: a
-successful combination in this grid almost always finishes in under 10s;
-a failing one costs anywhere from a few seconds up to the full 90s
-timeout, with substantial mass sitting at that cap.
+Independent of the model fit above: a successful combination in this
+grid almost always finishes in under 10s; a failing one costs anywhere
+from a few seconds up to the full 90s timeout, with substantial mass
+sitting at that cap.

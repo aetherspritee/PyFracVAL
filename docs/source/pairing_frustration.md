@@ -64,8 +64,7 @@ not perturb the outcome of the real run downstream.
 `experiments.md` for the same nominal regime, because that number includes
 the internal 20-attempt retry loop each real CLI/`run_simulation` call
 uses; this probe bypasses that loop to obtain a clean seed-to-outcome
-mapping. It is a different metric, not a contradiction - if anything, it
-makes the 97.4% figure more notable.)
+mapping. It is a different metric, not a contradiction.)
 
 Characterizing the failing rounds:
 
