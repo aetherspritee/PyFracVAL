@@ -8,16 +8,46 @@ git history has the detail).
 
 ## Open
 
-- [ ] Implement a matching-based (or backtracking) CCA pairing strategy.
-      `docs/source/pairing_frustration.md` found that 97.4% of hard-regime
-      CCA failures had a perfect matching available in the same cluster
-      pool greedy pairing failed on — this is the not-yet-implemented fix
-      that finding points to. Re-benchmark against
-      `configs/hard_regime_boundary_sweep.toml` /
-      `configs/full_stability_sweep.toml` once implemented to quantify the
-      actual boundary shift.
+- [ ] Implement a **backtracking** CCA pairing strategy (retry a failed
+      pair's cluster with a different partner using the *real* sticking
+      outcome, not a precomputed graph). `docs/source/matching_pairing.md`
+      found that matching over the cheap upfront gamma-feasibility graph
+      does not work (+0.2pp over 4200 trials, statistically noise) because
+      that graph is too optimistic — geometrically-feasible does not mean
+      actually-sticks. A backtracking approach that reacts to a real stick
+      failure instead of trying to predict it upfront is the design the
+      evidence now points to.
+- [ ] Statistical overlap-failure census + drop-a-few-particles rescue
+      fallback (Phases 2-3 of the paper-worthy roadmap — see
+      `/home/mar/.claude/plans/scalable-cooking-brooks.md`).
 
 ## Done (recent)
+
+- [x] **Implement and benchmark matching-based CCA pairing** (closes the
+      previous "Implement a matching-based (or backtracking) CCA pairing
+      strategy" item). Added `pyfracval/cca/matching.py` (exact
+      maximum-cardinality matching + leaf-weighted variant, both via
+      memoized brute-force DP — cheap and exact at CCA's round-pool sizes,
+      ~16 max) and a new `cca_pairing_strategy` config flag
+      (`"greedy"`/`"matching"`/`"matching_leaf_weighted"`, default
+      unchanged). Benchmarked against the exact
+      `pairing_frustration_probe.py` regime/seeds and the full
+      `hard_regime_boundary_sweep.toml` grid (4200 trials): **no
+      measurable improvement** (72.4% → 72.6% overall, differences scatter
+      in both directions with no systematic pattern). Root cause
+      identified and documented: `pairing_frustration.md`'s 97.4%
+      "rescuable" figure was computed against a feasibility graph built
+      from real sticking outcomes; `_generate_pairs()` can only afford the
+      cheap gamma-feasibility graph, which is necessary-but-not-sufficient
+      for actual sticking success, so maximizing cardinality over it
+      doesn't reliably find pairs that actually work. See
+      `docs/source/matching_pairing.md`. Both strategies remain available
+      as opt-in config values but are not promoted to default.
+- [x] **Phase 0 benchmarking baseline**: fixed `run_simulation()` to
+      report real PCA/CCA/TIMEOUT failure attribution (previously
+      hardcoded to "UNKNOWN" everywhere) and benchmarked
+      `densify_method="voronoi"` for the first time (worse than `radial`
+      on both speed and accuracy). See `docs/source/pipeline_baseline.md`.
 
 - [x] **Phase 5 follow-up — surveyed `dask_runner.py`/`batch_runner.py` vs.
       `benchmarks/`, decided `SweepConfig`'s dask pattern.** Actually

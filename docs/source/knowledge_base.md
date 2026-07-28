@@ -9,6 +9,7 @@ behind PyFracVAL's algorithmic design decisions.
 pipeline_baseline
 experiments
 pairing_frustration
+matching_pairing
 hard_regime_boundary_sweep
 full_stability_sweep
 gpu_acceleration

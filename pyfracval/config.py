@@ -254,6 +254,16 @@ class OrchestratorAlgorithmConfig(BaseModel):
     use_cca_incremental_overlap: bool = True
     cca_incremental_full_sync_period: int = 20
     cca_candidate_policy: str = "baseline"
+    # --- Pairing strategy (docs/source/matching_pairing.md) ------------------
+    # "greedy" (default, production, unchanged) | "matching" (exact
+    # maximum-cardinality matching over the same cheap feasibility graph) |
+    # "matching_leaf_weighted" (matching with leaf-class edge weights as a
+    # tiebreaker among cardinality-optimal solutions).
+    cca_pairing_strategy: str = "greedy"
+    cca_matching_leaf_class_weights: dict[str, float] = Field(
+        default_factory=lambda: {"LL": 1.0, "LN": 0.6, "NN": 0.3}
+    )
+    cca_matching_leaf_class_threshold: float = 0.5
     cca_score_topk_per_class: int = 32
     cca_retry_rotation_mode: str = "single"
     cca_coarse_fine_coarse_fraction: float = 0.67

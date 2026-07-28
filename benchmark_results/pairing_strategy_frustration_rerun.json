@@ -1,0 +1,110 @@
+[
+  {
+    "regime": "hard",
+    "strategy": "greedy",
+    "params": {
+      "N": 128,
+      "Df": 2.25,
+      "kf": 0.95,
+      "rp_gstd": 1.9
+    },
+    "n_seeds": 40,
+    "elapsed_s": 105.2452929019928,
+    "outcomes": {
+      "success": 1,
+      "cca_failed": 39,
+      "pca_failed": 0
+    },
+    "success_rate": 0.025
+  },
+  {
+    "regime": "hard",
+    "strategy": "matching",
+    "params": {
+      "N": 128,
+      "Df": 2.25,
+      "kf": 0.95,
+      "rp_gstd": 1.9
+    },
+    "n_seeds": 40,
+    "elapsed_s": 104.02688932418823,
+    "outcomes": {
+      "success": 2,
+      "cca_failed": 38,
+      "pca_failed": 0
+    },
+    "success_rate": 0.05
+  },
+  {
+    "regime": "hard",
+    "strategy": "matching_leaf_weighted",
+    "params": {
+      "N": 128,
+      "Df": 2.25,
+      "kf": 0.95,
+      "rp_gstd": 1.9
+    },
+    "n_seeds": 40,
+    "elapsed_s": 104.53884720802307,
+    "outcomes": {
+      "success": 1,
+      "cca_failed": 39,
+      "pca_failed": 0
+    },
+    "success_rate": 0.025
+  },
+  {
+    "regime": "easy_control",
+    "strategy": "greedy",
+    "params": {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5
+    },
+    "n_seeds": 40,
+    "elapsed_s": 4.961751461029053,
+    "outcomes": {
+      "success": 40,
+      "cca_failed": 0,
+      "pca_failed": 0
+    },
+    "success_rate": 1.0
+  },
+  {
+    "regime": "easy_control",
+    "strategy": "matching",
+    "params": {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5
+    },
+    "n_seeds": 40,
+    "elapsed_s": 5.013066291809082,
+    "outcomes": {
+      "success": 40,
+      "cca_failed": 0,
+      "pca_failed": 0
+    },
+    "success_rate": 1.0
+  },
+  {
+    "regime": "easy_control",
+    "strategy": "matching_leaf_weighted",
+    "params": {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5
+    },
+    "n_seeds": 40,
+    "elapsed_s": 4.862686634063721,
+    "outcomes": {
+      "success": 40,
+      "cca_failed": 0,
+      "pca_failed": 0
+    },
+    "success_rate": 1.0
+  }
+]

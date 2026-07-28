@@ -92,75 +92,19 @@ class _PairingMixin:
                 f"Cluster {i}: N={len(radii_i)}, Rg={rg_i:.3f}, Rmax={r_max_i:.3f}, Mass={m_i:.2e}"
             )
 
-        # Check TRACE logging once (optimization: avoid check in inner loop)
-        trace_enabled = logger.isEnabledFor(TRACE_LEVEL_NUM)
+        pairing_strategy = str(
+            getattr(self.algorithm_config, "cca_pairing_strategy", "greedy")
+        ).lower()
+        if pairing_strategy in ("matching", "matching_leaf_weighted"):
+            id_agglomerated, strict_pairing_used = self._generate_pairs_matching(
+                cluster_props, id_agglomerated, CCA_PAIRING_FACTOR, pairing_strategy
+            )
+        else:
+            id_agglomerated, strict_pairing_used = self._generate_pairs_greedy(
+                cluster_props, id_agglomerated, CCA_PAIRING_FACTOR
+            )
 
-        # Pairing loop
-        for i in range(self.i_t):
-            if np.sum(id_agglomerated[i, :]) > 0 or cluster_props[i][0] == 0.0:
-                continue
-
-            m1, rg1, _, r_max1, radii1 = cluster_props[i]
-            props1 = (m1, rg1, None, r_max1, radii1)
-            partner_found = False
-
-            for j in range(i + 1, self.i_t):
-                if np.sum(id_agglomerated[:, j]) > 0 or cluster_props[j][0] == 0.0:
-                    continue
-
-                m2, rg2, _, r_max2, radii2 = cluster_props[j]
-                props2 = (m2, rg2, None, r_max2, radii2)
-
-                gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
-                sum_rmax = r_max1 + r_max2
-
-                # --- Check Strict and Relaxed Conditions ---
-                strict_condition = gamma_real and gamma_pc < sum_rmax
-                # Apply factor ONLY if gamma is real
-                relaxed_condition = (
-                    gamma_real and gamma_pc < sum_rmax * CCA_PAIRING_FACTOR
-                )
-
-                # Log trace information
-                if trace_enabled:  # TRACE level (checked once for performance)
-                    logger.log(
-                        TRACE_LEVEL_NUM,
-                        f"Pair ({i},{j}): G={gamma_pc:.3f}, R1+R2={sum_rmax:.3f}, StrictOK={strict_condition}, RelaxOK={relaxed_condition} (Factor={CCA_PAIRING_FACTOR})",
-                    )
-
-                # --- Apply Pairing Logic ---
-                pair_marked = False
-                if strict_condition:
-                    id_agglomerated[i, j] = 1
-                    id_agglomerated[j, i] = 1
-                    partner_found = True
-                    pair_marked = True
-                    logger.debug(
-                        f"  Pair ({i},{j}): Success! Marked for aggregation (Strict)."
-                    )
-
-                elif relaxed_condition:  # Check relaxed only if strict failed
-                    id_agglomerated[i, j] = 1
-                    id_agglomerated[j, i] = 1
-                    partner_found = True
-                    pair_marked = True
-                    strict_pairing_used = False  # Set flag
-                    logger.warning(
-                        f"  Pair ({i},{j}): Marked using RELAXED condition "
-                        f"(Gamma={gamma_pc:.3f} vs SumRmax={sum_rmax:.3f}). "
-                        f"Final Df/kf may deviate slightly from target ({self.df:.2f}/{self.kf:.2f})."
-                    )
-                # --------------------------
-
-                if pair_marked:
-                    break  # Found partner for i
-
-            if not partner_found and logger.isEnabledFor(logging.DEBUG):
-                logger.debug(
-                    f"No suitable partner found for cluster {i} after checking all j > {i}."
-                )
-
-        # --- Handle the odd cluster out (Logic remains the same) ---
+        # --- Handle the odd cluster out (shared across all strategies) ---
         if self.i_t % 2 != 0:
             paired_status = np.sum(id_agglomerated, axis=0) + np.sum(
                 id_agglomerated, axis=1
@@ -204,3 +148,156 @@ class _PairingMixin:
 
         logger.debug("Pair generation completed.")
         return id_agglomerated, cluster_props
+
+    def _generate_pairs_greedy(
+        self, cluster_props: dict, id_agglomerated: np.ndarray, pairing_factor: float
+    ) -> Tuple[np.ndarray, bool]:
+        """Original greedy first-fit pairing loop (production default,
+        unchanged behavior). Odd-cluster-out handling and the final
+        completeness check live in the caller (_generate_pairs), shared
+        across all strategies."""
+        strict_pairing_used = True
+
+        # Check TRACE logging once (optimization: avoid check in inner loop)
+        trace_enabled = logger.isEnabledFor(TRACE_LEVEL_NUM)
+
+        # Pairing loop
+        for i in range(self.i_t):
+            if np.sum(id_agglomerated[i, :]) > 0 or cluster_props[i][0] == 0.0:
+                continue
+
+            m1, rg1, _, r_max1, radii1 = cluster_props[i]
+            props1 = (m1, rg1, None, r_max1, radii1)
+            partner_found = False
+
+            for j in range(i + 1, self.i_t):
+                if np.sum(id_agglomerated[:, j]) > 0 or cluster_props[j][0] == 0.0:
+                    continue
+
+                m2, rg2, _, r_max2, radii2 = cluster_props[j]
+                props2 = (m2, rg2, None, r_max2, radii2)
+
+                gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
+                sum_rmax = r_max1 + r_max2
+
+                # --- Check Strict and Relaxed Conditions ---
+                strict_condition = gamma_real and gamma_pc < sum_rmax
+                # Apply factor ONLY if gamma is real
+                relaxed_condition = gamma_real and gamma_pc < sum_rmax * pairing_factor
+
+                # Log trace information
+                if trace_enabled:  # TRACE level (checked once for performance)
+                    logger.log(
+                        TRACE_LEVEL_NUM,
+                        f"Pair ({i},{j}): G={gamma_pc:.3f}, R1+R2={sum_rmax:.3f}, StrictOK={strict_condition}, RelaxOK={relaxed_condition} (Factor={pairing_factor})",
+                    )
+
+                # --- Apply Pairing Logic ---
+                pair_marked = False
+                if strict_condition:
+                    id_agglomerated[i, j] = 1
+                    id_agglomerated[j, i] = 1
+                    partner_found = True
+                    pair_marked = True
+                    logger.debug(
+                        f"  Pair ({i},{j}): Success! Marked for aggregation (Strict)."
+                    )
+
+                elif relaxed_condition:  # Check relaxed only if strict failed
+                    id_agglomerated[i, j] = 1
+                    id_agglomerated[j, i] = 1
+                    partner_found = True
+                    pair_marked = True
+                    strict_pairing_used = False  # Set flag
+                    logger.warning(
+                        f"  Pair ({i},{j}): Marked using RELAXED condition "
+                        f"(Gamma={gamma_pc:.3f} vs SumRmax={sum_rmax:.3f}). "
+                        f"Final Df/kf may deviate slightly from target ({self.df:.2f}/{self.kf:.2f})."
+                    )
+                # --------------------------
+
+                if pair_marked:
+                    break  # Found partner for i
+
+            if not partner_found and logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    f"No suitable partner found for cluster {i} after checking all j > {i}."
+                )
+
+        return id_agglomerated, strict_pairing_used
+
+    def _generate_pairs_matching(
+        self,
+        cluster_props: dict,
+        id_agglomerated: np.ndarray,
+        pairing_factor: float,
+        strategy: str,
+    ) -> Tuple[np.ndarray, bool]:
+        """Exact maximum-cardinality matching over the same cheap
+        gamma-feasibility graph the greedy path uses, optionally weighted
+        by cluster-pair leaf class. See pyfracval/cca/matching.py and
+        docs/source/matching_pairing.md.
+
+        Does not distinguish strict vs. relaxed gamma per matched pair the
+        way the greedy path's logging does - `strict_pairing_used` is set
+        False whenever any accepted edge only satisfies the relaxed
+        (not strict) condition, same semantics as the greedy path, just
+        without the per-pair log message.
+        """
+        from .matching import (
+            build_feasibility_graph,
+            cluster_leaf_fraction,
+            cluster_pair_leaf_class,
+            leaf_weighted_matching,
+            max_cardinality_matching,
+        )
+
+        adj = build_feasibility_graph(
+            cluster_props, self._calculate_cca_gamma, pairing_factor
+        )
+        nodes = list(adj.keys())
+
+        if strategy == "matching_leaf_weighted":
+            leaf_fractions = {}
+            for i in nodes:
+                _, _, _, _, radii_i = cluster_props[i]
+                coords_i, _ = self._get_cluster_data(i)
+                leaf_fractions[i] = cluster_leaf_fraction(
+                    self._leaf_mask_for_cluster(coords_i, radii_i)
+                )
+            class_weights = self.algorithm_config.cca_matching_leaf_class_weights
+            threshold = self.algorithm_config.cca_matching_leaf_class_threshold
+
+            def edge_weight_fn(i: int, j: int) -> float:
+                cls = cluster_pair_leaf_class(
+                    leaf_fractions[i], leaf_fractions[j], threshold
+                )
+                return class_weights.get(cls, 0.0)
+
+            pairs = leaf_weighted_matching(adj, nodes, edge_weight_fn)
+        else:
+            pairs = max_cardinality_matching(adj, nodes)
+
+        strict_pairing_used = True
+        for i, j in pairs:
+            id_agglomerated[i, j] = 1
+            id_agglomerated[j, i] = 1
+            m1, rg1, _, r_max1, _ = cluster_props[i]
+            m2, rg2, _, r_max2, _ = cluster_props[j]
+            props1 = (m1, rg1, None, r_max1, cluster_props[i][4])
+            props2 = (m2, rg2, None, r_max2, cluster_props[j][4])
+            gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
+            sum_rmax = r_max1 + r_max2
+            if not (gamma_real and gamma_pc < sum_rmax):
+                strict_pairing_used = False
+                logger.warning(
+                    f"  Pair ({i},{j}): matched using RELAXED condition "
+                    f"(Gamma={gamma_pc:.3f} vs SumRmax={sum_rmax:.3f}). "
+                    f"Final Df/kf may deviate slightly from target ({self.df:.2f}/{self.kf:.2f})."
+                )
+
+        logger.debug(
+            f"Matching-based pairing ({strategy}) found {len(pairs)} pairs "
+            f"among {len(nodes)} feasible-graph nodes."
+        )
+        return id_agglomerated, strict_pairing_used
