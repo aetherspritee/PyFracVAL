@@ -1,5 +1,6 @@
 furo
 myst-parser
+linkify-it-py
 pydata-sphinx-theme
 sphinx-autoapi
 sphinx-autodoc-typehints
