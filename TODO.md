@@ -6,6 +6,17 @@ record). Convention: group by rough priority, check items off as they land,
 move finished items to the bottom "Done" section (or just delete them —
 git history has the detail).
 
+## Open
+
+- [ ] Implement a matching-based (or backtracking) CCA pairing strategy.
+      `docs/source/pairing_frustration.md` found that 97.4% of hard-regime
+      CCA failures had a perfect matching available in the same cluster
+      pool greedy pairing failed on — this is the not-yet-implemented fix
+      that finding points to. Re-benchmark against
+      `configs/hard_regime_boundary_sweep.toml` /
+      `configs/full_stability_sweep.toml` once implemented to quantify the
+      actual boundary shift.
+
 ## Done (recent)
 
 - [x] **Phase 5 follow-up — surveyed `dask_runner.py`/`batch_runner.py` vs.
