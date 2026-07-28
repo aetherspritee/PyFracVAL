@@ -5,10 +5,9 @@ point (Df=2.25, kf=0.95, σ=1.9) where success rates collapse to ~17-20%.
 [pairing_frustration.md](pairing_frustration.md) diagnosed *why* single-shot
 attempts fail there. This page maps the actual Df/kf/σ/N boundary around
 that point on the *current* implementation - a baseline for whatever
-pairing-choice fix follows, and a direct extension of prior work: Tamer
-Areij's bachelor thesis {cite:p}`Areij2026Bachelorarbeit` ran a 1512-run
-full-factorial sweep on an earlier PyFracVAL version but only covered
-kf ≥ 1.0 and σ ≤ 1.5 - both bounds our hard regime sits outside of.
+pairing-choice fix follows, and covers territory (kf < 1.0, σ > 1.5) that
+earlier stability characterizations of this project didn't reach - both
+bounds our hard regime sits outside of.
 
 ## Grid
 
@@ -17,8 +16,8 @@ kf ∈ [0.8, 1.4] step 0.1 (7), σ ∈ {1.0, 1.5, 1.9} (3), N ∈ {64, 128, 256,
 512, 1024} (5), 5 seeds/combo → 840 combinations, 4200 trials. Unlike
 `pairing_frustration_probe.py`'s single-shot methodology, this uses
 `run_simulation`'s standard internal retry loop (up to 20 attempts per
-trial) via `benchmarks/stability_sweep.py` - the same metric the thesis
-used, and what `--max-attempts`/the CLI actually give a user in practice.
+trial) via `benchmarks/stability_sweep.py` - the same retry-inclusive
+metric `--max-attempts`/the CLI actually give a user in practice.
 Local Dask (16 cores), ~4200 trials/~20-30 min wall clock.
 
 Raw output: `benchmark_results/hard_regime_boundary_sweep/stability_sweeps/`.
@@ -78,8 +77,7 @@ both land almost exactly on what this sweep measures directly: at σ=1.0,
 kf=0.8, Df=2.5 still succeeds 92% of the time, consistent with the ceiling
 sitting a bit further out around Df≈2.55.
 
-**The Df×kf interaction is sharp and directional, confirming the thesis's
-qualitative finding with a much finer boundary**: at every σ, *lower* kf
+**The Df×kf interaction is sharp and directional**: at every σ, *lower* kf
 survives further into high-Df territory than higher kf. At σ=1.9, Df=2.2:
 kf=0.8 is still 100% while kf=1.1 has already dropped to 16%, a cliff over
 a kf range of just 0.3.
@@ -105,9 +103,10 @@ success rate near the edge, but the per-attempt probability itself is what
 the probe's census actually explains (see
 [pairing_frustration.md](pairing_frustration.md)).
 
-**N amplifies instability specifically at the boundary, confirming the
-thesis's finding with a much cleaner signal** since this grid specifically
-targets the edge rather than averaging over a wide safe region. Two
+**N amplifies instability specifically at the boundary, with a much
+cleaner signal here** than a wide, non-boundary-focused sweep gives, since
+this grid specifically targets the edge rather than averaging over a wide
+safe region. Two
 representative near-boundary points:
 
 | Df | kf | N=64 | N=128 | N=256 | N=512 | N=1024 |

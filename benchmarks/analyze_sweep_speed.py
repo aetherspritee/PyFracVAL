@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fit an empirical runtime model from a stability_sweep.py summary, and
-render the thesis-style plots (success rate vs Df, Df x kf heatmaps,
-runtime distributions, ...) as static images for docs embedding.
+render summary plots (success rate vs Df, Df x kf heatmaps, runtime
+distributions, ...) as static images for docs embedding.
 
 Usage:
     devenv shell -- uv run --extra plot python benchmarks/analyze_sweep_speed.py \
-        benchmark_results/full_thesis_replication_sweep/stability_sweeps/stability_sweep_summary.json \
+        benchmark_results/full_stability_sweep/stability_sweeps/stability_sweep_summary.json \
         --out-dir docs/source/_static/sweep
 
 Methodology for the speed model
@@ -155,7 +155,7 @@ def main() -> None:
         fit_fail_uncensored,
         args.out_dir,
     )
-    _write_thesis_style_plots(rows, args.out_dir)
+    _write_stability_summary_plots(rows, args.out_dir)
 
     print(f"\nWrote plots to {args.out_dir}")
 
@@ -186,7 +186,7 @@ def _write_speed_plots(
     plt.close(fig)
 
 
-def _write_thesis_style_plots(rows: list[dict], out_dir: Path) -> None:
+def _write_stability_summary_plots(rows: list[dict], out_dir: Path) -> None:
     import matplotlib.pyplot as plt
 
     # --- Success rate vs Df (all other params collapsed) ---

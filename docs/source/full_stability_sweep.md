@@ -2,16 +2,13 @@
 
 [hard_regime_boundary_sweep.md](hard_regime_boundary_sweep.md) mapped the
 boundary right around PyFracVAL's established hard regime. This page
-extends the grid much further in every dimension - closer in scope to
-Tamer Areij's bachelor thesis {cite:p}`Areij2026Bachelorarbeit`, but wider
-and finer than either the thesis or the previous sweep - and adds
-something neither of them had: an empirical model for how long a
-parameter combination takes to run, fit from real per-combination timing
-data.
+extends the grid much further in every dimension, and adds something that
+page didn't have: an empirical model for how long a parameter combination
+takes to run, fit from real per-combination timing data.
 
 ## Grid
 
-`configs/full_thesis_replication_sweep.toml`:
+`configs/full_stability_sweep.toml`:
 
 | Parameter | Range | Count |
 |---|---|---:|
@@ -22,14 +19,15 @@ data.
 | seeds | 1, 2, 3, 4, 5 (literal, reused across every combination) | 5 |
 
 `13 × 11 × 4 × 8 = 4576` combinations × 5 seeds = **22,880 trials**, run via
-`benchmarks/stability_sweep.py`'s standard retry-inclusive metric (same as
-the thesis's Seed 1/2/3 convention - see
-[pairing_frustration.md](pairing_frustration.md) for why this differs from
-the single-shot metric used there).
+`benchmarks/stability_sweep.py`'s standard retry-inclusive metric (a single
+seed maps to "does the CLI's usual internal 20-attempt retry loop find a
+valid aggregate at all" - see [pairing_frustration.md](pairing_frustration.md)
+for why this differs from the single-shot metric used there).
 
-Raw output: `benchmark_results/full_thesis_replication_sweep/` (summary
-JSON/CSV under `stability_sweeps/`, ~15,500 generated aggregate `.dat`
-files under `aggregates/` - gitignored, not part of the repository).
+Raw output: `benchmark_results/full_stability_sweep/` (summary JSON/CSV
+under `stability_sweeps/`, ~15,500 generated aggregate `.dat` files under
+`aggregates/` - gitignored, not part of the repository; kept locally
+outside of version control given the raw data volume).
 
 ## A real infrastructure lesson from running this
 
@@ -72,12 +70,11 @@ tighter time budget.
 :width: 600px
 ```
 
-A clean, unimodal curve peaking at **Df=2.0** (not Df=1.8, where the thesis
-found 100%) - explained entirely by the wider kf range: kf=0.5 (below the
-thesis's floor of 1.0) already fails at Df=1.8 in this grid, pulling the
-Df=1.8 average down to ~81% once it's included. This is a genuine
-extension of the thesis's finding, not a contradiction of it: the "safe"
-Df region depends on which kf range you're averaging over.
+A clean, unimodal curve peaking at **Df=2.0**. This grid's kf range starts
+lower (0.5) than earlier characterizations of the safe region, and kf=0.5
+already fails even at Df=1.8 - pulling the Df=1.8 average down to ~81%
+once it's included in the collapse. The "safe" Df region depends on which
+kf range you're averaging over.
 
 ### Df × kf heatmap
 
@@ -86,13 +83,12 @@ Df region depends on which kf range you're averaging over.
 :width: 600px
 ```
 
-The safe band (Df≈1.8-2.3, green) is bounded by kf on *both* sides, sloping
-in the direction the thesis already established (higher Df needs lower kf
-and vice versa) - but this grid reaches new territory the thesis never
-tested: at **Df=1.4, every tested kf from 0.5 to 1.5 fails outright**. The
-thesis found Df=1.4 recoverable, but only at kf=2.2 - outside this grid's
-range entirely. Low-Df instability apparently needs a much larger kf
-correction than high-Df instability needs in the opposite direction.
+The safe band (Df≈1.8-2.3, green) is bounded by kf on *both* sides: higher
+Df needs lower kf, and vice versa. At the low-Df edge of this grid,
+**Df=1.4 fails at every tested kf from 0.5 to 1.5** - recovering it
+apparently needs a much larger kf correction than what compensates for
+high-Df instability in the opposite direction (outside the range tested
+here).
 
 ### Success rate vs N and σ
 
@@ -101,10 +97,9 @@ correction than high-Df instability needs in the opposite direction.
 :width: 600px
 ```
 
-Confirms the thesis's finding with much finer N resolution (8 steps vs.
-their 4): success rate degrades smoothly and monotonically with both N and
-σ, with no sharp cliffs - consistent with N/σ acting as amplifiers of
-whatever margin Df/kf already leaves, not independent failure causes (see
+Success rate degrades smoothly and monotonically with both N and σ, with
+no sharp cliffs - consistent with N/σ acting as amplifiers of whatever
+margin Df/kf already leaves, not independent failure causes (see
 [hard_regime_boundary_sweep.md](hard_regime_boundary_sweep.md) for the
 same conclusion at a finer boundary-focused grid).
 

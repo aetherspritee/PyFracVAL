@@ -94,16 +94,6 @@ matching instead of greedy first-fit, or backtracking to a different
 partner when a merge fails instead of aborting the whole attempt - has real,
 cheap leverage on hard-regime success rates.
 
-This connects directly to prior work: Tamer Areij's bachelor thesis
-{cite:p}`Areij2026Bachelorarbeit`, which ran a 1512-run full-factorial
-stability sweep on an earlier PyFracVAL version, explicitly flagged in its
-outlook that a closer look at *why* specific cluster combinations fail
-during CCA - "genauere Betrachtung der CCA-Fehlschläge... [könnten] später
-möglicherweise Verbesserungen am Algorithmus oder bessere Wiederholungs-
-und Abbruchstrategien entstehen" (a closer look at CCA failures... could
-lead to algorithm improvements or better retry/abort strategies) - was left
-for future work. This page is that follow-up.
-
 See [hard_regime_boundary_sweep.md](hard_regime_boundary_sweep.md) for a
 follow-up sweep mapping the Df/kf/σ/N boundary around the hard regime on
 the current (unfixed) implementation - the baseline a future pairing-choice

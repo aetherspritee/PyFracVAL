@@ -437,8 +437,7 @@ def _run_sweep_dask(
                         for trial in range(cfg.trials):
                             # Literal, trackable seed (1, 2, 3, ...) reused
                             # identically across every combo - not a
-                            # per-combo hash-derived value. Matches the
-                            # thesis's own methodology (Seed 1/2/3).
+                            # per-combo hash-derived value.
                             seed = trial + 1
                             fut = client.submit(
                                 _timed_run_simulation,
