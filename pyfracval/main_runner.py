@@ -23,6 +23,7 @@ def run_simulation(
     output_base_dir: str = "RESULTS",
     seed: int | None = None,
     max_runtime_seconds: float | None = None,
+    diagnostics: dict[str, Any] | None = None,
 ) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
     """
     Run one full FracVAL aggregate generation (PCA + CCA).
@@ -55,6 +56,14 @@ def run_simulation(
         wall-clock time exceeds this value between retry attempts.
         This allows callers to bound the worst-case runtime for parameter
         regions that are difficult or impossible to aggregate.
+    diagnostics : dict[str, Any] | None, optional
+        If given, populated in-place with attribution for the *last*
+        attempt made: ``failure_stage`` (one of "PARAMS", "RADII_GEN",
+        "PCA", "CCA", "TIMEOUT", or ``None`` on success),
+        ``failure_reason`` (short human string), and ``attempts_used``.
+        Purely additive - callers that don't pass this see no behavior
+        change, which keeps this a non-breaking instrumentation hook
+        rather than a change to the function's return contract.
 
     Returns
     -------
@@ -79,6 +88,10 @@ def run_simulation(
         logger.info(f"Validated Config: {sim_params.model_dump_json(indent=2)}")
     except Exception as e:
         logger.error(f"Invalid simulation parameters provided: {e}", exc_info=True)
+        if diagnostics is not None:
+            diagnostics["failure_stage"] = "PARAMS"
+            diagnostics["failure_reason"] = str(e)
+            diagnostics["attempts_used"] = 0
         return False, None, None
 
     # Algorithm-tuning keys (cca_*, densify_*, etc.) live flat alongside the
@@ -95,6 +108,7 @@ def run_simulation(
         max_runtime_seconds,
         sim_params,
         algorithm_config,
+        diagnostics,
     )
 
 
@@ -106,6 +120,7 @@ def _run_simulation_core(
     max_runtime_seconds,
     sim_params,
     algorithm_config,
+    diagnostics: dict[str, Any] | None = None,
 ):
     """Core simulation logic, given a resolved algorithm_config to pass through."""
     start_time = time.time()
@@ -134,6 +149,12 @@ def _run_simulation_core(
                     f"run_simulation: wall-clock budget of {max_runtime_seconds}s "
                     f"exhausted after {elapsed:.1f}s (attempt {attempt}). Aborting."
                 )
+                if diagnostics is not None:
+                    diagnostics["failure_stage"] = "TIMEOUT"
+                    diagnostics["failure_reason"] = (
+                        f"wall-clock budget of {max_runtime_seconds}s exhausted"
+                    )
+                    diagnostics["attempts_used"] = attempt - 1
                 return False, None, None
 
         # 1+2. Generate AND shuffle radii every attempt (Fortran does both per restart)
@@ -146,6 +167,10 @@ def _run_simulation_core(
             )
         except ValueError as e:
             logger.error(f"Error generating radii on attempt {attempt}: {e}")
+            if diagnostics is not None:
+                diagnostics["failure_stage"] = "RADII_GEN"
+                diagnostics["failure_reason"] = str(e)
+                diagnostics["attempts_used"] = attempt
             continue
         shuffled_radii = utils.shuffle_array(initial_radii, rng=rng)
 
@@ -186,6 +211,12 @@ def _run_simulation_core(
                 f"PCA Subclustering failed on attempt {attempt} "
                 f"(Failed on Subcluster {failed_subcluster_num}). Retrying with new shuffle..."
             )
+            if diagnostics is not None:
+                diagnostics["failure_stage"] = "PCA"
+                diagnostics["failure_reason"] = (
+                    f"failed on subcluster {failed_subcluster_num}"
+                )
+                diagnostics["attempts_used"] = attempt
             continue  # retry with a new shuffle
 
         # Retrieve PCA results
@@ -196,6 +227,12 @@ def _run_simulation_core(
             logger.warning(
                 f"PCA returned invalid results on attempt {attempt} despite reporting success. Retrying..."
             )
+            if diagnostics is not None:
+                diagnostics["failure_stage"] = "PCA"
+                diagnostics["failure_reason"] = (
+                    "PCA returned invalid results despite reporting success"
+                )
+                diagnostics["attempts_used"] = attempt
             continue
 
         # 4. Cluster-Cluster Aggregation
@@ -235,10 +272,18 @@ def _run_simulation_core(
             logger.warning(
                 f"CCA Aggregation failed on attempt {attempt}. Retrying with new shuffle..."
             )
+            if diagnostics is not None:
+                diagnostics["failure_stage"] = "CCA"
+                diagnostics["failure_reason"] = "CCA aggregation failed"
+                diagnostics["attempts_used"] = attempt
             continue  # retry with a new shuffle
 
         # Both PCA and CCA succeeded on this attempt
         logger.info(f"PCA+CCA succeeded on attempt {attempt}.")
+        if diagnostics is not None:
+            diagnostics["failure_stage"] = None
+            diagnostics["failure_reason"] = None
+            diagnostics["attempts_used"] = attempt
         break
     else:
         # All attempts exhausted

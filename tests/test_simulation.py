@@ -289,3 +289,85 @@ def test_dask_local_batch(tmp_path: Path):
     assert len(results) == 2, "Expected 2 results"
     successes = sum(1 for s, _, _ in results if s)
     assert successes == 2, f"Expected 2 successes, got {successes}"
+
+
+def test_diagnostics_hook_on_success(output_dir: Path):
+    """diagnostics dict is populated with failure_stage=None on a successful run."""
+    sim_config = {
+        "N": 64,
+        "Df": 1.8,
+        "kf": 1.3,
+        "rp_g": 10.0,
+        "rp_gstd": 1.2,
+        "tol_ov": 1e-4,
+        "n_subcl_percentage": 0.15,
+        "ext_case": 0,
+        "seed": 2001,
+    }
+    diagnostics: dict = {}
+    success, coords, radii = run_simulation(
+        iteration=1,
+        sim_config_dict=sim_config,
+        output_base_dir=str(output_dir),
+        diagnostics=diagnostics,
+    )
+    assert success
+    assert diagnostics["failure_stage"] is None
+    assert diagnostics["failure_reason"] is None
+    assert diagnostics["attempts_used"] >= 1
+
+
+def test_diagnostics_hook_on_pca_failure(output_dir: Path, monkeypatch):
+    """diagnostics attributes a forced PCA failure correctly, without depending on a
+    genuinely-hard (stochastic, slow) parameter regime to trigger one."""
+    import pyfracval.main_runner as main_runner_module
+
+    monkeypatch.setattr(
+        main_runner_module.Subclusterer, "run_subclustering", lambda self: False
+    )
+
+    sim_config = {
+        "N": 64,
+        "Df": 1.8,
+        "kf": 1.3,
+        "rp_g": 10.0,
+        "rp_gstd": 1.2,
+        "tol_ov": 1e-4,
+        "n_subcl_percentage": 0.15,
+        "ext_case": 0,
+        "seed": 2001,
+    }
+    diagnostics: dict = {}
+    success, coords, radii = run_simulation(
+        iteration=1,
+        sim_config_dict=sim_config,
+        output_base_dir=str(output_dir),
+        diagnostics=diagnostics,
+    )
+    assert not success
+    assert coords is None and radii is None
+    assert diagnostics["failure_stage"] == "PCA"
+    assert diagnostics["failure_reason"] is not None
+    assert diagnostics["attempts_used"] == 20
+
+
+def test_diagnostics_hook_default_none_is_noop(output_dir: Path):
+    """Omitting diagnostics entirely (the default) doesn't change behavior."""
+    sim_config = {
+        "N": 64,
+        "Df": 1.8,
+        "kf": 1.3,
+        "rp_g": 10.0,
+        "rp_gstd": 1.2,
+        "tol_ov": 1e-4,
+        "n_subcl_percentage": 0.15,
+        "ext_case": 0,
+        "seed": 2001,
+    }
+    success, coords, radii = run_simulation(
+        iteration=1,
+        sim_config_dict=sim_config,
+        output_base_dir=str(output_dir),
+    )
+    assert success
+    assert coords is not None

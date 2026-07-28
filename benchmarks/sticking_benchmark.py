@@ -346,7 +346,11 @@ class StickingBenchmark:
         start_time = time.time()
 
         try:
-            # Run inline — max_runtime_seconds provides a between-attempt budget
+            # Run inline — max_runtime_seconds provides a between-attempt budget.
+            # diagnostics is populated in-place by run_simulation with real
+            # PCA/CCA/TIMEOUT/PARAMS attribution for the last attempt made,
+            # rather than the previous hardcoded "UNKNOWN" placeholder.
+            diagnostics: dict = {}
             success, final_coords, final_radii = run_simulation(
                 iteration=trial_num,
                 sim_config_dict=full_params,
@@ -355,6 +359,7 @@ class StickingBenchmark:
                 max_runtime_seconds=float(trial_timeout)
                 if trial_timeout is not None
                 else None,
+                diagnostics=diagnostics,
             )
             runtime = time.time() - start_time
             final_N = None
@@ -376,8 +381,8 @@ class StickingBenchmark:
                 except Exception:
                     pass
             else:
-                failure_stage = "UNKNOWN"
-                failure_reason = "Check logs"
+                failure_stage = diagnostics.get("failure_stage") or "UNKNOWN"
+                failure_reason = diagnostics.get("failure_reason") or "Check logs"
 
             result = BenchmarkResult(
                 category=category,

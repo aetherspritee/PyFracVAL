@@ -6,6 +6,7 @@ behind PyFracVAL's algorithmic design decisions.
 ```{toctree}
 :maxdepth: 1
 
+pipeline_baseline
 experiments
 pairing_frustration
 hard_regime_boundary_sweep

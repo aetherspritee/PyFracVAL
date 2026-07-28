@@ -1,0 +1,49 @@
+# pipeline_stage_census.toml
+# Which pipeline stage (PCA subclustering vs CCA aggregation) actually
+# causes failures across easy-to-hard territory, not just an aggregate
+# success/fail number.
+#
+# Motivation
+# ----------
+# Every earlier sweep (hard_regime_boundary_sweep.toml, full_stability_
+# sweep.toml) reports only end-to-end success/failure. BenchmarkResult has
+# carried a failure_stage field since sticking_benchmark.py was written,
+# but run_simulation() never reported which stage actually failed - the
+# field was hardcoded to "UNKNOWN" on every failure (both in
+# StickingBenchmark.run_single_trial and stability_sweep.py's Dask path,
+# which hardcoded failure_stage_counts to {} entirely). Fixed by adding an
+# optional diagnostics dict to run_simulation() that both paths now thread
+# through, giving real PCA/CCA/TIMEOUT/PARAMS attribution for the first
+# time.
+#
+# Grid: intentionally spans from comfortably-safe to well past the known
+# hard regime (Df=2.25/kf=0.95/rp_gstd=1.9) so both PCA-dominated and
+# CCA-dominated failure territory (if either exists) shows up in the
+# same run, rather than only sampling one regime.
+#
+# Grid: 5 Df x 5 kf x 3 sigma x 3 N x 4 seeds = 900 trials.
+#
+# Run with:
+#   devenv shell -- uv run python benchmarks/stability_sweep.py \
+#       --config configs/pipeline_stage_census.toml
+
+sizes     = [128, 512, 1024]
+sigmas    = [1.0, 1.5, 1.9]
+
+df_values = [1.4, 1.8, 2.0, 2.2, 2.5]
+kf_values = [0.6, 0.9, 1.0, 1.2, 1.4]
+
+trials    = 4
+save_raw  = false
+output_dir = "benchmark_results/pipeline_stage_census"
+
+[dask]
+enable = true
+# scheduler_address unset -> local cluster using all available cores
+
+[simulation]
+rp_g               = 100.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+trial_timeout      = 90

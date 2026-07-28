@@ -347,16 +347,25 @@ def _timed_run_simulation(
 ):
     """Runs on the Dask worker; self-reports execution duration rather than
     relying on submit-to-completion wall time (which includes queue wait
-    when many more tasks are submitted than there are workers)."""
+    when many more tasks are submitted than there are workers). Also
+    threads through run_simulation's diagnostics hook so the Dask path
+    gets the same PCA/CCA failure_stage attribution the sequential path
+    already gets via StickingBenchmark.run_single_trial."""
     import time as _time
 
     from pyfracval.main_runner import run_simulation
 
     t0 = _time.time()
+    diagnostics: dict = {}
     result = run_simulation(
-        iteration, sim_config_dict, output_base_dir, seed, max_runtime_seconds
+        iteration,
+        sim_config_dict,
+        output_base_dir,
+        seed,
+        max_runtime_seconds,
+        diagnostics=diagnostics,
     )
-    return result, _time.time() - t0
+    return result, _time.time() - t0, diagnostics
 
 
 def _run_sweep_dask(
@@ -456,6 +465,7 @@ def _run_sweep_dask(
         # wait for tasks scheduled late, not actual execution cost.
         combo_results: dict = {k: [] for k in combo_params}  # → list[bool]
         combo_runtimes: dict = {k: [] for k in combo_params}  # → list[float]
+        combo_failure_stages: dict = {k: [] for k in combo_params}  # → list[str]
 
         try:
             from tqdm import tqdm as _tqdm
@@ -471,12 +481,17 @@ def _run_sweep_dask(
         for future in completed_iter:
             combo_key, _trial = combo_futures[future]
             try:
-                (success, _coords, _radii), duration = future.result()
+                (success, _coords, _radii), duration, diagnostics = future.result()
             except Exception:
                 success = False
                 duration = 0.0
+                diagnostics = {}
             combo_results[combo_key].append(success)
             combo_runtimes[combo_key].append(duration)
+            if not success:
+                combo_failure_stages[combo_key].append(
+                    diagnostics.get("failure_stage") or "NONE"
+                )
 
         # Build sweep rows in original order
         combo_index = 0
@@ -494,6 +509,11 @@ def _run_sweep_dask(
                             f"[{combo_index}/{total_combos}] {label} → "
                             f"{successes}/{cfg.trials} success"
                         )
+                        failure_stages = combo_failure_stages[combo_key]
+                        stage_counts = {
+                            stage: failure_stages.count(stage)
+                            for stage in sorted(set(failure_stages))
+                        }
                         sweep_rows.append(
                             {
                                 "N": n_val,
@@ -507,7 +527,7 @@ def _run_sweep_dask(
                                 "median_runtime_s": median(runtimes)
                                 if runtimes
                                 else 0.0,
-                                "failure_stage_counts": {},
+                                "failure_stage_counts": stage_counts,
                             }
                         )
 

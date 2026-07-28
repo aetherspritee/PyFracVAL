@@ -1,0 +1,2994 @@
+{
+  "generated_at": "2026-07-28 19:10:23",
+  "config": {
+    "sizes": [
+      128,
+      512,
+      1024
+    ],
+    "sigmas": [
+      1.0,
+      1.5,
+      1.9
+    ],
+    "df_values": [
+      1.4,
+      1.8,
+      2.0,
+      2.2,
+      2.5
+    ],
+    "kf_values": [
+      0.6,
+      0.9,
+      1.0,
+      1.2,
+      1.4
+    ],
+    "df_min": 1.4,
+    "df_max": 2.6,
+    "df_step": 0.2,
+    "kf_min": 0.6,
+    "kf_max": 1.6,
+    "kf_step": 0.2,
+    "trials": 4,
+    "save_raw": false,
+    "output_dir": "benchmark_results/pipeline_stage_census",
+    "algorithm": {},
+    "dask": {
+      "enable": true,
+      "scheduler_address": null,
+      "workers": null
+    },
+    "simulation": {
+      "rp_g": 100.0,
+      "tol_ov": 1e-06,
+      "n_subcl_percentage": 0.1,
+      "ext_case": 0,
+      "trial_timeout": 90
+    }
+  },
+  "total_combinations": 225,
+  "trials_per_combo": 4,
+  "sizes": [
+    128,
+    512,
+    1024
+  ],
+  "sigmas": [
+    1.0,
+    1.5,
+    1.9
+  ],
+  "df_values": [
+    1.4,
+    1.8,
+    2.0,
+    2.2,
+    2.5
+  ],
+  "kf_values": [
+    0.6,
+    0.9,
+    1.0,
+    1.2,
+    1.4
+  ],
+  "total_runtime_s": 1376.913516998291,
+  "results": [
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 1.6637046337127686,
+      "median_runtime_s": 1.6471747159957886,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 2.1435378789901733,
+      "median_runtime_s": 1.8935904502868652,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 2.0570372343063354,
+      "median_runtime_s": 1.8922483921051025,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 1.8658111095428467,
+      "median_runtime_s": 1.884909749031067,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 1.361147940158844,
+      "median_runtime_s": 1.2985607385635376,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 1.284820020198822,
+      "median_runtime_s": 1.2872381210327148,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.12791955471038818,
+      "median_runtime_s": 0.1257258653640747,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.16090703010559082,
+      "median_runtime_s": 0.1372838020324707,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.1281355619430542,
+      "median_runtime_s": 0.1108865737915039,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.11099845170974731,
+      "median_runtime_s": 0.10794377326965332,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.10994750261306763,
+      "median_runtime_s": 0.11194026470184326,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.16413843631744385,
+      "median_runtime_s": 0.131583571434021,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.16168993711471558,
+      "median_runtime_s": 0.1494615077972412,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.12450271844863892,
+      "median_runtime_s": 0.12244117259979248,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.14854472875595093,
+      "median_runtime_s": 0.13479900360107422,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.1459568738937378,
+      "median_runtime_s": 0.14269006252288818,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.17876368761062622,
+      "median_runtime_s": 0.17486882209777832,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.15503889322280884,
+      "median_runtime_s": 0.14262473583221436,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.23176312446594238,
+      "median_runtime_s": 0.2158604860305786,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.2823508381843567,
+      "median_runtime_s": 0.22032177448272705,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.2808915972709656,
+      "median_runtime_s": 0.24664819240570068,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.273237943649292,
+      "median_runtime_s": 1.1803702116012573,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.8777719140052795,
+      "median_runtime_s": 1.334832787513733,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 2,
+      "success_rate": 0.5,
+      "avg_runtime_s": 7.409398794174194,
+      "median_runtime_s": 8.408354878425598,
+      "failure_stage_counts": {
+        "CCA": 2
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 5.328315258026123,
+      "median_runtime_s": 5.556709289550781,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 4.036579608917236,
+      "median_runtime_s": 3.9519184827804565,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 4.248555779457092,
+      "median_runtime_s": 4.342424392700195,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 3.9675270915031433,
+      "median_runtime_s": 4.089226484298706,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 3.9219383001327515,
+      "median_runtime_s": 3.9309366941452026,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 4.507755219936371,
+      "median_runtime_s": 4.3673306703567505,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 1,
+      "success_rate": 0.25,
+      "avg_runtime_s": 3.382360279560089,
+      "median_runtime_s": 3.8484513759613037,
+      "failure_stage_counts": {
+        "CCA": 3
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.21015679836273193,
+      "median_runtime_s": 0.20299065113067627,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.23248505592346191,
+      "median_runtime_s": 0.21943151950836182,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.23306185007095337,
+      "median_runtime_s": 0.2306528091430664,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.29886704683303833,
+      "median_runtime_s": 0.32021284103393555,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.31328022480010986,
+      "median_runtime_s": 0.2967621088027954,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.229550302028656,
+      "median_runtime_s": 0.22099781036376953,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.2470112442970276,
+      "median_runtime_s": 0.2210942506790161,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.27826160192489624,
+      "median_runtime_s": 0.27834880352020264,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.32383984327316284,
+      "median_runtime_s": 0.312466025352478,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.24767184257507324,
+      "median_runtime_s": 0.24254488945007324,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.270219087600708,
+      "median_runtime_s": 0.23522377014160156,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.31973081827163696,
+      "median_runtime_s": 0.3356832265853882,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.5762385129928589,
+      "median_runtime_s": 0.5502735376358032,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.698069393634796,
+      "median_runtime_s": 2.4140552282333374,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.5343601703643799,
+      "median_runtime_s": 0.4522916078567505,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 9.418580651283264,
+      "median_runtime_s": 9.705113172531128,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 6.82939350605011,
+      "median_runtime_s": 6.999673366546631,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 6.4199748039245605,
+      "median_runtime_s": 6.613643169403076,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 5.95963054895401,
+      "median_runtime_s": 5.843414783477783,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 19.79587972164154,
+      "median_runtime_s": 19.86231005191803,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 20.479976415634155,
+      "median_runtime_s": 20.447798490524292,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 21.100695431232452,
+      "median_runtime_s": 21.251226663589478,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 21.547500491142273,
+      "median_runtime_s": 21.585622787475586,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 1,
+      "success_rate": 0.25,
+      "avg_runtime_s": 17.609071254730225,
+      "median_runtime_s": 21.284877061843872,
+      "failure_stage_counts": {
+        "CCA": 3
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 3,
+      "success_rate": 0.75,
+      "avg_runtime_s": 9.289485037326813,
+      "median_runtime_s": 6.722967267036438,
+      "failure_stage_counts": {
+        "CCA": 1
+      }
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.7056737542152405,
+      "median_runtime_s": 0.7411844730377197,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.6847776174545288,
+      "median_runtime_s": 0.6994764804840088,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.772010326385498,
+      "median_runtime_s": 0.7501780986785889,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.6241533756256104,
+      "median_runtime_s": 0.5932220220565796,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.8248661756515503,
+      "median_runtime_s": 0.7368056774139404,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.8836178183555603,
+      "median_runtime_s": 0.838754415512085,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.7320447564125061,
+      "median_runtime_s": 0.7035430669784546,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.8656495809555054,
+      "median_runtime_s": 0.8640450239181519,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 3,
+      "success_rate": 0.75,
+      "avg_runtime_s": 7.626672863960266,
+      "median_runtime_s": 2.949723958969116,
+      "failure_stage_counts": {
+        "CCA": 1
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.792448103427887,
+      "median_runtime_s": 0.8032317161560059,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.1954243779182434,
+      "median_runtime_s": 3.1473662853240967,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.687593936920166,
+      "median_runtime_s": 2.7790993452072144,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 24.30181187391281,
+      "median_runtime_s": 23.243692636489868,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 25.211283147335052,
+      "median_runtime_s": 26.6206237077713,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 1,
+      "success_rate": 0.25,
+      "avg_runtime_s": 17.29012769460678,
+      "median_runtime_s": 21.530954122543335,
+      "failure_stage_counts": {
+        "CCA": 3
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 29.514183938503265,
+      "median_runtime_s": 29.668264865875244,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 29.087406635284424,
+      "median_runtime_s": 30.466530323028564,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 32.65922224521637,
+      "median_runtime_s": 32.920698285102844,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 128,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 30.620783984661102,
+      "median_runtime_s": 31.50258994102478,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 12.202253997325897,
+      "median_runtime_s": 12.021074891090393,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 10.92431128025055,
+      "median_runtime_s": 10.85199749469757,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 11.448244512081146,
+      "median_runtime_s": 11.47834825515747,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 9.377098739147186,
+      "median_runtime_s": 9.422133564949036,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 11.311944365501404,
+      "median_runtime_s": 11.192116141319275,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 10.160867929458618,
+      "median_runtime_s": 10.656707406044006,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.0351932048797607,
+      "median_runtime_s": 1.0229942798614502,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.8490467667579651,
+      "median_runtime_s": 0.8457973003387451,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 0.9810954928398132,
+      "median_runtime_s": 0.9516481161117554,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.2359409928321838,
+      "median_runtime_s": 1.2024303674697876,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.0901232361793518,
+      "median_runtime_s": 1.077350378036499,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.010596215724945,
+      "median_runtime_s": 1.0402365922927856,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.108070194721222,
+      "median_runtime_s": 0.9496927261352539,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.5839034914970398,
+      "median_runtime_s": 1.3340057134628296,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.390749454498291,
+      "median_runtime_s": 1.2350980043411255,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.2217462062835693,
+      "median_runtime_s": 1.1864426136016846,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.3834317326545715,
+      "median_runtime_s": 1.2764848470687866,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.6921957731246948,
+      "median_runtime_s": 1.6321063041687012,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.1461626291275024,
+      "median_runtime_s": 2.303276538848877,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.0660271048545837,
+      "median_runtime_s": 3.231305718421936,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 7.942093670368195,
+      "median_runtime_s": 7.9828221797943115,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 3,
+      "success_rate": 0.75,
+      "avg_runtime_s": 68.10558497905731,
+      "median_runtime_s": 72.75351428985596,
+      "failure_stage_counts": {
+        "TIMEOUT": 1
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 106.17787700891495,
+      "median_runtime_s": 107.24665033817291,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 94.33886647224426,
+      "median_runtime_s": 94.1397557258606,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 96.90219163894653,
+      "median_runtime_s": 96.89369642734528,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 19.7336705327034,
+      "median_runtime_s": 19.944948077201843,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 18.144522190093994,
+      "median_runtime_s": 18.459823489189148,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 20.148828506469727,
+      "median_runtime_s": 21.02799904346466,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 22.497512936592102,
+      "median_runtime_s": 22.391719222068787,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 22.086207449436188,
+      "median_runtime_s": 22.065563797950745,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 20.16613668203354,
+      "median_runtime_s": 20.415582299232483,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.9573879837989807,
+      "median_runtime_s": 1.7988481521606445,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.9719609022140503,
+      "median_runtime_s": 1.8490713834762573,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.028005301952362,
+      "median_runtime_s": 2.0255478620529175,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.5509774684906006,
+      "median_runtime_s": 1.4758660793304443,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.9781067967414856,
+      "median_runtime_s": 2.044121265411377,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.88034588098526,
+      "median_runtime_s": 1.886452317237854,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.4903186559677124,
+      "median_runtime_s": 2.168266534805298,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.505280911922455,
+      "median_runtime_s": 2.362929105758667,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.0059757828712463,
+      "median_runtime_s": 1.7794859409332275,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 1.974514901638031,
+      "median_runtime_s": 2.1443047523498535,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.7908539175987244,
+      "median_runtime_s": 2.7966631650924683,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.9779561161994934,
+      "median_runtime_s": 2.848646879196167,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.108513295650482,
+      "median_runtime_s": 3.9920716285705566,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 26.053484857082367,
+      "median_runtime_s": 22.31814992427826,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 27.03028094768524,
+      "median_runtime_s": 30.19091510772705,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 81.98736876249313,
+      "median_runtime_s": 83.73114764690399,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 75.99767833948135,
+      "median_runtime_s": 73.46431589126587,
+      "failure_stage_counts": {
+        "CCA": 3,
+        "TIMEOUT": 1
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 57.136472940444946,
+      "median_runtime_s": 57.27104330062866,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 52.52366364002228,
+      "median_runtime_s": 53.44212448596954,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 47.52418404817581,
+      "median_runtime_s": 48.42660188674927,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 42.169688165187836,
+      "median_runtime_s": 43.27362823486328,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 44.68526744842529,
+      "median_runtime_s": 45.576804637908936,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 41.82331019639969,
+      "median_runtime_s": 41.14270877838135,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 44.21662628650665,
+      "median_runtime_s": 44.58318018913269,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 41.36675786972046,
+      "median_runtime_s": 40.998327016830444,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.388087809085846,
+      "median_runtime_s": 3.2000534534454346,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.742382228374481,
+      "median_runtime_s": 2.4110218286514282,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.5106142163276672,
+      "median_runtime_s": 2.1735122203826904,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.950816035270691,
+      "median_runtime_s": 2.8519452810287476,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.6710358262062073,
+      "median_runtime_s": 2.830633521080017,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.2084107995033264,
+      "median_runtime_s": 3.118208408355713,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.6287039518356323,
+      "median_runtime_s": 3.3748570680618286,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.467991054058075,
+      "median_runtime_s": 3.5466474294662476,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 5.693142890930176,
+      "median_runtime_s": 5.716649293899536,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.7489250898361206,
+      "median_runtime_s": 4.044053435325623,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 11.387020349502563,
+      "median_runtime_s": 8.961323976516724,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 3,
+      "success_rate": 0.75,
+      "avg_runtime_s": 72.16071653366089,
+      "median_runtime_s": 79.94473683834076,
+      "failure_stage_counts": {
+        "TIMEOUT": 1
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 90.6122545003891,
+      "median_runtime_s": 90.68126964569092,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 85.34484106302261,
+      "median_runtime_s": 83.22298955917358,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 87.96301305294037,
+      "median_runtime_s": 88.95248484611511,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 77.0938549041748,
+      "median_runtime_s": 76.26853489875793,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 79.94603806734085,
+      "median_runtime_s": 79.78571128845215,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 76.09060817956924,
+      "median_runtime_s": 76.226109623909,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 512,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 79.8594418168068,
+      "median_runtime_s": 77.32526624202728,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 22.373742640018463,
+      "median_runtime_s": 22.15861737728119,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 23.358656525611877,
+      "median_runtime_s": 23.30279266834259,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 24.00816911458969,
+      "median_runtime_s": 24.53726875782013,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 21.628872096538544,
+      "median_runtime_s": 22.118602871894836,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 23.12518322467804,
+      "median_runtime_s": 23.508713960647583,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 23.30986100435257,
+      "median_runtime_s": 23.045689582824707,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.3574347496032715,
+      "median_runtime_s": 2.4242085218429565,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.796929359436035,
+      "median_runtime_s": 2.7106664180755615,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.0258748531341553,
+      "median_runtime_s": 2.1763535737991333,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.361464202404022,
+      "median_runtime_s": 2.0869486331939697,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.675118565559387,
+      "median_runtime_s": 3.339704155921936,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.0045716762542725,
+      "median_runtime_s": 2.8921117782592773,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.5053014159202576,
+      "median_runtime_s": 3.3907428979873657,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.8964046835899353,
+      "median_runtime_s": 3.8317662477493286,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 2.753745138645172,
+      "median_runtime_s": 2.7409921884536743,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.325143814086914,
+      "median_runtime_s": 3.3066917657852173,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.136630475521088,
+      "median_runtime_s": 3.9633491039276123,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.923589050769806,
+      "median_runtime_s": 4.39082133769989,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.63756799697876,
+      "median_runtime_s": 6.874642729759216,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 10.3167365193367,
+      "median_runtime_s": 10.671545505523682,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 16.74115413427353,
+      "median_runtime_s": 16.560757756233215,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 168.82157504558563,
+      "median_runtime_s": 163.48881566524506,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 99.80669420957565,
+      "median_runtime_s": 96.54006695747375,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 97.47552931308746,
+      "median_runtime_s": 97.71646642684937,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.0,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 91.37462627887726,
+      "median_runtime_s": 92.26086604595184,
+      "failure_stage_counts": {
+        "CCA": 2,
+        "TIMEOUT": 2
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 41.57917881011963,
+      "median_runtime_s": 40.274293065071106,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 41.6903361082077,
+      "median_runtime_s": 43.112966775894165,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 42.154323518276215,
+      "median_runtime_s": 42.48801553249359,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 39.333002865314484,
+      "median_runtime_s": 38.45965933799744,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 41.16300892829895,
+      "median_runtime_s": 41.32469666004181,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 39.084993958473206,
+      "median_runtime_s": 39.506938219070435,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.026667594909668,
+      "median_runtime_s": 2.7304718494415283,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.2518503069877625,
+      "median_runtime_s": 2.9122387170791626,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.1343319416046143,
+      "median_runtime_s": 2.973947525024414,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.6138961911201477,
+      "median_runtime_s": 3.1631776094436646,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.9404995441436768,
+      "median_runtime_s": 3.867278575897217,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.0414240956306458,
+      "median_runtime_s": 2.809319853782654,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 3.884700298309326,
+      "median_runtime_s": 4.182031989097595,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.282308280467987,
+      "median_runtime_s": 3.8172106742858887,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 5.6254464983940125,
+      "median_runtime_s": 5.6210092306137085,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 4.263094246387482,
+      "median_runtime_s": 4.453836560249329,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.92041802406311,
+      "median_runtime_s": 6.973625302314758,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 8.864947080612183,
+      "median_runtime_s": 8.722469329833984,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 24.466076493263245,
+      "median_runtime_s": 24.342885732650757,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 103.9444437623024,
+      "median_runtime_s": 113.07538831233978,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 3,
+      "success_rate": 0.75,
+      "avg_runtime_s": 134.37361311912537,
+      "median_runtime_s": 140.05979192256927,
+      "failure_stage_counts": {
+        "TIMEOUT": 1
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 92.49199795722961,
+      "median_runtime_s": 93.56092989444733,
+      "failure_stage_counts": {
+        "CCA": 3,
+        "TIMEOUT": 1
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 87.95348477363586,
+      "median_runtime_s": 87.55423641204834,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 78.3380229473114,
+      "median_runtime_s": 77.90805804729462,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.5,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 75.16269755363464,
+      "median_runtime_s": 75.61248862743378,
+      "failure_stage_counts": {
+        "CCA": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 88.16321885585785,
+      "median_runtime_s": 88.46050715446472,
+      "failure_stage_counts": {
+        "CCA": 2,
+        "TIMEOUT": 2
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 92.90748929977417,
+      "median_runtime_s": 92.65682363510132,
+      "failure_stage_counts": {
+        "CCA": 1,
+        "TIMEOUT": 3
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 91.90637928247452,
+      "median_runtime_s": 91.81396949291229,
+      "failure_stage_counts": {
+        "CCA": 2,
+        "TIMEOUT": 2
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 89.12131249904633,
+      "median_runtime_s": 90.45183098316193,
+      "failure_stage_counts": {
+        "CCA": 1,
+        "TIMEOUT": 3
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.4,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 88.03175175189972,
+      "median_runtime_s": 88.05708575248718,
+      "failure_stage_counts": {
+        "CCA": 3,
+        "TIMEOUT": 1
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 90.79072856903076,
+      "median_runtime_s": 91.7453111410141,
+      "failure_stage_counts": {
+        "CCA": 2,
+        "TIMEOUT": 2
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.204066216945648,
+      "median_runtime_s": 5.911715626716614,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.062183499336243,
+      "median_runtime_s": 5.7740479707717896,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.819047033786774,
+      "median_runtime_s": 6.694026231765747,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 1.8,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.925335705280304,
+      "median_runtime_s": 7.164051532745361,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.980233013629913,
+      "median_runtime_s": 7.35983943939209,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.910631418228149,
+      "median_runtime_s": 7.008393287658691,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 6.464240849018097,
+      "median_runtime_s": 6.725998878479004,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 10.082380950450897,
+      "median_runtime_s": 10.452298164367676,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.0,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 24.127897322177887,
+      "median_runtime_s": 22.222536444664,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 4,
+      "success_rate": 1.0,
+      "avg_runtime_s": 8.074712693691254,
+      "median_runtime_s": 7.8757065534591675,
+      "failure_stage_counts": {}
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 3,
+      "success_rate": 0.75,
+      "avg_runtime_s": 77.26899433135986,
+      "median_runtime_s": 88.03850758075714,
+      "failure_stage_counts": {
+        "TIMEOUT": 1
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 93.5038355588913,
+      "median_runtime_s": 92.36103618144989,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 94.78773713111877,
+      "median_runtime_s": 93.54804849624634,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.2,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 95.16766160726547,
+      "median_runtime_s": 94.86967432498932,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 0.6,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 92.70618724822998,
+      "median_runtime_s": 92.44426703453064,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 0.9,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 91.52401423454285,
+      "median_runtime_s": 91.4549320936203,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 92.78784936666489,
+      "median_runtime_s": 92.81962025165558,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.2,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 92.37165850400925,
+      "median_runtime_s": 92.19320738315582,
+      "failure_stage_counts": {
+        "TIMEOUT": 4
+      }
+    },
+    {
+      "N": 1024,
+      "Df": 2.5,
+      "kf": 1.4,
+      "rp_gstd": 1.9,
+      "trials": 4,
+      "successes": 0,
+      "success_rate": 0.0,
+      "avg_runtime_s": 80.49737584590912,
+      "median_runtime_s": 76.39813721179962,
+      "failure_stage_counts": {
+        "CCA": 3,
+        "TIMEOUT": 1
+      }
+    }
+  ]
+}
