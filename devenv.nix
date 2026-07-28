@@ -93,15 +93,6 @@ in
   };
 
   git-hooks.hooks = {
-    sync-docs-requirements = {
-      enable = true;
-      description = "Regenerate docs/requirements.txt from the docs dependency group - CI's sphinx-notes/pages action installs from this file, not pyproject.toml, so it must stay in sync manually otherwise.";
-      package = pkgs.uv;
-      entry = "uv export --only-group docs --no-hashes -o docs/requirements.txt";
-      pass_filenames = false;
-      files = "^(pyproject\\.toml|uv\\.lock)$";
-    };
-
     isort = {
       enable = true;
       settings.profile = "black";

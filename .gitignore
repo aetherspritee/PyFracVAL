@@ -183,3 +183,7 @@ devenv.local.nix
 
 # pre-commit
 .pre-commit-config.yaml
+
+# docs/requirements.txt is generated fresh by the docs CI workflow from
+# the pyproject.toml docs dependency group - see .github/workflows/docs.yml
+docs/requirements.txt

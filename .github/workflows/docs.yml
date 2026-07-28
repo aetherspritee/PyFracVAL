@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - "docs/**/*"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/docs.yml"
 
 jobs:
@@ -16,6 +18,17 @@ jobs:
       pages: write
       id-token: write
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v9.0.0
+
+      # sphinx-notes/pages installs from docs/requirements.txt, not
+      # pyproject.toml (it has no support for PEP 735 dependency-groups -
+      # see https://github.com/sphinx-notes/pages/issues/49). Regenerate it
+      # here from the docs group so pyproject.toml/uv.lock stay the single
+      # source of truth and this file can't silently drift out of sync.
+      - run: uv export --only-group docs --no-hashes -o docs/requirements.txt
+
       - id: deployment
         uses: sphinx-notes/pages@v3
         with:
