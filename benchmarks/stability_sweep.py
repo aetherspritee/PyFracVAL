@@ -371,6 +371,13 @@ def _run_sweep_dask(
 
     sim = cfg.simulation
     dask_cfg = cfg.dask
+    # Write generated aggregates under the configured output_dir (matching
+    # the sequential path's "aggregates/<category>" layout via
+    # StickingBenchmark), not a hardcoded /tmp location - previously this
+    # was "/tmp/dask_sweep_output" regardless of --output-dir/cfg.output_dir,
+    # so a completed sweep's raw per-trial data lived somewhere the caller
+    # never asked for and had no obvious link back to the summary.
+    dask_output_base_dir = str(benchmark.output_dir / "aggregates" / "stability_sweep")
 
     total_combos = len(sizes) * len(sigmas) * len(df_values) * len(kf_values)
     total_trials = total_combos * cfg.trials
@@ -437,7 +444,7 @@ def _run_sweep_dask(
                                 _timed_run_simulation,
                                 trial,
                                 params,
-                                "/tmp/dask_sweep_output",
+                                dask_output_base_dir,
                                 seed,
                                 sim.trial_timeout,
                             )
