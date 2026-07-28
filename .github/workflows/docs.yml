@@ -18,7 +18,11 @@ jobs:
       pages: write
       id-token: write
     steps:
+      # fetch-depth: 0 matches what sphinx-notes/pages' own checkout would
+      # use when cache: true (required by sphinxnotes-incrbuild).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v9.0.0
 
@@ -34,3 +38,7 @@ jobs:
         with:
           documentation_path: ./docs/source
           cache: true
+          # We already checked out above - sphinx-notes/pages' own internal
+          # checkout would otherwise wipe the workspace (including the
+          # requirements.txt just generated) before installing from it.
+          checkout: false
