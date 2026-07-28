@@ -264,6 +264,13 @@ class OrchestratorAlgorithmConfig(BaseModel):
         default_factory=lambda: {"LL": 1.0, "LN": 0.6, "NN": 0.3}
     )
     cca_matching_leaf_class_threshold: float = 0.5
+    # --- Overlap-failure census (docs/source/overlap_failure_census.md) ------
+    # Strictly opt-in, off the hot path: when a pair's sticking attempt
+    # fails, runs one full (non-early-exit) overlap scan to record how
+    # many particles overlap and by how much, instead of just the binary
+    # success/fail signal pyfracval/overlap.py's scalar checks give.
+    cca_overlap_census_enabled: bool = False
+    cca_overlap_census_max_pairs: int = 4096
     cca_score_topk_per_class: int = 32
     cca_retry_rotation_mode: str = "single"
     cca_coarse_fine_coarse_fraction: float = 0.67

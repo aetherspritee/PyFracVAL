@@ -14,6 +14,7 @@ a first benchmark of `densify_method="voronoi"` (previously untested).
 | CCA vanilla Fibonacci sticking | production default | reference baseline | [experiments.md](experiments.md) |
 | CCA pairing (greedy first-fit) | production default | diagnosed bottleneck - 97.4% of hard-regime failures had a rescuable alternative pairing available | [pairing_frustration.md](pairing_frustration.md) |
 | CCA pairing, exact matching / leaf-weighted matching | opt-in | implemented and benchmarked - no measurable improvement (+0.2pp over 4200 trials); the cheap feasibility graph matching operates on is too optimistic to translate into real sticking success | [matching_pairing.md](matching_pairing.md) |
+| CCA overlap-failure census (`cca_overlap_census_enabled`) | opt-in, diagnostic only | implemented - reveals hard-regime failures involve a median 9/24 particles in the failing pair (~37.5%), not a small handful; informs whether a drop-a-few-particles rescue is viable | [overlap_failure_census.md](overlap_failure_census.md) |
 | CCA retry rotation modes (`alternate`, `dual_jitter`, `coarse_grid`, `coarse_to_fine`) | opt-in, archived | no measurable benefit | [experiments.md](experiments.md) |
 | CCA candidate ordering (`leaf_soft`, `leaf_score`, `leaf_hybrid`) | opt-in, archived | no measurable benefit | [experiments.md](experiments.md) |
 | CCA pair pre-filters (bounding-volume, SSA) | opt-in, archived | no measurable benefit | [experiments.md](experiments.md) |

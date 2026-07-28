@@ -62,6 +62,11 @@ class BenchmarkResult:
     gamma_failures: Optional[int] = None
     candidate_failures: Optional[int] = None
 
+    # Overlap-failure census (only populated when the trial's algorithm
+    # config has cca_overlap_census_enabled=True - see
+    # docs/source/overlap_failure_census.md). None otherwise.
+    overlap_census: Optional[dict] = None
+
 
 class StickingBenchmark:
     """Comprehensive benchmark suite for sticking process analysis."""
@@ -384,6 +389,8 @@ class StickingBenchmark:
                 failure_stage = diagnostics.get("failure_stage") or "UNKNOWN"
                 failure_reason = diagnostics.get("failure_reason") or "Check logs"
 
+            overlap_census = diagnostics.get("overlap_census")
+
             result = BenchmarkResult(
                 category=category,
                 success=success,
@@ -392,6 +399,7 @@ class StickingBenchmark:
                 failure_reason=failure_reason,
                 final_N=final_N,
                 final_Rg=final_Rg,
+                overlap_census=overlap_census,
                 **{k: v for k, v in full_params.items() if k in _result_fields},
             )
             return result

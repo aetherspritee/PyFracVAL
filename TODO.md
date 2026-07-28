@@ -17,12 +17,34 @@ git history has the detail).
       actually-sticks. A backtracking approach that reacts to a real stick
       failure instead of trying to predict it upfront is the design the
       evidence now points to.
-- [ ] Statistical overlap-failure census + drop-a-few-particles rescue
-      fallback (Phases 2-3 of the paper-worthy roadmap — see
-      `/home/mar/.claude/plans/scalable-cooking-brooks.md`).
+- [ ] Drop-a-few-particles rescue fallback (Phase 3 of the paper-worthy
+      roadmap — see `/home/mar/.claude/plans/scalable-cooking-brooks.md`).
+      `docs/source/overlap_failure_census.md`'s real data is a caution,
+      not a green light: at N=128 hard regime, failures always happen at
+      CCA round 1 between ~12-particle subclusters, with a median 9/24
+      (~37.5%) particles implicated — not the "5 out of 512" scale the
+      idea was framed around. Needs checking whether late-round merges
+      between large, already-built clusters look different before
+      building the rescue mechanism around an assumption the N=128 data
+      doesn't support.
 
 ## Done (recent)
 
+- [x] **Statistical overlap-failure census** (Phase 2 of the roadmap).
+      Added `pyfracval/overlap_statistics.py` (`compute_overlap_census`,
+      a two-cluster non-early-exit overlap scan modeled on
+      `densify.py`'s existing self-overlap kernel) and a new
+      `OverlapCensus` schema, wired in as a strictly opt-in
+      (`cca_overlap_census_enabled`, default off) hook at
+      `fallbacks.py::_perform_cca_sticking`'s give-up point, threaded out
+      through `run_simulation`'s `diagnostics` parameter into
+      `BenchmarkResult.overlap_census`. Ran `benchmarks/overlap_census_probe.py`
+      (40 seeds, hard + easy-control regimes, retry-inclusive metric):
+      found every hard-regime failure happens at a fixed 24-particle
+      cluster pair (confirms `pairing_frustration.md`'s "always round 1"
+      finding quantitatively), with a median of 9 offending particles —
+      informs (and complicates) the Phase 3 item above. See
+      `docs/source/overlap_failure_census.md`.
 - [x] **Implement and benchmark matching-based CCA pairing** (closes the
       previous "Implement a matching-based (or backtracking) CCA pairing
       strategy" item). Added `pyfracval/cca/matching.py` (exact

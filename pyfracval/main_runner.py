@@ -276,6 +276,10 @@ def _run_simulation_core(
                 diagnostics["failure_stage"] = "CCA"
                 diagnostics["failure_reason"] = "CCA aggregation failed"
                 diagnostics["attempts_used"] = attempt
+                census = getattr(cca_runner, "_last_overlap_census", None)
+                diagnostics["overlap_census"] = (
+                    census.model_dump() if census is not None else None
+                )
             continue  # retry with a new shuffle
 
         # Both PCA and CCA succeeded on this attempt

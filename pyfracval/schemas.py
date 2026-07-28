@@ -77,6 +77,48 @@ class AggregateProperties(BaseModel):
     # Add r_max etc. if calculated and needed
 
 
+class OverlapCensus(BaseModel):
+    """Severity census of a failed CCA sticking attempt's overlap state.
+
+    Internal diagnostic/telemetry data produced by
+    ``pyfracval.overlap_statistics.compute_overlap_census`` when
+    ``OrchestratorAlgorithmConfig.cca_overlap_census_enabled`` is set -
+    strictly opt-in, off the default hot path. Not part of a saved
+    aggregate's output metadata (see ``AggregateProperties`` for that);
+    this is per-attempt diagnostic data consumed by benchmark harnesses.
+    """
+
+    n_pairs_overlapping: int = Field(
+        ..., description="Number of overlapping particle pairs found."
+    )
+    n_particles_cluster1_offending: int = Field(
+        ..., description="Distinct particles in cluster 1 involved in any overlap."
+    )
+    n_particles_cluster2_offending: int = Field(
+        ..., description="Distinct particles in cluster 2 involved in any overlap."
+    )
+    offending_indices_cluster1: list[int] = Field(
+        default_factory=list, description="Indices of offending particles in cluster 1."
+    )
+    offending_indices_cluster2: list[int] = Field(
+        default_factory=list, description="Indices of offending particles in cluster 2."
+    )
+    max_overlap_fraction: float = Field(
+        ..., description="Largest single-pair overlap fraction observed."
+    )
+    mean_overlap_fraction: float = Field(
+        ..., description="Mean overlap fraction across all overlapping pairs."
+    )
+    severity_histogram: dict[str, int] = Field(
+        default_factory=dict,
+        description="Overlap-fraction bucket label -> pair count.",
+    )
+    cluster1_size: int = Field(..., description="Particle count of cluster 1.")
+    cluster2_size: int = Field(..., description="Particle count of cluster 2.")
+
+    model_config = ConfigDict(extra="allow")
+
+
 class GenerationInfo(BaseModel):
     """Information about the generation process."""
 

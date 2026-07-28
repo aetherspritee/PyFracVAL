@@ -640,7 +640,43 @@ class _FallbacksMixin:
             logger.warning(
                 f"CCA sticking failed for clusters {cluster_idx1} and {cluster_idx2} after trying {attempts_tried} pairs."
             )
+            if self.algorithm_config.cca_overlap_census_enabled:
+                self._run_overlap_census_on_failure(
+                    coords1_stick, radii1_in, current_coords2, radii2_in
+                )
             return None  # Failed to find non-overlapping configuration
+
+    def _run_overlap_census_on_failure(
+        self,
+        coords1_last: np.ndarray | None,
+        radii1: np.ndarray,
+        coords2_last: np.ndarray | None,
+        radii2: np.ndarray,
+    ) -> None:
+        """Opt-in post-failure diagnostic (docs/source/overlap_failure_census.md).
+
+        Runs a full non-early-exit overlap scan against the last-attempted
+        candidate placement (whatever the sticking loop above left
+        coords1_stick/current_coords2 as when it exhausted candidates) and
+        stashes the result on self._last_overlap_census for the caller
+        (benchmark harness, or a future rescue fallback) to consume.
+        Silently no-ops if the very last attempt never got past initial
+        placement (coords1_last/coords2_last still None) - there is no
+        geometry to census in that case. Strictly additive: only runs when
+        cca_overlap_census_enabled is set, never on the default hot path.
+        """
+        if coords1_last is None or coords2_last is None:
+            self._last_overlap_census = None
+            return
+        from ..overlap_statistics import compute_overlap_census
+
+        self._last_overlap_census = compute_overlap_census(
+            coords1_last,
+            radii1,
+            coords2_last,
+            radii2,
+            max_pairs=self.algorithm_config.cca_overlap_census_max_pairs,
+        )
 
     def _try_soft_relaxation_sticking(
         self,

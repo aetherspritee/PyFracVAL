@@ -167,6 +167,12 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         self._bv_filter_rejects: int = 0
         self._ssa_filter_rejects: int = 0
 
+        # Opt-in overlap-failure census (cca_overlap_census_enabled), set by
+        # fallbacks.py::_run_overlap_census_on_failure - see
+        # docs/source/overlap_failure_census.md. None when disabled or
+        # before any failure has been censused.
+        self._last_overlap_census = None
+
         # FFT docking telemetry
         self._fft_docking_attempts: int = 0
         self._fft_docking_successes: int = 0

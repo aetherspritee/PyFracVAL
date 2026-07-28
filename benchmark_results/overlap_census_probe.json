@@ -1,0 +1,101 @@
+[
+  {
+    "regime": "hard",
+    "params": {
+      "N": 128,
+      "Df": 2.25,
+      "kf": 0.95,
+      "rp_gstd": 1.9,
+      "description": "hard_regime",
+      "cca_overlap_census_enabled": true
+    },
+    "n_seeds": 40,
+    "n_success": 13,
+    "success_rate": 0.325,
+    "n_failures_with_census": 23,
+    "offending_particle_counts": [
+      10,
+      6,
+      14,
+      6,
+      15,
+      6,
+      13,
+      9,
+      10,
+      19,
+      7,
+      17,
+      15,
+      12,
+      8,
+      8,
+      15,
+      8,
+      3,
+      4,
+      15,
+      8,
+      9
+    ],
+    "cluster_size_at_failure": [
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24,
+      24
+    ],
+    "localized_buckets": {
+      "6-10": 12,
+      "11-20": 9,
+      "<=5": 2
+    },
+    "severity_histogram_totals": {
+      "0-0.05": 20,
+      "0.05-0.15": 21,
+      "0.15-0.3": 39,
+      "0.3+": 137
+    },
+    "mean_offending_particles": 10.304347826086957,
+    "median_offending_particles": 9
+  },
+  {
+    "regime": "easy_control",
+    "params": {
+      "N": 128,
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "description": "easy_control",
+      "cca_overlap_census_enabled": true
+    },
+    "n_seeds": 40,
+    "n_success": 40,
+    "success_rate": 1.0,
+    "n_failures_with_census": 0,
+    "offending_particle_counts": [],
+    "cluster_size_at_failure": [],
+    "localized_buckets": {},
+    "severity_histogram_totals": {},
+    "mean_offending_particles": null,
+    "median_offending_particles": null
+  }
+]

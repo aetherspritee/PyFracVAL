@@ -10,6 +10,7 @@ pipeline_baseline
 experiments
 pairing_frustration
 matching_pairing
+overlap_failure_census
 hard_regime_boundary_sweep
 full_stability_sweep
 gpu_acceleration
