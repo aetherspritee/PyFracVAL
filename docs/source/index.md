@@ -13,6 +13,7 @@ usage
 experiments
 pairing_frustration
 hard_regime_boundary_sweep
+full_thesis_replication_sweep
 gpu_acceleration
 references
 ```
