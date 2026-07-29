@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.spatial import KDTree
+from scipy.spatial.distance import pdist
 
 _VALID_MODES = {"average", "strict"}
 
@@ -115,16 +116,25 @@ def _validate_no_overlaps(
 ) -> None:
     """Confirm no pair of scaled particles overlaps -- a hard-fail safety
     net, not a formality: the "average" mode is a heuristic and can
-    theoretically under-scale an irregular aggregate."""
-    tree = KDTree(scaled_coords)
-    r_max = float(np.max(radii))
-    pairs = tree.query_pairs(r=2 * r_max, output_type="ndarray")
-    if pairs.size == 0:
+    theoretically under-scale an irregular aggregate.
+
+    Plain all-pairs distances (``pdist``), not a KD-tree -- this is a
+    correctness check, not a hot path, and cluster sizes here (up to
+    ~1000 spheres, ~500k pairs) are nowhere near where an O(N^2) pairwise
+    distance matrix would actually matter; a tree-based cutoff query is
+    real complexity bought for a performance concern that doesn't exist
+    at this scale.
+    """
+    n = len(radii)
+    if n < 2:
         return
-    idx_i, idx_j = pairs[:, 0], pairs[:, 1]
-    d_ij = np.linalg.norm(scaled_coords[idx_i] - scaled_coords[idx_j], axis=1)
-    min_required = radii[idx_i] + radii[idx_j]
-    overlap_count = int(np.sum(d_ij < min_required))
+    # pdist's condensed output is pairs (0,1),(0,2),...,(0,n-1),(1,2),...
+    # in exactly the order np.triu_indices(n, k=1) produces -- this is
+    # pdist/squareform's own documented correspondence, not a coincidence.
+    dists = pdist(scaled_coords)
+    i_idx, j_idx = np.triu_indices(n, k=1)
+    min_required = radii[i_idx] + radii[j_idx]
+    overlap_count = int(np.sum(dists < min_required))
     if overlap_count > 0:
         raise ValueError(
             f"Scaling for gap_factor={gap_factor} (mode={mode!r}) failed to "
