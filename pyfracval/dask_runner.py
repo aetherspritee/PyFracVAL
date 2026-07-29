@@ -60,11 +60,15 @@ def install_wheel_on_workers(
     installs whatever wheel you hand it, it does not build one (see
     ``_register_package`` below for pyfracval's own "build one first" case).
 
-    ``client.run()`` sends a callable directly to each worker and executes it
-    there, bypassing the plugin/scheduler machinery. The installer function
-    is defined inline so cloudpickle serialises it **by value** (bytecode),
-    not by reference to a module -- which would fail on the scheduler/workers
-    before *package_name* is installed there.
+    Installs via a ``WorkerPlugin`` (``client.register_plugin()``), not a
+    one-shot ``client.run()`` sweep: a plugin also runs its ``setup()`` on
+    any worker that joins *after* this call (Docker restart, autoscaling,
+    ...), where a ``client.run()`` snapshot of currently-connected workers
+    would silently miss it and leave that worker without the package. The
+    installer function and plugin class are both defined inline so
+    cloudpickle serialises them **by value** (bytecode), not by reference to
+    a module -- which would fail on the scheduler/workers before
+    *package_name* is installed there.
 
     Parameters
     ----------
@@ -181,8 +185,54 @@ def install_wheel_on_workers(
             "pid": str(os.getpid()),
         }
 
-    # Install on the scheduler first using embedded functions in this scope
-    # (cloudpickle serialises them by value).
+    # A WorkerPlugin, not just a one-shot client.run() sweep: client.run()
+    # only ever reaches workers connected *at call time*. A worker that
+    # joins later (Docker restart, --nworkers auto scaling up, ...) would
+    # never get the package and would die with a bare ModuleNotFoundError
+    # the moment it's handed a task referencing it. register_plugin()
+    # installs on every currently-connected worker (synchronously -- it
+    # waits for setup() to finish on each one and returns their results)
+    # *and* registers with the scheduler so any future worker runs setup()
+    # automatically on connect. This is the gap client.run() can't close.
+    #
+    # Defined nested (like _install_wheel_bytes_embedded above) so
+    # cloudpickle ships the class by value, not by reference to this
+    # module -- a fresh worker doesn't have pyfracval importable yet,
+    # which is exactly the problem this plugin exists to fix.
+    from distributed import WorkerPlugin
+
+    class _InstallWheelPlugin(WorkerPlugin):
+        name = f"install-{package_name}"
+
+        def __init__(
+            self,
+            wheel_bytes,
+            wheel_filename,
+            package_name,
+            expected_version,
+            env_installed_wheel,
+            env_expected_version,
+        ):
+            self.wheel_bytes = wheel_bytes
+            self.wheel_filename = wheel_filename
+            self.package_name = package_name
+            self.expected_version = expected_version
+            self.env_installed_wheel = env_installed_wheel
+            self.env_expected_version = env_expected_version
+
+        def setup(self, worker):
+            return _install_wheel_bytes_embedded(
+                self.wheel_bytes,
+                self.wheel_filename,
+                self.package_name,
+                self.expected_version,
+                self.env_installed_wheel,
+                self.env_expected_version,
+            )
+
+    # Install on the scheduler first using the embedded function in this
+    # scope (cloudpickle serialises it by value). The scheduler process
+    # isn't a "worker" so the plugin mechanism above doesn't cover it.
     sched_msg = client.run_on_scheduler(
         _install_wheel_bytes_embedded,
         wheel_bytes,
@@ -193,21 +243,21 @@ def install_wheel_on_workers(
         env_expected_version,
     )
     logger.info(f"  scheduler: {sched_msg}")
-    # Install on all workers.
-    worker_addresses = list(client.scheduler_info()["workers"].keys())
-    results = client.run(
-        _install_wheel_bytes_embedded,
+
+    # Install on all current workers and register for all future ones.
+    plugin = _InstallWheelPlugin(
         wheel_bytes,
         wheel_filename,
         package_name,
         expected_version,
         env_installed_wheel,
         env_expected_version,
-        workers=worker_addresses,
     )
+    results = client.register_plugin(plugin, name=plugin.name)
     for worker_addr, msg in results.items():
         logger.info(f"  {worker_addr}: {msg}")
 
+    worker_addresses = list(client.scheduler_info()["workers"].keys())
     fingerprints = client.run(
         _worker_fingerprint_embedded, package_name, workers=worker_addresses
     )

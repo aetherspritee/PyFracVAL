@@ -22,13 +22,20 @@ class _FakeClient:
     """Records what would be sent to the scheduler/workers without
     actually invoking it -- install_wheel_on_workers()'s embedded
     functions do real subprocess pip installs, which this must not
-    trigger."""
+    trigger.
+
+    Notably: register_plugin() is recorded but its plugin's setup() is
+    deliberately never called (unlike the real Client, which calls it on
+    every worker) -- that's exactly the real subprocess-install path this
+    fake exists to avoid triggering.
+    """
 
     def __init__(self, worker_ids, fingerprint_version):
         self._worker_ids = worker_ids
         self._fingerprint_version = fingerprint_version
         self.scheduler_calls: list[tuple] = []
         self.run_calls: list[tuple] = []
+        self.register_plugin_calls: list[tuple] = []
 
     def run_on_scheduler(self, fn, *args):
         self.scheduler_calls.append((fn, args))
@@ -37,21 +44,22 @@ class _FakeClient:
     def scheduler_info(self):
         return {"workers": {wid: {} for wid in self._worker_ids}}
 
+    def register_plugin(self, plugin, name=None):
+        self.register_plugin_calls.append((plugin, name))
+        return {w: {"status": "OK"} for w in self._worker_ids}
+
     def run(self, fn, *args, workers=None):
         self.run_calls.append((fn, args, workers))
-        if len(args) == 1:
-            # The fingerprint call: (package_name,).
-            return {
-                w: {
-                    "version": self._fingerprint_version,
-                    "module_file": "fake.py",
-                    "pid": "1",
-                }
-                for w in workers
+        # Only the fingerprint call goes through client.run() now --
+        # installation happens via register_plugin() above.
+        return {
+            w: {
+                "version": self._fingerprint_version,
+                "module_file": "fake.py",
+                "pid": "1",
             }
-        # The install call: (wheel_bytes, wheel_filename, package_name,
-        # expected_version, env_installed_wheel, env_expected_version).
-        return {w: {"installed_wheel": args[1]} for w in workers}
+            for w in workers
+        }
 
 
 def _wheel_file(tmp_path, name="dummy-1.2.3-py3-none-any.whl"):
@@ -89,10 +97,21 @@ def test_install_wheel_on_workers_dispatches_with_correct_args(tmp_path):
     assert env_wheel == "DUMMY_INSTALLED_WHEEL"
     assert env_version == "DUMMY_EXPECTED_VERSION"
 
-    # Two client.run() calls: install on workers, then fingerprint.
-    assert len(client.run_calls) == 2
-    install_call, fingerprint_call = client.run_calls
-    assert install_call[2] == ["tcp://w1", "tcp://w2"]  # workers=
+    # Installation now happens via a registered WorkerPlugin, not a
+    # client.run() sweep -- covers workers that join later too.
+    assert len(client.register_plugin_calls) == 1
+    plugin, plugin_name = client.register_plugin_calls[0]
+    assert plugin.wheel_bytes == wheel_path.read_bytes()
+    assert plugin.wheel_filename == wheel_path.name
+    assert plugin.package_name == "dummy"
+    assert plugin.expected_version == "1.2.3"
+    assert plugin.env_installed_wheel == "DUMMY_INSTALLED_WHEEL"
+    assert plugin.env_expected_version == "DUMMY_EXPECTED_VERSION"
+    assert plugin_name == plugin.name
+
+    # One client.run() call: the post-install fingerprint check.
+    assert len(client.run_calls) == 1
+    (fingerprint_call,) = client.run_calls
     assert fingerprint_call[1] == ("dummy",)  # args=(package_name,)
     assert fingerprint_call[2] == ["tcp://w1", "tcp://w2"]
 
