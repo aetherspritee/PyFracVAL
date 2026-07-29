@@ -8,11 +8,6 @@ import subprocess
 import tomllib
 from pathlib import Path
 
-from pyfracval.environments import (
-    PYFRACVAL_EXPECTED_VERSION,
-    PYFRACVAL_INSTALLED_WHEEL,
-)
-
 logger = logging.getLogger(__name__)
 
 # Project root: two levels up from this file (pyfracval/dask_runner.py → project root)
@@ -47,42 +42,52 @@ def _project_version() -> str:
     return str(data["project"]["version"])
 
 
-def _worker_fingerprint() -> dict[str, str]:
-    """Return runtime package fingerprint for verification."""
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as pkg_version
+def install_wheel_on_workers(
+    client,
+    wheel_path: str | Path,
+    package_name: str,
+    expected_version: str,
+) -> None:
+    """Install an arbitrary wheel on a Dask scheduler and all its workers,
+    verified via a runtime version fingerprint.
 
-    import pyfracval
-
-    try:
-        runtime_version = pkg_version("PyFracVAL")
-    except PackageNotFoundError:
-        runtime_version = "unknown"
-
-    return {
-        "version": str(runtime_version),
-        "module_file": str(getattr(pyfracval, "__file__", "unknown")),
-        "pid": str(os.getpid()),
-        "installed_wheel_env": os.environ.get(PYFRACVAL_INSTALLED_WHEEL, ""),
-        "expected_version_env": os.environ.get(PYFRACVAL_EXPECTED_VERSION, ""),
-    }
-
-
-def _register_package(client) -> None:
-    """Build a wheel and install it on all workers via client.run().
+    Generic version of the mechanism this module has always used for
+    installing *pyfracval* itself onto Dask Docker workers that don't have
+    it preinstalled (e.g. a generic ``ghcr.io/dask/dask`` image) -- reusable
+    for any package, not just this one. In particular: a *compiled*
+    extension (e.g. pyfastmm's f2py extension) needs a wheel actually built
+    for the worker's platform/Python ABI -- this function only ships and
+    installs whatever wheel you hand it, it does not build one (see
+    ``_register_package`` below for pyfracval's own "build one first" case).
 
     ``client.run()`` sends a callable directly to each worker and executes it
-    there, bypassing the plugin/scheduler machinery.
+    there, bypassing the plugin/scheduler machinery. The installer function
+    is defined inline so cloudpickle serialises it **by value** (bytecode),
+    not by reference to a module -- which would fail on the scheduler/workers
+    before *package_name* is installed there.
 
-    The installer function is defined inline so cloudpickle serialises it
-    **by value** (bytecode), not by reference to the pyfracval module — which
-    would fail on the scheduler/workers before pyfracval is installed.
+    Parameters
+    ----------
+    client:
+        A connected ``dask.distributed.Client``.
+    wheel_path:
+        Path to a ``.whl`` file, already built for the *worker's* platform
+        and Python version (this function does no cross-compilation or
+        compatibility checking -- get that part right before calling this).
+    package_name:
+        The distribution/import name (e.g. ``"pyfracval"``, ``"pyfastmm"``,
+        ``"spcwth"``) -- used for the post-install version check, the
+        stale-module cache eviction, and the ``<PACKAGE>_INSTALLED_WHEEL``/
+        ``<PACKAGE>_EXPECTED_VERSION`` env vars set on each worker.
+    expected_version:
+        Version string the installed wheel must report after installing,
+        or this raises ``RuntimeError``.
     """
-
-    wheel_path = _build_wheel()
-    expected_version = _project_version()
+    wheel_path = Path(wheel_path)
     wheel_bytes = wheel_path.read_bytes()
     wheel_filename = wheel_path.name
+    env_installed_wheel = f"{package_name.upper()}_INSTALLED_WHEEL"
+    env_expected_version = f"{package_name.upper()}_EXPECTED_VERSION"
     logger.info(
         f"Installing {wheel_filename} ({len(wheel_bytes) // 1024} KB) "
         f"on scheduler and all workers…"
@@ -91,7 +96,10 @@ def _register_package(client) -> None:
     def _install_wheel_bytes_embedded(
         wheel_bytes: bytes,
         wheel_filename: str,
+        package_name: str,
         expected_version: str,
+        env_installed_wheel: str,
+        env_expected_version: str,
     ) -> dict[str, str]:
         import importlib
         import os
@@ -99,7 +107,7 @@ def _register_package(client) -> None:
         import sys
         import tempfile
 
-        tmp_dir = tempfile.mkdtemp(prefix="pyfracval_wheel_")
+        tmp_dir = tempfile.mkdtemp(prefix=f"{package_name}_wheel_")
         wheel_path = os.path.join(tmp_dir, wheel_filename)
         with open(wheel_path, "wb") as fh:
             fh.write(wheel_bytes)
@@ -138,11 +146,11 @@ def _register_package(client) -> None:
 
         importlib.invalidate_caches()
         for mod_name in list(sys.modules):
-            if mod_name == "pyfracval" or mod_name.startswith("pyfracval."):
+            if mod_name == package_name or mod_name.startswith(package_name + "."):
                 sys.modules.pop(mod_name, None)
 
-        os.environ[PYFRACVAL_INSTALLED_WHEEL] = wheel_filename
-        os.environ[PYFRACVAL_EXPECTED_VERSION] = expected_version
+        os.environ[env_installed_wheel] = wheel_filename
+        os.environ[env_expected_version] = expected_version
 
         return {
             "python": sys.executable,
@@ -151,13 +159,38 @@ def _register_package(client) -> None:
             "expected_version": expected_version,
         }
 
-    # Install on the scheduler first using an embedded function in this scope
-    # (cloudpickle serialises it by value).
+    def _worker_fingerprint_embedded(package_name: str) -> dict[str, str]:
+        import importlib
+        import os
+        from importlib.metadata import PackageNotFoundError
+        from importlib.metadata import version as pkg_version
+
+        try:
+            module = importlib.import_module(package_name)
+        except ImportError:
+            module = None
+
+        try:
+            runtime_version = pkg_version(package_name)
+        except PackageNotFoundError:
+            runtime_version = "unknown"
+
+        return {
+            "version": str(runtime_version),
+            "module_file": str(getattr(module, "__file__", "unknown")),
+            "pid": str(os.getpid()),
+        }
+
+    # Install on the scheduler first using embedded functions in this scope
+    # (cloudpickle serialises them by value).
     sched_msg = client.run_on_scheduler(
         _install_wheel_bytes_embedded,
         wheel_bytes,
         wheel_filename,
+        package_name,
         expected_version,
+        env_installed_wheel,
+        env_expected_version,
     )
     logger.info(f"  scheduler: {sched_msg}")
     # Install on all workers.
@@ -166,13 +199,18 @@ def _register_package(client) -> None:
         _install_wheel_bytes_embedded,
         wheel_bytes,
         wheel_filename,
+        package_name,
         expected_version,
+        env_installed_wheel,
+        env_expected_version,
         workers=worker_addresses,
     )
     for worker_addr, msg in results.items():
         logger.info(f"  {worker_addr}: {msg}")
 
-    fingerprints = client.run(_worker_fingerprint, workers=worker_addresses)
+    fingerprints = client.run(
+        _worker_fingerprint_embedded, package_name, workers=worker_addresses
+    )
     for worker_addr, fp in fingerprints.items():
         logger.info(
             "  %s version=%s file=%s pid=%s",
@@ -188,8 +226,25 @@ def _register_package(client) -> None:
             )
 
     logger.info(
-        "Scheduler and all workers have pyfracval installed and verified at runtime."
+        f"Scheduler and all workers have {package_name} installed and "
+        "verified at runtime."
     )
+
+
+def _register_package(client) -> None:
+    """Build pyfracval's own wheel and install it on all workers.
+
+    Thin wrapper around :func:`install_wheel_on_workers` -- kept for
+    backwards compatibility and as pyfracval's own "build from local source
+    first" use case; other packages (e.g. a compiled extension like
+    pyfastmm, which needs a wheel built for the *worker's* platform, not
+    whatever this machine happens to be) call
+    :func:`install_wheel_on_workers` directly with an already-built wheel
+    instead of going through this function.
+    """
+    wheel_path = _build_wheel()
+    expected_version = _project_version()
+    install_wheel_on_workers(client, wheel_path, "pyfracval", expected_version)
 
 
 def get_client(
