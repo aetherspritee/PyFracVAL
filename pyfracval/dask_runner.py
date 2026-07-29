@@ -330,10 +330,29 @@ def get_client(
     -------
     dask.distributed.Client
     """
+    import dask
     from dask.distributed import Client, LocalCluster  # lazy import
 
     if scheduler_address is not None:
         logger.info(f"Connecting to remote Dask scheduler at {scheduler_address}")
+        # register_plugin() (used by install_wheel_on_workers() below, and
+        # called up to 3x per campaign launch -- pyfracval/spcwth/pyfastmm)
+        # is a single blocking RPC that waits for every currently-connected
+        # worker to finish a real `pip install` before the scheduler
+        # replies at all -- the socket sits silent the whole time. Dask's
+        # default distributed.comm.timeouts.tcp is only 30s, comfortably
+        # exceeded once a cluster has ~20+ workers all installing
+        # concurrently (observed in practice: CommClosedError("Stream is
+        # closed") mid-registration, not a real network failure -- just
+        # this timeout firing while the install was still legitimately in
+        # progress). Set once, globally, before the client exists; cheap
+        # insurance for the rest of this process's Dask RPCs too.
+        dask.config.set(
+            {
+                "distributed.comm.timeouts.tcp": "120s",
+                "distributed.comm.timeouts.connect": "60s",
+            }
+        )
         client = Client(scheduler_address)
         if install_package:
             _register_package(client)
