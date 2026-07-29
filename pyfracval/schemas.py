@@ -347,3 +347,22 @@ class Metadata(BaseModel):
 
         # Return None, None only if file read failed completely at the start
         return metadata_instance, data_array
+
+
+class ClusterEntry(BaseModel):
+    """One row of a ``cluster_index.csv`` master index (see
+    ``pyfracval.catalog``) -- the generation parameters and output path for
+    a single generated aggregate, without loading its (potentially large)
+    coordinate/radius data. Use ``Metadata.from_file(entry.filepath)`` when
+    the actual geometry is needed.
+    """
+
+    config: str = Field(..., description="Named generation batch, e.g. 'vanilla'.")
+    sigma: float = Field(..., description="Geometric std. dev. of radii (rp_gstd).")
+    Df: float = Field(..., description="Target fractal dimension.")
+    N: int = Field(..., description="Target number of primary particles.")
+    kf: float = Field(..., description="Target fractal prefactor.")
+    attempt: int = Field(..., description="Attempt index within this parameter combo.")
+    seed: int = Field(..., description="Random seed used for generation.")
+    success: bool = Field(..., description="Whether generation succeeded.")
+    filepath: Path = Field(..., description="Path to the aggregate's .dat file.")
