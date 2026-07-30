@@ -290,6 +290,12 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         for uniform density), or None if every route failed.
         """
         self._last_sticking_stats = {}
+        # Clear the census side-channel too: it is only repopulated when a
+        # failure gets far enough to run one, so leaving the previous
+        # pair's census in place would attribute its offending-particle
+        # counts to this merge (visible as offending fractions above 1.0).
+        self._last_overlap_census = None
+        self._last_overlap_failure_geometry = None
         outcome = "stuck"
         n_dropped = 0
         dens1 = self._get_cluster_densities(k)

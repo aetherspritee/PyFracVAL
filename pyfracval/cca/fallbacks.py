@@ -663,8 +663,23 @@ class _FallbacksMixin:
                             used_adaptive_tol = True
                             break
 
-            if cov_max < best_overlap:
-                best_overlap = float(cov_max)
+            # Record how close this candidate actually came, for the merge
+            # log. cov_max cannot be used directly: on the incremental path
+            # it only rescans previously-active collision pairs, so it
+            # reads 0.0 whenever that set is empty regardless of the true
+            # overlap. Only measured when a merge log is attached - it
+            # costs one full non-early-exit scan per exhausted candidate,
+            # which is pure overhead for anyone not collecting statistics.
+            if self._merge_log is not None:
+                true_final_overlap = overlap.calculate_max_overlap_cca_auto(
+                    coords1_stick,
+                    radii1_in,
+                    current_coords2,
+                    radii2_in,
+                    tolerance=float("inf"),
+                )
+                if true_final_overlap < best_overlap:
+                    best_overlap = float(true_final_overlap)
             self._last_sticking_stats.update(
                 {
                     "candidates_tried": attempts_tried,

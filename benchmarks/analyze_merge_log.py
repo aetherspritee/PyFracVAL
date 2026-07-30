@@ -105,12 +105,20 @@ def summarize(events: list[dict]) -> dict:
         "min_overlap_failure": [
             e["min_overlap"] for e in failures if e.get("min_overlap") is not None
         ],
+        # Built from the same event subset, so they stay index-aligned:
+        # only failures that actually carry a census have an offending
+        # count, and pairing those against *all* failures' sizes would
+        # mismatch the two lists and produce nonsense fractions.
         "offending_failure": [
             e["n_offending_particles"]
             for e in failures
             if e.get("n_offending_particles") is not None
         ],
-        "cluster_sizes_failure": [e.get("n1", 0) + e.get("n2", 0) for e in failures],
+        "cluster_sizes_failure": [
+            e.get("n1", 0) + e.get("n2", 0)
+            for e in failures
+            if e.get("n_offending_particles") is not None
+        ],
         "margin_success": [margin(e) for e in successes],
         "margin_failure": [margin(e) for e in failures],
         "particles_dropped": sum(e.get("n_particles_dropped", 0) for e in events),
