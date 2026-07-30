@@ -83,6 +83,46 @@ class AggregateProperties(BaseModel):
             "value; there is no backfill. See docs/source/drop_rescue.md."
         ),
     )
+    # --- Measured quality of the saved geometry (pyfracval/quality.py) ------
+    # Recorded for every aggregate. "success" otherwise only means PCA+CCA
+    # reached the requested particle count, which says nothing about
+    # whether the saved coordinates are physically valid - clusters marked
+    # successful have been found carrying severe residual overlap. See
+    # docs/source/catalog_overlap_leak.md.
+    max_residual_overlap: float | None = Field(
+        None,
+        description=(
+            "Largest overlap fraction ((r_i+r_j-d_ij)/(r_i+r_j)) between any "
+            "pair of particles in the saved aggregate. Same normalization as "
+            "tol_ov, so directly comparable to it."
+        ),
+    )
+    n_overlapping_pairs: int | None = Field(
+        None, description="Number of overlapping particle pairs in the saved geometry."
+    )
+    overlap_ok: bool | None = Field(
+        None,
+        description=(
+            "False when max_residual_overlap exceeds the run's tolerance - "
+            "i.e. the saved geometry is not physically valid despite the run "
+            "being reported as successful."
+        ),
+    )
+    measured_rg: float | None = Field(
+        None,
+        description=(
+            "Radius of gyration measured from the saved coordinates including "
+            "each primary particle's own gyration radius (Moran et al. 2019 "
+            "Eq. 4), as opposed to the scaling-law value."
+        ),
+    )
+    rg_error_pct: float | None = Field(
+        None,
+        description=(
+            "(measured_rg - scaling_law_rg) / scaling_law_rg * 100. How far "
+            "the built aggregate landed from the prescribed Df/kf."
+        ),
+    )
     # Add r_max etc. if calculated and needed
 
 

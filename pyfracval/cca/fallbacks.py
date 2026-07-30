@@ -85,6 +85,14 @@ class _FallbacksMixin:
                 algorithm_config=self.algorithm_config,
             ):
                 self._bv_filter_rejects += 1
+                self._last_sticking_stats = {
+                    "n1": n1,
+                    "n2": n2,
+                    "gamma_pc": float(gamma_pc_bv),
+                    "gamma_real": bool(gamma_real_bv),
+                    "sum_rmax": float(r_max1 + r_max2),
+                    "failure_reason": "skipped_bv_filter",
+                }
                 logger.info(
                     f"CCA pair ({cluster_idx1}, {cluster_idx2}): "
                     f"Rejected by BV pre-check (gamma={gamma_pc_bv:.3f})"
@@ -270,7 +278,28 @@ class _FallbacksMixin:
         if self.algorithm_config.profile_timing:
             self._t_select_candidates += perf_counter() - _t0
 
+        # Side-channel for the merge event log / _attempt_pair_merge. Set
+        # up before the early return below so a no-candidate failure is
+        # still described accurately rather than reported as an overlap
+        # failure it never got far enough to have.
+        n_feasible_pairs = int(np.sum(list_matrix))
+        self._last_sticking_stats = {
+            "n1": n1,
+            "n2": n2,
+            "gamma_pc": float(gamma_pc),
+            "gamma_real": bool(gamma_real),
+            "sum_rmax": float(r_max1 + r_max2),
+            "n_feasible_pairs": n_feasible_pairs,
+            "candidates_tried": 0,
+            "rotations_used": 0,
+            "min_overlap": float("inf"),
+            "used_adaptive_tol": False,
+        }
+
         if np.sum(list_matrix) == 0:
+            self._last_sticking_stats["failure_reason"] = (
+                "failed_gamma_not_real" if not gamma_real else "failed_no_candidates"
+            )
             logger.warning(
                 f"No initial candidates found for sticking clusters {cluster_idx1} and {cluster_idx2}. Gamma_real={gamma_real}"
             )
@@ -316,6 +345,7 @@ class _FallbacksMixin:
         final_coords2 = None
 
         attempts_tried = 0
+        best_overlap = float("inf")
         for attempt, (cand1_idx, cand2_idx) in enumerate(_candidate_indices):
             attempts_tried = attempt + 1
             leaf1 = bool(leaf_mask_1[cand1_idx])
@@ -483,14 +513,27 @@ class _FallbacksMixin:
                         current_coords2 = coords2_batch[best_idx]
                         cov_max = overlaps[best_idx]
 
-                        # Check adaptive tolerance
+                        # Check adaptive tolerance. cov_max comes from a scan
+                        # that early-exits at tol_ov, so it is only a lower
+                        # bound on the true maximum here - re-evaluate at the
+                        # threshold being compared against before accepting
+                        # (see PCAggregator._true_overlap_at).
                         if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
-                            logger.info(
-                                f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting relaxed tolerance "
-                                f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                            true_cov = overlap.calculate_max_overlap_cca_auto(
+                                coords1_stick,
+                                radii1_in,
+                                current_coords2,
+                                radii2_in,
+                                tolerance=relaxed_tol,
                             )
-                            used_adaptive_tol = True
-                            break
+                            if true_cov <= relaxed_tol:
+                                cov_max = true_cov
+                                logger.info(
+                                    f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting relaxed tolerance "
+                                    f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
+                                )
+                                used_adaptive_tol = True
+                                break
 
                         logger.trace(
                             f"    CCA Batch {batch_start}-{batch_end}: Best overlap={cov_max:.4e} at attempt {intento}"
@@ -585,12 +628,35 @@ class _FallbacksMixin:
                     )
 
                     if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
-                        logger.info(
-                            f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting "
-                            f"relaxed tol (overlap={cov_max:.4e}) after {intento} rotations."
+                        # cov_max early-exits at tol_ov and is only a lower
+                        # bound above it; re-evaluate at relaxed_tol before
+                        # accepting (see PCAggregator._true_overlap_at).
+                        true_cov = overlap.calculate_max_overlap_cca_auto(
+                            coords1_rotated,
+                            radii1_in,
+                            coords2_rotated,
+                            radii2_in,
+                            tolerance=relaxed_tol,
                         )
-                        used_adaptive_tol = True
-                        break
+                        if true_cov <= relaxed_tol:
+                            cov_max = true_cov
+                            logger.info(
+                                f"  CCA pair ({cand1_idx}, {cand2_idx}): Accepting "
+                                f"relaxed tol (overlap={cov_max:.4e}) after {intento} rotations."
+                            )
+                            used_adaptive_tol = True
+                            break
+
+            if cov_max < best_overlap:
+                best_overlap = float(cov_max)
+            self._last_sticking_stats.update(
+                {
+                    "candidates_tried": attempts_tried,
+                    "rotations_used": int(intento),
+                    "min_overlap": best_overlap,
+                    "used_adaptive_tol": bool(used_adaptive_tol),
+                }
+            )
 
             # Check if overlap is acceptable
             if cov_max <= self.tol_ov or used_adaptive_tol:
@@ -637,6 +703,7 @@ class _FallbacksMixin:
             combined_radii = np.concatenate((radii1_in, radii2_in))
             return combined_coords, combined_radii
         else:
+            self._last_sticking_stats["failure_reason"] = "failed_overlap"
             logger.warning(
                 f"CCA sticking failed for clusters {cluster_idx1} and {cluster_idx2} after trying {attempts_tried} pairs."
             )

@@ -12,6 +12,7 @@ from .cca import CCAggregator
 from .config import OrchestratorAlgorithmConfig
 from .densify import densify_aggregate
 from .pca_subclusters import Subclusterer
+from .quality import compute_aggregate_quality
 from .schemas import AggregateProperties, GenerationInfo, Metadata, SimulationParameters
 
 logger = logging.getLogger(__name__)
@@ -362,6 +363,31 @@ def _run_simulation_core(
             final_rg = None  # Use None if calculation failed
             final_cm = None
 
+    # Measure what was actually built before saving it. Unconditional: a
+    # single O(N^2) pass is negligible against a generation that took
+    # seconds to minutes, and skipping it is how invalid geometry reaches
+    # the catalog marked success (docs/source/catalog_overlap_leak.md).
+    quality = {}
+    if n_actual > 0:
+        try:
+            quality = compute_aggregate_quality(
+                final_coords,
+                final_radii,
+                sim_params.Df,
+                sim_params.kf,
+                sim_params.tol_ov,
+                n_particles_dropped=max(0, sim_params.N - n_actual),
+            )
+            if not quality["overlap_ok"]:
+                logger.error(
+                    f"Aggregate {iteration} saved with residual overlap "
+                    f"{quality['max_residual_overlap']:.3e} across "
+                    f"{quality['n_overlapping_pairs']} pairs - geometry is not "
+                    f"physically valid (tol_ov={sim_params.tol_ov:.1e})."
+                )
+        except Exception as e:
+            logger.warning(f"Could not compute aggregate quality record: {e}")
+
     # Create Metadata
     gen_info = GenerationInfo(iteration=iteration)
     agg_props = AggregateProperties(
@@ -372,6 +398,11 @@ def _run_simulation_core(
         # mechanism that can leave n_actual short of the requested N -
         # densify repositions particles but never removes them.
         n_particles_dropped=max(0, sim_params.N - n_actual),
+        max_residual_overlap=quality.get("max_residual_overlap"),
+        n_overlapping_pairs=quality.get("n_overlapping_pairs"),
+        overlap_ok=quality.get("overlap_ok"),
+        measured_rg=quality.get("measured_rg"),
+        rg_error_pct=quality.get("rg_error_pct"),
     )
     metadata_instance = Metadata(
         generation_info=gen_info,

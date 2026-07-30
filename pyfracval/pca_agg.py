@@ -214,35 +214,29 @@ class PCAggregator:
         self,
         m2: float,
         rg2: float,
-        heuristic: bool = True,
+        use_mass: bool = False,
     ) -> tuple[bool, float]:
         """
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
+
+        Defaults to the count-based form deliberately: the Fortran PCA
+        solves Gamma with counts (``PCA_cca.f90``'s ``Gamma_calculation``
+        takes ``n1, n2, n3``), unlike the Fortran CCA which uses true
+        masses. Keeping PCA on counts means each stage matches its own
+        Fortran counterpart exactly. See NOTE.md 1.2.
         """
-        if heuristic:
-            return fractal.gamma_calculation(
-                self.n1,
-                self.rg1,
-                self.radii[: self.n1],
-                1,
-                rg2,
-                np.array([self.initial_radii[self.n1]]),
-                self.df,
-                self.kf,
-                all_radii=self.initial_radii,
-            )
-        else:
-            return fractal.gamma_calculation(
-                self.m1,
-                self.rg1,
-                self.radii[: self.n1],
-                m2,
-                rg2,
-                np.array([self.initial_radii[self.n1]]),
-                self.df,
-                self.kf,
-                all_radii=self.initial_radii,
-            )
+        return fractal.gamma_calculation(
+            self.m1,
+            self.rg1,
+            self.radii[: self.n1],
+            m2,
+            rg2,
+            np.array([self.initial_radii[self.n1]]),
+            self.df,
+            self.kf,
+            use_mass=use_mass,
+            all_radii=self.initial_radii,
+        )
         # n1 = self.n1
         # n2 = 1
         # n3 = n1 + n2
@@ -827,6 +821,39 @@ class PCAggregator:
             n_coarse,
         )
 
+    def _true_overlap_at(self, k: int, threshold: float) -> float:
+        """Overlap of particle ``k`` re-evaluated with early exit at ``threshold``.
+
+        ``calculate_max_overlap_pca_auto`` stops at the first pair exceeding
+        the ``tolerance`` it is handed and returns *that* pair's overlap.
+        The returned value is therefore only a lower bound on the true
+        maximum once it exceeds that tolerance - which is exactly the
+        regime the adaptive-tolerance path operates in, since it triggers
+        on values already above ``tol_ov``.
+
+        Comparing such a lower bound against the 10x-larger ``relaxed_tol``
+        silently accepted placements whose real worst-case overlap was
+        enormous: the scan would return, say, 2.6e-6 from the first
+        offending pair (under relaxed_tol, so accepted) while a later pair
+        overlapped by 0.43. That produced "successful" subclusters
+        containing deeply interpenetrating particles, which CCA then
+        carried into the final aggregate untouched - it only ever checks
+        cluster-against-cluster, never within a cluster. See
+        docs/source/catalog_overlap_leak.md.
+
+        Re-running the scan with early exit at the threshold actually being
+        compared against makes the comparison sound: either no early exit
+        happens and the result is the true maximum, or it exceeds
+        ``threshold`` and the placement is rejected regardless.
+        """
+        return overlap.calculate_max_overlap_pca_auto(
+            self.coords[: self.n1],
+            self.radii[: self.n1],
+            self.coords[k],
+            self.radii[k],
+            tolerance=threshold,
+        )
+
     def _pca_bisection(
         self,
         k: int,
@@ -1141,6 +1168,11 @@ class PCAggregator:
                                         intento >= adaptive_tol_threshold
                                         and cov_max <= relaxed_tol
                                     ):
+                                        true_cov = self._true_overlap_at(k, relaxed_tol)
+                                        if true_cov > relaxed_tol:
+                                            intento = batch_end
+                                            continue
+                                        cov_max = true_cov
                                         logger.info(
                                             f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
                                             f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
@@ -1254,6 +1286,10 @@ class PCAggregator:
                                         intento >= adaptive_tol_threshold
                                         and cov_max <= relaxed_tol
                                     ):
+                                        true_cov = self._true_overlap_at(k, relaxed_tol)
+                                        if true_cov > relaxed_tol:
+                                            continue
+                                        cov_max = true_cov
                                         logger.info(
                                             f"  PCA k={k}, cand={current_selected_idx}: Accepting relaxed tolerance "
                                             f"(overlap={cov_max:.4e} <= {relaxed_tol:.4e}) after {intento} rotations."
