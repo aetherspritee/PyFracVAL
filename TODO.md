@@ -8,17 +8,6 @@ git history has the detail).
 
 ## Open
 
-- [ ] **Re-run the boundary sweep against the new defaults.**
-      `docs/source/hard_regime_boundary_sweep.md`'s 4200-trial grid (and
-      its 72.4% overall figure) was measured with greedy first-fit
-      pairing and the overlap-acceptance bug both present. Backtracking
-      plus the overlap fix should move that boundary substantially; the
-      grid is the right instrument to say by how much, and the page
-      explicitly reserved itself as the baseline for exactly this.
-      Note the sweep is now substantially more expensive in
-      *infeasible* corners: backtracking tries several partners per
-      cluster before giving up, so a hopeless configuration burns far
-      more time than greedy's immediate bail did.
 - [ ] **Density-density correlation f(r) validator** (paper backbone).
       Moran's own validation metric is f(r) and its Df−3 slope, not Rg —
       an aggregate can match Rg while having the wrong internal
@@ -76,6 +65,38 @@ git history has the detail).
       `docs/source/drop_rescue.md`'s corresponding section.
 
 ## Done (recent)
+
+- [x] **Re-ran the Df/kf/sigma/N boundary sweep against the new defaults**
+      (`configs/boundary_sweep_v2.toml`, same grid/seeds as the original).
+      Overall 72.4% -> 80.3%; the collapse boundary moved outward at every
+      sigma. Sharpest result: at sigma=1.9, Df=2.2/kf=1.0 went from
+      degrading to 0.00 at N=1024 to a flat 1.00 across N=64..1024. The
+      whole Df=2.1 row at sigma=1.9 is now uniformly 1.00 (was 0.08-0.80
+      at high kf). Also found and fixed that `trial_timeout` could never
+      fire, because the wall clock was only checked *between* PCA+CCA
+      attempts - backtracking makes a single attempt far more expensive in
+      infeasible corners. `CCAggregator` now takes a `deadline`. See
+      `docs/source/boundary_sweep_v2.md`.
+- [x] **Re-evaluated drop-rescue after backtracking — recommend leaving it
+      off.** Its original 3x win was measured against the greedy baseline
+      that no longer exists. At the new failure frontier the success
+      effect is inconsistent (+15pp at one point, -7.5pp at another) while
+      mean |Rg error| degrades from 1.2-1.9% to 4.5-10.7% once the budget
+      is loose enough to fire. Kept, documented and tested so the idea can
+      be answered with a measurement rather than re-litigated. See
+      `docs/source/drop_rescue.md`'s new section and
+      `benchmarks/drop_rescue_after_backtracking.py`.
+- [x] **Per-merge statistics tooling** — `benchmarks/analyze_merge_log.py`
+      aggregates the JSONL merge log into failure-mode breakdowns,
+      per-round failure rates, search effort, how close failures came, and
+      offending-particle counts. Using it immediately exposed three
+      defects in its own inputs (all fixed): `min_overlap` was always 0
+      because it read the incremental scan's lower bound, offending counts
+      could be attributed to the wrong merge via a stale census, and the
+      analyzer misaligned two lists. Findings: failures are
+      `failed_overlap` not `failed_no_candidates`, they are *not*
+      near-misses (median overlap 0.126 against tol_ov 1e-6), and failure
+      rate falls monotonically with round (45.8% -> 0%).
 
 - [x] **Backtracking CCA pairing, now the default** (`cca_pairing_strategy
       = "backtracking"`), plus the four supporting items from `NOTE.md`.

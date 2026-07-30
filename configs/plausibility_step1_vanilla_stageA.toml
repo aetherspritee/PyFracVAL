@@ -1,0 +1,33 @@
+# Step 1 (Stage A): vanilla plausibility map for stability regions
+#
+# Purpose:
+# - establish where base/vanilla FracVAL remains stable
+# - keep run reproducible and config-driven
+# - prepare boundary tuples for Step 2 feature-matrix testing
+#
+# Grid size:
+#   N(3) * sigma(2) * Df(7) * kf(7) * trials(20) = 5880 tasks
+#
+# Run:
+#   devenv shell -- uv run python benchmarks/run.py stability --config configs/plausibility_step1_vanilla_stageA.toml
+
+sizes     = [64, 128, 256]
+sigmas    = [1.1, 1.5]
+
+df_values = [1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6]
+kf_values = [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8]
+
+trials     = 20
+save_raw   = false
+output_dir = "benchmark_results/plausibility/step1_vanilla_stageA"
+
+[dask]
+enable            = true
+scheduler_address = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+
+[simulation]
+rp_g               = 1.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+trial_timeout      = 600

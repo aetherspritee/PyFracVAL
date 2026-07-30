@@ -126,6 +126,60 @@ beyond opt-in, and not to assume the "5 out of 512" framing that
 motivated it generalizes to the regime this project has actually
 characterized in depth.
 
+## Re-evaluated after backtracking (2026-07-30): leave it off
+
+Everything above was measured against the *greedy* pairing baseline,
+where hard-regime single-shot success was 2.5% and drop-rescue's 7.5%
+looked like a 3x improvement. That baseline no longer exists:
+[backtracking_pairing.md](backtracking_pairing.md) reaches ~100% at the
+same point, so the failures this feature was built to catch mostly stop
+happening there.
+
+The question worth asking is therefore whether it helps at the *new*
+failure frontier - the Df/kf/σ region where backtracking still fails, per
+[boundary_sweep_v2.md](boundary_sweep_v2.md).
+`benchmarks/drop_rescue_after_backtracking.py`, 40 seeds, same
+single-shot methodology, σ=1.9, N=128:
+
+| Point | Config | Success | Aggregates short of N | Particles dropped | mean \|Rg error\| |
+|---|---|---:|---:|---:|---:|
+| Df=2.3, kf=1.0 | baseline | 55.0% | 0 | 0 | **1.89%** |
+| | default budget | 57.5% | 1 | 2 | 1.98% |
+| | relaxed (25%/side) | 40.0% | 10 | 83 | 3.84% |
+| | relative-only (no absolute cap) | 47.5% | 16 | 253 | 10.73% |
+| Df=2.4, kf=0.8 | baseline | 45.0% | 0 | 0 | **1.18%** |
+| | default budget | 42.5% | 1 | 2 | 1.29% |
+| | relaxed (25%/side) | 42.5% | 13 | 113 | 4.49% |
+| | relative-only (no absolute cap) | 60.0% | 20 | 268 | 6.54% |
+
+Two things stand out, and they point the same way:
+
+1. **The success effect is inconsistent.** The relative-only budget gains
+   15pp at one frontier point and loses 7.5pp at the other. That is not a
+   mechanism working; that is noise around zero. There is a plausible
+   reason for the losses too: a rescued merge yields a cluster smaller
+   than the hierarchy expects, which shifts every subsequent Γ and can
+   cascade into failures later in the same run.
+2. **The accuracy cost is not noise.** Mean \|Rg error\| rises from
+   1.2-1.9% to 4.5-10.7% once the budget is loose enough to actually
+   fire. A tunable algorithm exists to hit a prescribed Df/kf; dropping
+   5-8% of the particles misses the target by several times the 5%
+   tolerance the rest of the pipeline is held to. Trading that for an
+   unreliable success change is a bad trade.
+
+The conservative default budget remains a no-op (1 rescue, 2 particles,
+across 40 seeds) - it is working exactly as designed, and that design is
+now clearly the right one.
+
+**Recommendation: leave `cca_drop_rescue_enabled` off.** The mechanism is
+kept, documented and tested because "drop the few offenders" is an idea
+that keeps suggesting itself and it is worth being able to point at a
+measurement rather than re-litigating it. The measurement says the
+premise - that failures are localized to a handful of particles - does
+not hold at any regime this project has characterized: the merge-log
+census puts the median failure at ~35% of the cluster pair offending, not
+a handful.
+
 ## Limitations
 
 No backfill (see Scoping decision above) - every downstream consumer of

@@ -1,0 +1,35 @@
+# Wide feasibility map: vanilla stability sweep
+#
+# Grid:
+#   N   : 8, 16, 32, 64, 128, 256, 384, 512, 640, 768, 896, 1024  (12)
+#   Df  : 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6                        (7)
+#   kf  : 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8                        (7)
+#   sigma : 1.0, 1.25, 1.5                                           (3)
+#
+# Total combos: 12*7*7*3 = 1764
+# Trials/combo: 15
+# Total tasks: 26460
+#
+# Run:
+#   devenv shell -- uv run python benchmarks/run.py stability --config configs/plausibility_wide_sweep.toml
+
+sizes  = [8, 16, 32, 64, 128, 256, 384, 512, 640, 768, 896, 1024]
+sigmas = [1.0, 1.25, 1.5]
+
+df_values = [1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6]
+kf_values = [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8]
+
+trials     = 15
+save_raw   = false
+output_dir = "benchmark_results/plausibility/wide_sweep"
+
+[dask]
+enable            = true
+scheduler_address = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+
+[simulation]
+rp_g               = 1.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+trial_timeout      = 600

@@ -15,6 +15,7 @@ overlap_failure_census
 drop_rescue
 catalog_overlap_leak
 hard_regime_boundary_sweep
+boundary_sweep_v2
 full_stability_sweep
 gpu_acceleration
 ```
