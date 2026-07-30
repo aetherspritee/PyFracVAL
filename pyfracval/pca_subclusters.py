@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from pyfracval.environments import get_env_config
 
-from . import particle_generation
+from . import fractal, particle_generation
 from .config import OrchestratorAlgorithmConfig
 from .pca_agg import PCAggregator
 
@@ -22,20 +22,26 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _run_single_subcluster(args: tuple[Any, ...]) -> tuple[int, np.ndarray | None]:
+def _run_single_subcluster(
+    args: tuple[Any, ...],
+) -> tuple[int, np.ndarray | None, np.ndarray | None]:
     """Run PCA for one subcluster; used as the Pool worker.
 
     Parameters
     ----------
     args : tuple
         ``(idx, radii, pca_df, pca_kf, tol_ov, seed,
-           rp_gstd, rp_g, max_retries, can_retry, algorithm_config)``
+           rp_gstd, rp_g, max_retries, can_retry, algorithm_config,
+           densities)``
 
     Returns
     -------
-    tuple[int, np.ndarray | None]
-        ``(idx, subcluster_data)`` where *subcluster_data* is the Nx4
-        ``[X, Y, Z, R]`` array on success or ``None`` on failure.
+    tuple[int, np.ndarray | None, np.ndarray | None]
+        ``(idx, subcluster_data, densities)`` where *subcluster_data* is
+        the Nx4 ``[X, Y, Z, R]`` array on success or ``None`` on failure,
+        and *densities* are that array's rows' densities (``None`` for
+        uniform density). PCA reorders particles, so the caller cannot
+        reconstruct this from the input order.
     """
     (
         idx,
@@ -49,6 +55,7 @@ def _run_single_subcluster(args: tuple[Any, ...]) -> tuple[int, np.ndarray | Non
         max_retries,
         can_retry,
         algorithm_config,
+        densities,
     ) = args
     rng = np.random.default_rng(seed)
     num_particles = len(radii)
@@ -56,17 +63,28 @@ def _run_single_subcluster(args: tuple[Any, ...]) -> tuple[int, np.ndarray | Non
 
     for attempt in range(total_attempts):
         if attempt > 0:
+            # Retry draws a fresh radii sample. Densities stay attached
+            # positionally: they are an independent per-particle material
+            # property, so a fresh size draw preserves the *composition*
+            # of the subcluster (how many particles of each density) even
+            # though individual size-density pairings change.
             radii = particle_generation.lognormal_pp_radii(
                 rp_gstd, rp_g, num_particles, rng=rng
             )
         pca_runner = PCAggregator(
-            radii, pca_df, pca_kf, tol_ov, rng=rng, algorithm_config=algorithm_config
+            radii,
+            pca_df,
+            pca_kf,
+            tol_ov,
+            rng=rng,
+            algorithm_config=algorithm_config,
+            densities=densities,
         )
         result = pca_runner.run()
         if result is not None and not pca_runner.not_able_pca:
-            return idx, result
+            return idx, result, pca_runner.densities
 
-    return idx, None
+    return idx, None, None
 
 
 class Subclusterer(BaseModel):
@@ -113,6 +131,10 @@ class Subclusterer(BaseModel):
     """
 
     initial_radii: np.ndarray
+    # Optional per-particle densities, aligned with initial_radii. Split
+    # across subclusters alongside the radii, and reordered by each PCA
+    # run exactly as its radii are, so densities always follow particles.
+    initial_densities: np.ndarray | None = Field(default=None)
     df: float = Field(..., gt=1.0, lt=3.0)
     kf: float = Field(..., gt=0.0)
     tol_ov: float
@@ -132,6 +154,7 @@ class Subclusterer(BaseModel):
     N: int = Field(default=0)
     all_coords: np.ndarray = Field(default=np.zeros(0))
     all_radii: np.ndarray = Field(default=np.zeros(0))
+    all_densities: np.ndarray | None = Field(default=None)
     i_orden: np.ndarray | None = Field(default=None)
     number_clusters: int = Field(default=0)
     not_able_pca: bool = Field(default=False)
@@ -148,6 +171,14 @@ class Subclusterer(BaseModel):
 
         self.all_coords = np.zeros((self.N, 3), dtype=float)
         self.all_radii = np.zeros(self.N, dtype=float)
+        self.initial_densities = fractal.resolve_densities(
+            self.initial_densities, self.N, context="Subclusterer densities"
+        )
+        self.all_densities = (
+            np.zeros(self.N, dtype=float)
+            if self.initial_densities is not None
+            else None
+        )
 
     # def __init__(
     #     self,
@@ -285,6 +316,13 @@ class Subclusterer(BaseModel):
             radii_slice = self.initial_radii[
                 current_n_start_idx : current_n_start_idx + n
             ].copy()
+            densities_slice = (
+                self.initial_densities[
+                    current_n_start_idx : current_n_start_idx + n
+                ].copy()
+                if self.initial_densities is not None
+                else None
+            )
             worker_args.append(
                 (
                     i,
@@ -298,6 +336,7 @@ class Subclusterer(BaseModel):
                     self.max_subcluster_retries,
                     can_retry_with_fresh_radii,
                     self.algorithm_config,
+                    densities_slice,
                 )
             )
             current_n_start_idx += n
@@ -329,14 +368,18 @@ class Subclusterer(BaseModel):
             with ctx.Pool() as pool:
                 results_unordered = pool.map(_run_single_subcluster, worker_args)
             # Results come back in submission order (pool.map preserves order)
-            results: list[tuple[int, np.ndarray | None]] = results_unordered
+            results: list[tuple[int, np.ndarray | None, np.ndarray | None]] = (
+                results_unordered
+            )
         else:
             logger.info(f"Running {self.number_clusters} subclusters sequentially.")
             results = [_run_single_subcluster(args) for args in worker_args]
 
         # --- Assemble results in order ---
         current_fill_idx = 0
-        for i, (returned_idx, subcluster_data) in enumerate(results):
+        for i, (returned_idx, subcluster_data, subcluster_densities) in enumerate(
+            results
+        ):
             self.number_clusters_processed = i
             num_particles_in_subcluster = int(subcluster_sizes[i])
 
@@ -363,6 +406,15 @@ class Subclusterer(BaseModel):
             fill_slice = slice(current_fill_idx, current_fill_idx + num_added)
             self.all_coords[fill_slice, :] = subcluster_data[:, :3]
             self.all_radii[fill_slice] = subcluster_data[:, 3]
+            if self.all_densities is not None:
+                if subcluster_densities is None:
+                    logger.error(
+                        f"Subcluster {i + 1} returned no densities although "
+                        f"densities were supplied. Cannot align particles."
+                    )
+                    self.not_able_pca = True
+                    return False
+                self.all_densities[fill_slice] = subcluster_densities[:num_added]
 
             start_cluster_idx = current_fill_idx
             end_cluster_idx = current_fill_idx + num_added - 1

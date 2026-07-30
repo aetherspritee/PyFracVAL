@@ -285,14 +285,20 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_overlap_census_enabled: bool = False
     cca_overlap_census_max_pairs: int = 4096
     # --- Gamma formulation (see NOTE.md 1.2) ---------------------------------
-    # False (default) computes Gamma with particle *counts* - Filippov
-    # et al. (2000) Eq. 7, which is what the Fortran PCA does and what
-    # this port has always done everywhere. True uses true (proportional
-    # to r^3) masses - Moran et al. (2019) Eq. 6, the paper's central
-    # polydisperse contribution and what the Fortran *CCA* actually does.
-    # The two are identical for monodisperse primary particles and
-    # diverge as rp_gstd grows.
-    cca_gamma_use_mass: bool = False
+    # True (default) solves Gamma with true masses - Moran et al. (2019)
+    # Eq. 6, the paper's central polydisperse contribution, and what the
+    # Fortran CCA does. False substitutes particle *counts* (Filippov
+    # et al. 2000 Eq. 7), which is what the Fortran PCA does and what this
+    # port historically did everywhere; kept as an opt-in alternative for
+    # reproducing that behaviour.
+    #
+    # The two are identical only for uniform-density monodisperse primary
+    # particles. Counts cannot represent a heterogeneous aggregate at all:
+    # once particles differ in density, mass is no longer a function of
+    # radius, so any count- or radius-derived weighting misplaces the
+    # center of mass and the radius of gyration. Applies to both PCA and
+    # CCA.
+    gamma_use_mass: bool = True
     # Feed the *measured* radius of gyration of each already-built cluster
     # into the next round's Gamma, instead of re-deriving it from the
     # scaling law. Without this, per-merge deviations (the pairing

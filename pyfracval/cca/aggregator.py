@@ -13,6 +13,7 @@ from typing import Tuple
 
 import numpy as np
 
+from .. import fractal
 from ..config import OrchestratorAlgorithmConfig
 from .candidates import _CandidatesMixin
 from .fallbacks import _FallbacksMixin
@@ -82,6 +83,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         ext_case: int,
         rng: np.random.Generator | None = None,
         algorithm_config: OrchestratorAlgorithmConfig | None = None,
+        initial_densities: np.ndarray | None = None,
     ):
         if initial_coords.shape[0] != n_total or initial_radii.shape[0] != n_total:
             raise ValueError(
@@ -114,6 +116,12 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         # Current state of the simulation
         self.coords = initial_coords.copy()
         self.radii = initial_radii.copy()
+        # Optional per-particle densities, kept in lockstep with radii
+        # through every reorder, merge and drop. None means uniform.
+        _dens = fractal.resolve_densities(
+            initial_densities, n_total, context="CCAggregator densities"
+        )
+        self.densities = _dens.copy() if _dens is not None else None
         self.i_orden = initial_i_orden.copy()  # Shape (i_t, 3) [start, end, count]
         self.i_t = self.i_orden.shape[0]  # Current number of clusters
 
@@ -241,6 +249,16 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
 
         return cluster_coords, cluster_radii
 
+    def _get_cluster_densities(self, cluster_idx: int) -> np.ndarray | None:
+        """Densities of one cluster's particles, or None for uniform density."""
+        if self.densities is None:
+            return None
+        start_idx = self.i_orden[cluster_idx, 0]
+        end_idx = self.i_orden[cluster_idx, 1] + 1
+        if start_idx < 0 or end_idx > self.densities.shape[0] or start_idx >= end_idx:
+            return np.array([])
+        return self.densities[start_idx:end_idx]
+
     # --------------------------------------------------------------------------
     # Main CCA Iteration Logic
     # --------------------------------------------------------------------------
@@ -252,7 +270,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         cluster_props_cache: dict | None,
         pool_size: int,
         attempt_index: int = 0,
-    ) -> Tuple[np.ndarray, np.ndarray] | None:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray | None] | None:
         """Attempt one cluster merge, including every configured fallback.
 
         The single place a pair of clusters is turned into a merged one:
@@ -261,12 +279,22 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         apart in which fallbacks they honour, and the one place merge
         events are recorded from.
 
-        Returns the merged ``(coords, radii)``, or None if every route
-        failed.
+        Also the single place per-particle densities are realigned. Every
+        sticking path - rigid, soft relaxation, FFT docking, drop-rescue -
+        returns its rows as ``[cluster1 rows..., cluster2 rows...]``, so
+        the matching densities can be rebuilt here from the two clusters'
+        own density slices rather than being threaded through each
+        sticking routine's signature.
+
+        Returns the merged ``(coords, radii, densities)`` (densities None
+        for uniform density), or None if every route failed.
         """
         self._last_sticking_stats = {}
         outcome = "stuck"
         n_dropped = 0
+        dens1 = self._get_cluster_densities(k)
+        dens2 = self._get_cluster_densities(other)
+        drop_indices: tuple[list[int], list[int]] | None = None
 
         stick_result = self._perform_cca_sticking_with_expansion(
             k, other, cluster_props_cache
@@ -322,6 +350,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
                     n_dropped = len(drop_idx1) + len(drop_idx2)
                     self._particles_dropped_total += n_dropped
                     outcome = "rescued_drop"
+                    drop_indices = (list(drop_idx1), list(drop_idx2))
                     logger.info(f"Drop-rescue succeeded for pair ({k}, {other})")
 
         if stick_result is None:
@@ -330,7 +359,54 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
             outcome = "stuck_relaxed_tol"
 
         self._record_merge_event(k, other, outcome, pool_size, attempt_index, n_dropped)
-        return stick_result
+        if stick_result is None:
+            return None
+
+        merged_coords, merged_radii = stick_result
+        merged_densities = self._merge_densities(
+            dens1, dens2, drop_indices, merged_radii.shape[0]
+        )
+        return merged_coords, merged_radii, merged_densities
+
+    def _merge_densities(
+        self,
+        dens1: np.ndarray | None,
+        dens2: np.ndarray | None,
+        drop_indices: tuple[list[int], list[int]] | None,
+        expected_len: int,
+    ) -> np.ndarray | None:
+        """Rebuild a merged cluster's densities from its two parents'.
+
+        Relies on every sticking path emitting ``[cluster1 rows...,
+        cluster2 rows...]`` in the parents' own particle order, with
+        drop-rescue removing the censused indices from each side while
+        leaving the survivors' relative order intact.
+        """
+        if dens1 is None or dens2 is None:
+            return None
+
+        if drop_indices is not None:
+            drop1, drop2 = drop_indices
+            keep1 = np.setdiff1d(
+                np.arange(dens1.shape[0]), np.asarray(drop1, dtype=int)
+            )
+            keep2 = np.setdiff1d(
+                np.arange(dens2.shape[0]), np.asarray(drop2, dtype=int)
+            )
+            merged = np.concatenate((dens1[keep1], dens2[keep2]))
+        else:
+            merged = np.concatenate((dens1, dens2))
+
+        if merged.shape[0] != expected_len:
+            # Alignment is a correctness invariant, not a nicety: a
+            # mismatch means densities would silently attach to the wrong
+            # particles from here on. Fail loudly instead.
+            raise RuntimeError(
+                f"Density/particle misalignment after merge: rebuilt "
+                f"{merged.shape[0]} densities for {expected_len} particles. "
+                f"A sticking path must have changed its row ordering."
+            )
+        return merged
 
     def _record_merge_event(
         self,
@@ -381,9 +457,9 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
     def _assemble_next_round(self, merged_units: list) -> bool:
         """Install a round's resulting clusters as the next round's state.
 
-        ``merged_units`` is the list of ``(coords, radii)`` produced by
-        this round, one entry per surviving cluster. Rebuilds
-        ``coords``/``radii``/``i_orden``/``i_t`` from it.
+        ``merged_units`` is the list of ``(coords, radii, densities)``
+        produced by this round, one entry per surviving cluster. Rebuilds
+        ``coords``/``radii``/``densities``/``i_orden``/``i_t`` from it.
         """
         if not merged_units:
             logger.error("No clusters formed in CCA iteration.")
@@ -393,13 +469,18 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         total = sum(unit[0].shape[0] for unit in merged_units)
         coords_next = np.zeros((total, 3), dtype=self.coords.dtype)
         radii_next = np.zeros(total, dtype=self.radii.dtype)
+        densities_next = (
+            np.zeros(total, dtype=float) if self.densities is not None else None
+        )
         i_orden_next = np.zeros((len(merged_units), 3), dtype=int)
 
         fill_idx = 0
-        for idx, (unit_coords, unit_radii) in enumerate(merged_units):
+        for idx, (unit_coords, unit_radii, unit_densities) in enumerate(merged_units):
             count = unit_coords.shape[0]
             coords_next[fill_idx : fill_idx + count, :] = unit_coords
             radii_next[fill_idx : fill_idx + count] = unit_radii
+            if densities_next is not None and unit_densities is not None:
+                densities_next[fill_idx : fill_idx + count] = unit_densities
             i_orden_next[idx, 0] = fill_idx
             i_orden_next[idx, 1] = fill_idx + count - 1
             i_orden_next[idx, 2] = count
@@ -407,6 +488,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
 
         self.coords = coords_next
         self.radii = radii_next
+        self.densities = densities_next
         self.i_orden = i_orden_next
         self.i_t = len(merged_units)
         return True
@@ -517,7 +599,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
                 return False
             coords_k, radii_k = self._get_cluster_data(k)
             if coords_k.shape[0] > 0:
-                merged_units.append((coords_k, radii_k))
+                merged_units.append((coords_k, radii_k, self._get_cluster_densities(k)))
                 n_pass_through += 1
 
         # A round where nothing merged makes no progress; letting it
@@ -568,14 +650,10 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
 
         # --- Agglomerate Pairs ---
         num_clusters_next = math.ceil(self.i_t / 2.0)
-        coords_next = np.zeros_like(self.coords)
-        radii_next = np.zeros_like(self.radii)
-        i_orden_next = np.zeros((num_clusters_next, 3), dtype=int)
+        merged_units: list = []
 
         considered = np.zeros(self.i_t, dtype=int)  # Track processed clusters (0-based)
         processed_pairs = set()  # Track (idx1, idx2) tuples already processed
-        fill_idx = 0  # Index for coords_next/radii_next
-        next_cluster_idx = 0  # Index for i_orden_next
 
         for k in range(self.i_t):  # Iterate cluster index 0 to i_t-1
             if considered[k] == 1:
@@ -623,6 +701,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
 
                 combined_coords = coords_k
                 combined_radii = radii_k
+                combined_densities = self._get_cluster_densities(k)
                 considered[k] = 1
             else:  # Handle a pair (k, other)
                 # logger.info(f"Attempting to stick pair ({k}, {other})")
@@ -637,67 +716,29 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
                     self.not_able_cca = True
                     return False  # Critical failure
 
-                combined_coords, combined_radii = stick_result
+                combined_coords, combined_radii, combined_densities = stick_result
                 considered[k] = 1
                 considered[other] = 1
 
-            # --- Update next iteration arrays ---
-            num_added = combined_coords.shape[0]
-            if fill_idx + num_added > self.N:
-                logger.error("Exceeding total particle count N during CCA iteration.")
-                self.not_able_cca = True
-                return False
-
-            if next_cluster_idx >= num_clusters_next:
-                logger.error(
-                    "Exceeding expected number of clusters for next CCA iteration."
-                )
-                self.not_able_cca = True
-                return False
-
-            coords_next[fill_idx : fill_idx + num_added, :] = combined_coords
-            radii_next[fill_idx : fill_idx + num_added] = combined_radii
-
-            i_orden_next[next_cluster_idx, 0] = fill_idx
-            i_orden_next[next_cluster_idx, 1] = fill_idx + num_added - 1
-            i_orden_next[next_cluster_idx, 2] = num_added
-
-            fill_idx += num_added
-            next_cluster_idx += 1
+            merged_units.append((combined_coords, combined_radii, combined_densities))
 
         # --- Post-Iteration Update ---
         # Check if expected number of clusters were formed
-        if next_cluster_idx != num_clusters_next:
+        if len(merged_units) != num_clusters_next:
             logger.warning(
-                f"CCA iteration formed {next_cluster_idx} clusters, expected {num_clusters_next}."
+                f"CCA iteration formed {len(merged_units)} clusters, expected {num_clusters_next}."
             )
             # This could happen if empty clusters were skipped.
-            if next_cluster_idx == 0 and self.i_t > 1:  # Check if any clusters remain
+            if not merged_units and self.i_t > 1:  # Check if any clusters remain
                 logger.error("No clusters formed in CCA iteration.")
                 self.not_able_cca = True
                 return False
-            # Adjust i_orden_next size if fewer clusters were formed
-            i_orden_next = i_orden_next[:next_cluster_idx, :]
-            num_clusters_next = next_cluster_idx  # Update expected count
-
-        # coords_next/radii_next are pre-sized to self.coords.shape[0] (the
-        # particle count entering this iteration), but fill_idx only
-        # reaches that full size when every particle from every processed
-        # cluster carries forward unchanged. Drop-rescue (docs/source/
-        # drop_rescue.md) can now legitimately produce num_added <
-        # combined original cluster sizes, leaving trailing all-zero rows
-        # here that must not be carried forward as if they were real
-        # particles. Trimming to fill_idx is a no-op whenever nothing was
-        # dropped (fill_idx == coords_next.shape[0] in that case).
-        coords_next = coords_next[:fill_idx]
-        radii_next = radii_next[:fill_idx]
-
-        # Update state for the next iteration
-        self.coords = coords_next
-        self.radii = radii_next
-        self.i_orden = i_orden_next
-        self.i_t = num_clusters_next
+        # _assemble_next_round sizes everything from the units actually
+        # produced, so a round that drops particles (drop-rescue) or skips
+        # an empty cluster needs no separate trimming pass.
         self._round_index += 1
+        if not self._assemble_next_round(merged_units):
+            return False
 
         logger.info(f"--- CCA Iteration End - Clusters Remaining: {self.i_t} ---")
         return True  # Iteration successful

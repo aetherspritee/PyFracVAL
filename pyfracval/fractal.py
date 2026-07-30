@@ -30,23 +30,62 @@ import numpy.typing as npt
 logger = logging.getLogger(__name__)
 
 
-def calculate_mass(radii: np.ndarray) -> np.ndarray:
-    """Calculate particle mass from radii assuming constant density (prop. to R^3).
+def calculate_mass(
+    radii: np.ndarray, densities: np.ndarray | None = None
+) -> np.ndarray:
+    """Calculate particle mass from radii and (optionally) per-particle density.
+
+    ``m_i = (4/3) pi r_i^3 rho_i``.
 
     Parameters
     ----------
     radii : np.ndarray
         Array of particle radii.
+    densities : np.ndarray, optional
+        Per-particle densities. ``None`` (the default) means uniform
+        density, in which case mass is proportional to r^3 and every
+        density-aware quantity reduces exactly to its single-material
+        form. Supplying densities is what makes *heterogeneous*
+        aggregates - different materials, not just different sizes -
+        physically meaningful, since the center of mass, radius of
+        gyration and the Gamma equation are all mass-weighted.
 
     Returns
     -------
     np.ndarray
         Array of corresponding particle masses.
     """
-    return (4.0 / 3.0) * np.pi * (radii**3)
+    volume = (4.0 / 3.0) * np.pi * (radii**3)
+    if densities is None:
+        return volume
+    return volume * densities
 
 
-def compute_empirical_rg_polydisperse(coords: np.ndarray, radii: np.ndarray) -> float:
+def resolve_densities(
+    densities: np.ndarray | None, n: int, context: str = "densities"
+) -> np.ndarray | None:
+    """Validate an optional per-particle density array against a count.
+
+    Returns the array unchanged (as float) when supplied, or ``None`` for
+    the uniform-density case so downstream code can keep taking the
+    cheaper ``None`` path rather than carrying an array of ones.
+    """
+    if densities is None:
+        return None
+    arr = np.asarray(densities, dtype=float)
+    if arr.shape != (n,):
+        raise ValueError(
+            f"{context}: expected shape ({n},), got {arr.shape}. Densities must "
+            f"be one value per particle, aligned with the radii array."
+        )
+    if np.any(arr <= 0.0):
+        raise ValueError(f"{context}: densities must be strictly positive.")
+    return arr
+
+
+def compute_empirical_rg_polydisperse(
+    coords: np.ndarray, radii: np.ndarray, densities: np.ndarray | None = None
+) -> float:
     """Radius of gyration of actual coordinates, including each primary
     particle's own gyration radius (paper Eq. 4).
 
@@ -81,6 +120,10 @@ def compute_empirical_rg_polydisperse(coords: np.ndarray, radii: np.ndarray) -> 
         Nx3 particle coordinates.
     radii : np.ndarray
         N particle radii.
+    densities : np.ndarray, optional
+        Per-particle densities; ``None`` means uniform. Both the center of
+        mass and the mass weighting below use these, so a heterogeneous
+        aggregate's Rg is only correct when they are supplied.
 
     Returns
     -------
@@ -90,7 +133,7 @@ def compute_empirical_rg_polydisperse(coords: np.ndarray, radii: np.ndarray) -> 
     if coords.shape[0] == 0:
         return 0.0
 
-    mass = calculate_mass(radii)
+    mass = calculate_mass(radii, densities)
     total_mass = float(np.sum(mass))
     if total_mass <= 1e-12:
         return 0.0
@@ -257,7 +300,11 @@ def gamma_calculation(
 
 
 def calculate_cluster_properties(
-    coords: np.ndarray, radii: np.ndarray, df: float, kf: float
+    coords: np.ndarray,
+    radii: np.ndarray,
+    df: float,
+    kf: float,
+    densities: np.ndarray | None = None,
 ) -> Tuple[float, float, np.ndarray, float]:
     """Calculate aggregate properties: total mass, Rg, center of mass, Rmax.
 
@@ -271,6 +318,10 @@ def calculate_cluster_properties(
         Fractal dimension used for Rg calculation.
     kf : float
         Fractal prefactor used for Rg calculation.
+    densities : np.ndarray, optional
+        Per-particle densities; ``None`` means uniform. Affects the total
+        mass and the center of mass (and hence r_max), which in turn feed
+        the Gamma equation.
 
     Returns
     -------
@@ -290,7 +341,7 @@ def calculate_cluster_properties(
     if npp == 0:
         return 0.0, 0.0, np.zeros(3), 0.0
 
-    mass_vec = calculate_mass(radii)
+    mass_vec = calculate_mass(radii, densities)
     total_mass = np.sum(mass_vec)
 
     if total_mass < 1e-12:  # Use tolerance

@@ -44,11 +44,15 @@ class _PairingMixin:
             radii2,
             self.df,
             self.kf,
-            use_mass=bool(self.algorithm_config.cca_gamma_use_mass),
+            use_mass=bool(self.algorithm_config.gamma_use_mass),
         )
 
     def _cluster_rg(
-        self, coords: np.ndarray, radii: np.ndarray, scaling_law_rg: float
+        self,
+        coords: np.ndarray,
+        radii: np.ndarray,
+        scaling_law_rg: float,
+        densities: np.ndarray | None = None,
     ) -> float:
         """Radius of gyration to feed into Gamma for an existing cluster.
 
@@ -70,7 +74,7 @@ class _PairingMixin:
         than assuming it never opened.
 
         Note this identity holds for true masses; with the default
-        count-based Gamma (``cca_gamma_use_mass=False``) the correction is
+        count-based Gamma (``gamma_use_mass=False``) the correction is
         approximate, so the two flags are best enabled together.
         """
         if not self.algorithm_config.cca_gamma_measured_rg:
@@ -80,7 +84,7 @@ class _PairingMixin:
             # what the scaling law means by Rg for n=1; the scaling-law
             # value is the meaningful input to Gamma here.
             return scaling_law_rg
-        return fractal.compute_empirical_rg_polydisperse(coords, radii)
+        return fractal.compute_empirical_rg_polydisperse(coords, radii, densities)
 
     def _identify_monomers(self) -> np.ndarray | None:
         """Creates an array mapping each active monomer index to its
@@ -129,13 +133,15 @@ class _PairingMixin:
             if coords_i.shape[0] == 0:
                 cluster_props[i] = (0.0, 0.0, np.zeros(3), 0.0, np.array([]))
                 continue
+            densities_i = self._get_cluster_densities(i)
             m_i, rg_i, cm_i, r_max_i = fractal.calculate_cluster_properties(
                 coords_i,
                 radii_i,
                 self.df,
                 self.kf,  # Use target Df/kf
+                densities=densities_i,
             )
-            rg_i = self._cluster_rg(coords_i, radii_i, rg_i)
+            rg_i = self._cluster_rg(coords_i, radii_i, rg_i, densities_i)
             cluster_props[i] = (m_i, rg_i, cm_i, r_max_i, radii_i)
             logger.debug(
                 f"Cluster {i}: N={len(radii_i)}, Rg={rg_i:.3f}, Rmax={r_max_i:.3f}, Mass={m_i:.2e}"

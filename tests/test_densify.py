@@ -6,10 +6,10 @@ import pytest
 from pyfracval.densify import (
     _compute_empirical_rg,
     _find_overlaps,
+    densify_aggregate,
     radial_compress,
     resolve_overlaps,
     voronoi_local_density,
-    densify_aggregate,
 )
 
 
@@ -31,8 +31,16 @@ class TestEmpiricalRg:
     def test_cube_corners(self):
         d = 10.0
         coords = np.array(
-            [[d, d, d], [-d, d, d], [d, -d, d], [d, d, -d],
-             [-d, -d, d], [-d, d, -d], [d, -d, -d], [-d, -d, -d]]
+            [
+                [d, d, d],
+                [-d, d, d],
+                [d, -d, d],
+                [d, d, -d],
+                [-d, -d, d],
+                [-d, d, -d],
+                [d, -d, -d],
+                [-d, -d, -d],
+            ]
         )
         radii = np.ones(8)
         rg = _compute_empirical_rg(coords, radii)
@@ -146,9 +154,12 @@ class TestDensifyAggregate:
         target_rg = utils.calculate_rg(radii, n, 2.0, 1.0)
 
         new_coords, new_radii, success = densify_aggregate(
-            coords, radii,
-            target_df=2.0, target_kf=1.0,
-            tol_ov=1e-3, max_push_iters=30,
+            coords,
+            radii,
+            target_df=2.0,
+            target_kf=1.0,
+            tol_ov=1e-3,
+            max_push_iters=30,
             method="radial",
             rng=rng,
         )
@@ -163,8 +174,10 @@ class TestDensifyAggregate:
         radii = np.ones(n) * 1.0
 
         new_coords, new_radii, success = densify_aggregate(
-            coords, radii,
-            target_df=2.0, target_kf=1.0,
+            coords,
+            radii,
+            target_df=2.0,
+            target_kf=1.0,
             method="invalid_method",
             rng=rng,
         )

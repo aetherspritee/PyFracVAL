@@ -25,6 +25,7 @@ def run_simulation(
     seed: int | None = None,
     max_runtime_seconds: float | None = None,
     diagnostics: dict[str, Any] | None = None,
+    densities: np.ndarray | None = None,
 ) -> tuple[bool, np.ndarray | None, np.ndarray | None]:
     """
     Run one full FracVAL aggregate generation (PCA + CCA).
@@ -101,6 +102,10 @@ def run_simulation(
     # the algorithm subset with defaults for anything unset.
     algorithm_config = OrchestratorAlgorithmConfig.model_validate(sim_config_dict)
 
+    densities = fractal.resolve_densities(
+        densities, sim_params.N, context="run_simulation densities"
+    )
+
     return _run_simulation_core(
         iteration,
         sim_config_dict,
@@ -110,6 +115,7 @@ def run_simulation(
         sim_params,
         algorithm_config,
         diagnostics,
+        densities,
     )
 
 
@@ -122,6 +128,7 @@ def _run_simulation_core(
     sim_params,
     algorithm_config,
     diagnostics: dict[str, Any] | None = None,
+    densities: np.ndarray | None = None,
 ):
     """Core simulation logic, given a resolved algorithm_config to pass through."""
     start_time = time.time()
@@ -173,7 +180,18 @@ def _run_simulation_core(
                 diagnostics["failure_reason"] = str(e)
                 diagnostics["attempts_used"] = attempt
             continue
-        shuffled_radii = utils.shuffle_array(initial_radii, rng=rng)
+        # Radii are shuffled every attempt. When densities are supplied they
+        # must ride the *same* permutation, otherwise each particle would
+        # silently acquire a different particle's density - so shuffle an
+        # index array once and apply it to both rather than shuffling the
+        # two arrays independently.
+        if densities is None:
+            shuffled_radii = utils.shuffle_array(initial_radii, rng=rng)
+            shuffled_densities = None
+        else:
+            perm = utils.shuffle_array(np.arange(sim_params.N), rng=rng)
+            shuffled_radii = initial_radii[perm]
+            shuffled_densities = np.asarray(densities, dtype=float)[perm]
 
         logger.info(
             f"--- PCA+CCA Attempt {attempt}/{max_attempts} --- "
@@ -185,6 +203,7 @@ def _run_simulation_core(
         pca_start_time = time.time()
         subcluster_runner = Subclusterer(
             initial_radii=shuffled_radii,
+            initial_densities=shuffled_densities,
             df=sim_params.Df,
             kf=sim_params.kf,
             tol_ov=sim_params.tol_ov,
@@ -262,6 +281,7 @@ def _run_simulation_core(
             ext_case=sim_params.ext_case,
             rng=rng,
             algorithm_config=algorithm_config,
+            initial_densities=subcluster_runner.all_densities,
         )
         cca_result = cca_runner.run_cca()
         cca_end_time = time.time()
@@ -298,6 +318,9 @@ def _run_simulation_core(
     # 5. Prepare Results (Only if CCA succeeded)
     final_coords, final_radii = cca_result
     n_actual = final_coords.shape[0]
+    # Densification below repositions particles but never reorders or
+    # removes them, so CCA's density ordering stays valid throughout.
+    final_densities = cca_runner.densities
 
     # 5b. Post-aggregation densification (opt-in)
     if algorithm_config.densify_enabled:
@@ -350,6 +373,7 @@ def _run_simulation_core(
                     final_radii,
                     sim_params.Df,
                     sim_params.kf,
+                    densities=final_densities,
                 )
             )
             # Handle potential None return from calculate_rg inside calculate_cluster_properties
@@ -377,6 +401,7 @@ def _run_simulation_core(
                 sim_params.kf,
                 sim_params.tol_ov,
                 n_particles_dropped=max(0, sim_params.N - n_actual),
+                densities=final_densities,
             )
             if not quality["overlap_ok"]:
                 logger.error(

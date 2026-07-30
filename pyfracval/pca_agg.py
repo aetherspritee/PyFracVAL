@@ -74,6 +74,7 @@ class PCAggregator:
         tol_ov: float,
         rng: np.random.Generator | None = None,
         algorithm_config: OrchestratorAlgorithmConfig | None = None,
+        densities: np.ndarray | None = None,
     ):
         self.N = len(initial_radii)
         if self.N < 2:
@@ -91,8 +92,19 @@ class PCAggregator:
         # (making rg1 tiny and gamma_pc huge) or both huge (creating immediate
         # overlap).  Random order from shuffling avoids both extremes.
         self.initial_radii = initial_radii.copy()
+        # Optional per-particle densities. Kept as a parallel array and
+        # swapped in lockstep with initial_radii/initial_mass below, so a
+        # particle's density always follows the particle rather than the
+        # index it happened to start at. None means uniform density.
+        self.initial_densities = fractal.resolve_densities(
+            densities, self.N, context="PCAggregator densities"
+        )
+        if self.initial_densities is not None:
+            self.initial_densities = self.initial_densities.copy()
         # Calculate initial mass using utils consistently
-        self.initial_mass = fractal.calculate_mass(self.initial_radii)
+        self.initial_mass = fractal.calculate_mass(
+            self.initial_radii, self.initial_densities
+        )
 
         self.df = df
         self.kf = kf
@@ -104,6 +116,14 @@ class PCAggregator:
         self.coords = np.zeros((self.N, 3), dtype=float)
         self.radii = np.zeros(self.N, dtype=float)
         self.mass = np.zeros(self.N, dtype=float)
+        # Placement-ordered densities, filled alongside self.radii as each
+        # particle is accepted. This is what callers must read to know a
+        # finished subcluster's densities, since PCA reorders particles.
+        self.densities = (
+            np.zeros(self.N, dtype=float)
+            if self.initial_densities is not None
+            else None
+        )
 
         self.n1: int = 0  # Number of particles currently in the aggregate
         self.m1: float = 0.0  # Mass of the current aggregate
@@ -166,6 +186,9 @@ class PCAggregator:
 
         self.radii[0] = self.initial_radii[0]
         self.radii[1] = self.initial_radii[1]
+        if self.densities is not None and self.initial_densities is not None:
+            self.densities[0] = self.initial_densities[0]
+            self.densities[1] = self.initial_densities[1]
         self.mass[0] = self.initial_mass[0]
         self.mass[1] = self.initial_mass[1]
 
@@ -214,17 +237,21 @@ class PCAggregator:
         self,
         m2: float,
         rg2: float,
-        use_mass: bool = False,
+        use_mass: bool | None = None,
     ) -> tuple[bool, float]:
         """
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
 
-        Defaults to the count-based form deliberately: the Fortran PCA
-        solves Gamma with counts (``PCA_cca.f90``'s ``Gamma_calculation``
-        takes ``n1, n2, n3``), unlike the Fortran CCA which uses true
-        masses. Keeping PCA on counts means each stage matches its own
-        Fortran counterpart exactly. See NOTE.md 1.2.
+        Follows ``gamma_use_mass`` (default True, mass-based) unless
+        overridden. Note the Fortran PCA solves Gamma with *counts*
+        (``PCA_cca.f90``'s ``Gamma_calculation`` takes ``n1, n2, n3``),
+        unlike the Fortran CCA which uses true masses - so
+        ``gamma_use_mass=False`` is what reproduces the original PCA
+        exactly. Mass is the default here anyway because counts cannot
+        represent per-particle densities at all. See NOTE.md 1.2.
         """
+        if use_mass is None:
+            use_mass = bool(self.algorithm_config.gamma_use_mass)
         return fractal.gamma_calculation(
             self.m1,
             self.rg1,
@@ -560,6 +587,14 @@ class PCAggregator:
                     self.initial_mass[swap_target_original_idx],
                     self.initial_mass[k],
                 )
+                if self.initial_densities is not None:
+                    (
+                        self.initial_densities[k],
+                        self.initial_densities[swap_target_original_idx],
+                    ) = (
+                        self.initial_densities[swap_target_original_idx],
+                        self.initial_densities[k],
+                    )
                 # Note: The particle originally at k is now at swap_target_original_idx
                 # The particle originally at swap_target_original_idx is now at k
 
@@ -1073,6 +1108,11 @@ class PCAggregator:
                     self.coords[k] = coord_k_initial
                     self.radii[k] = radius_k_current
                     self.mass[k] = mass_k_current
+                    if (
+                        self.densities is not None
+                        and self.initial_densities is not None
+                    ):
+                        self.densities[k] = self.initial_densities[k]
 
                     cov_max = overlap.calculate_max_overlap_pca_auto(
                         self.coords[: self.n1],
@@ -1321,6 +1361,8 @@ class PCAggregator:
                     self.coords[k] = 0.0
                     self.radii[k] = 0.0
                     self.mass[k] = 0.0
+                    if self.densities is not None:
+                        self.densities[k] = 0.0
                     # The outer `while not sticking_successful` loop will continue
                 # else: sticking_successful is True, outer while loop will exit
 

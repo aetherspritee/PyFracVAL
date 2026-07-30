@@ -12,7 +12,7 @@ instead: on failure, try the cluster's next feasible partner.
 This script measures the resulting success rate, plus the two Gamma
 faithfulness/stability flags added alongside it:
 
-- ``cca_gamma_use_mass``: true masses (Moran Eq. 6, what the Fortran CCA
+- ``gamma_use_mass``: true masses (Moran Eq. 6, what the Fortran CCA
   does) instead of particle counts (Filippov Eq. 7).
 - ``cca_gamma_measured_rg``: feed each cluster's *measured* Rg into the
   next Gamma so per-merge deviations cannot accumulate.
@@ -70,11 +70,11 @@ CONFIGS = {
     ),
     "backtracking_mass_gamma": OrchestratorAlgorithmConfig(
         cca_pairing_strategy="backtracking",
-        cca_gamma_use_mass=True,
+        gamma_use_mass=True,
     ),
     "backtracking_mass_and_measured": OrchestratorAlgorithmConfig(
         cca_pairing_strategy="backtracking",
-        cca_gamma_use_mass=True,
+        gamma_use_mass=True,
         cca_gamma_measured_rg=True,
     ),
 }

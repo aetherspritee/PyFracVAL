@@ -63,10 +63,18 @@ class _FallbacksMixin:
             m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
         else:
             m1, rg1, cm1, r_max1 = fractal.calculate_cluster_properties(
-                coords1_in, radii1_in, self.df, self.kf
+                coords1_in,
+                radii1_in,
+                self.df,
+                self.kf,
+                densities=self._get_cluster_densities(cluster_idx1),
             )
             m2, rg2, cm2, r_max2 = fractal.calculate_cluster_properties(
-                coords2_in, radii2_in, self.df, self.kf
+                coords2_in,
+                radii2_in,
+                self.df,
+                self.kf,
+                densities=self._get_cluster_densities(cluster_idx2),
             )
         if self.algorithm_config.profile_timing:
             self._t_cluster_props += perf_counter() - _t0
@@ -219,10 +227,18 @@ class _FallbacksMixin:
             m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
         else:
             m1, rg1, cm1, r_max1 = fractal.calculate_cluster_properties(
-                coords1_in, radii1_in, self.df, self.kf
+                coords1_in,
+                radii1_in,
+                self.df,
+                self.kf,
+                densities=self._get_cluster_densities(cluster_idx1),
             )
             m2, rg2, cm2, r_max2 = fractal.calculate_cluster_properties(
-                coords2_in, radii2_in, self.df, self.kf
+                coords2_in,
+                radii2_in,
+                self.df,
+                self.kf,
+                densities=self._get_cluster_densities(cluster_idx2),
             )
         if self.algorithm_config.profile_timing:
             self._t_cluster_props += perf_counter() - _t0
@@ -794,10 +810,18 @@ class _FallbacksMixin:
             m2, rg2, cm2, r_max2 = _p2[0], _p2[1], _p2[2], _p2[3]
         else:
             m1, rg1, cm1, r_max1 = fractal.calculate_cluster_properties(
-                coords1_in, radii1_in, self.df, self.kf
+                coords1_in,
+                radii1_in,
+                self.df,
+                self.kf,
+                densities=self._get_cluster_densities(cluster_idx1),
             )
             m2, rg2, cm2, r_max2 = fractal.calculate_cluster_properties(
-                coords2_in, radii2_in, self.df, self.kf
+                coords2_in,
+                radii2_in,
+                self.df,
+                self.kf,
+                densities=self._get_cluster_densities(cluster_idx2),
             )
 
         # Calculate gamma

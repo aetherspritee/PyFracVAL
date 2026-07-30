@@ -87,6 +87,7 @@ def compute_aggregate_quality(
     kf: float,
     tol_ov: float,
     n_particles_dropped: int = 0,
+    densities: np.ndarray | None = None,
 ) -> dict:
     """Measure a finished aggregate against what was asked for.
 
@@ -111,7 +112,7 @@ def compute_aggregate_quality(
     """
     n = int(coords.shape[0])
     max_overlap, n_pairs = max_self_overlap(coords, radii)
-    measured_rg = fractal.compute_empirical_rg_polydisperse(coords, radii)
+    measured_rg = fractal.compute_empirical_rg_polydisperse(coords, radii, densities)
     scaling_law_rg = fractal.calculate_rg(radii, n, df, kf)
     rg_error_pct = (
         (measured_rg - scaling_law_rg) / scaling_law_rg * 100.0
