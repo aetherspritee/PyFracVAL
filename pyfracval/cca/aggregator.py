@@ -16,7 +16,7 @@ import numpy as np
 from ..config import OrchestratorAlgorithmConfig
 from .candidates import _CandidatesMixin
 from .fallbacks import _FallbacksMixin
-from .pairing import _PairingMixin
+from .pairing import CCA_PAIRING_FACTOR, _PairingMixin
 from .sticking import _StickingMixin
 
 logger = logging.getLogger(__name__)
@@ -188,6 +188,26 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         self._soft_relaxation_attempts: int = 0
         self._soft_relaxation_successes: int = 0
 
+        # Backtracking-pairing telemetry: merges that only succeeded
+        # because a *later* partner was tried, and edges proven not to
+        # stick. The first is the direct measure of what backtracking buys
+        # over greedy first-fit.
+        self._backtrack_rescued_merges: int = 0
+        self._backtrack_failed_edges: int = 0
+        self._pass_through_clusters: int = 0
+
+        # Per-merge diagnostics. _last_sticking_stats is a side-channel
+        # filled in by the sticking loop (same pattern as
+        # _last_overlap_census) and drained by _record_merge_event.
+        self._round_index: int = 1
+        self._last_sticking_stats: dict = {}
+        self._merge_log = None
+        merge_log_path = self.algorithm_config.cca_merge_log_path
+        if merge_log_path:
+            from ..merge_log import MergeEventLog
+
+            self._merge_log = MergeEventLog(merge_log_path)
+
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
     # --------------------------------------------------------------------------
@@ -225,8 +245,307 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
     # Main CCA Iteration Logic
     # --------------------------------------------------------------------------
 
+    def _attempt_pair_merge(
+        self,
+        k: int,
+        other: int,
+        cluster_props_cache: dict | None,
+        pool_size: int,
+        attempt_index: int = 0,
+    ) -> Tuple[np.ndarray, np.ndarray] | None:
+        """Attempt one cluster merge, including every configured fallback.
+
+        The single place a pair of clusters is turned into a merged one:
+        rigid sticking first, then (if enabled) soft relaxation, then
+        drop-rescue. Shared by every pairing strategy so they cannot drift
+        apart in which fallbacks they honour, and the one place merge
+        events are recorded from.
+
+        Returns the merged ``(coords, radii)``, or None if every route
+        failed.
+        """
+        self._last_sticking_stats = {}
+        outcome = "stuck"
+        n_dropped = 0
+
+        stick_result = self._perform_cca_sticking_with_expansion(
+            k, other, cluster_props_cache
+        )
+
+        # Try soft relaxation fallback if enabled and rigid sticking failed
+        if (
+            stick_result is None
+            and self.algorithm_config.cca_soft_relaxation_enabled
+            and self.algorithm_config.cca_soft_relaxation_fallback_only
+        ):
+            self._soft_relaxation_attempts += 1
+            logger.info(
+                f"Rigid sticking failed for pair ({k}, {other}), "
+                f"trying soft relaxation fallback..."
+            )
+            stick_result = self._try_soft_relaxation_sticking(
+                k, other, cluster_props_cache
+            )
+            if stick_result is not None:
+                self._soft_relaxation_successes += 1
+                outcome = "rescued_soft_relaxation"
+                logger.info(f"Soft relaxation succeeded for pair ({k}, {other})")
+
+        # Try drop-rescue if enabled and every prior fallback failed
+        # (docs/source/drop_rescue.md). Depends on the overlap census
+        # populated by _perform_cca_sticking_with_expansion's failure path
+        # above - self.algorithm_config's validator guarantees
+        # cca_overlap_census_enabled is also True whenever
+        # cca_drop_rescue_enabled is.
+        if (
+            stick_result is None
+            and self.algorithm_config.cca_drop_rescue_enabled
+            and self._last_overlap_census is not None
+            and self._last_overlap_failure_geometry is not None
+        ):
+            from .rescue import retry_sticking_with_drops, select_drop_candidates
+
+            drop = select_drop_candidates(
+                self._last_overlap_census,
+                self.algorithm_config.cca_drop_rescue_max_particles,
+                self.algorithm_config.cca_drop_rescue_max_fraction,
+            )
+            if drop is not None:
+                self._drop_rescue_attempts += 1
+                drop_idx1, drop_idx2 = drop
+                c1, r1, c2, r2 = self._last_overlap_failure_geometry
+                stick_result = retry_sticking_with_drops(
+                    c1, r1, c2, r2, drop_idx1, drop_idx2, self.tol_ov
+                )
+                if stick_result is not None:
+                    self._drop_rescue_successes += 1
+                    n_dropped = len(drop_idx1) + len(drop_idx2)
+                    self._particles_dropped_total += n_dropped
+                    outcome = "rescued_drop"
+                    logger.info(f"Drop-rescue succeeded for pair ({k}, {other})")
+
+        if stick_result is None:
+            outcome = self._last_sticking_stats.get("failure_reason", "failed_overlap")
+        elif outcome == "stuck" and self._last_sticking_stats.get("used_adaptive_tol"):
+            outcome = "stuck_relaxed_tol"
+
+        self._record_merge_event(k, other, outcome, pool_size, attempt_index, n_dropped)
+        return stick_result
+
+    def _record_merge_event(
+        self,
+        k: int,
+        other: int,
+        outcome: str,
+        pool_size: int,
+        attempt_index: int,
+        n_dropped: int,
+    ) -> None:
+        """Append one record to the merge event log, when one is configured."""
+        if self._merge_log is None:
+            return
+
+        from ..merge_log import MergeEvent
+
+        stats = self._last_sticking_stats or {}
+        census = self._last_overlap_census
+        n_offending = None
+        if census is not None and not outcome.startswith("stuck"):
+            n_offending = int(
+                census.n_particles_cluster1_offending
+                + census.n_particles_cluster2_offending
+            )
+
+        self._merge_log.record(
+            MergeEvent(
+                round_index=self._round_index,
+                pool_size=pool_size,
+                cluster_idx1=int(k),
+                cluster_idx2=int(other),
+                n1=int(stats.get("n1", 0)),
+                n2=int(stats.get("n2", 0)),
+                gamma_pc=float(stats.get("gamma_pc", 0.0)),
+                gamma_real=bool(stats.get("gamma_real", False)),
+                sum_rmax=float(stats.get("sum_rmax", 0.0)),
+                outcome=outcome,
+                candidates_tried=int(stats.get("candidates_tried", 0)),
+                n_feasible_pairs=int(stats.get("n_feasible_pairs", 0)),
+                rotations_used=int(stats.get("rotations_used", 0)),
+                min_overlap=float(stats.get("min_overlap", float("inf"))),
+                n_offending_particles=n_offending,
+                n_particles_dropped=int(n_dropped),
+                attempt_index=int(attempt_index),
+            )
+        )
+
+    def _assemble_next_round(self, merged_units: list) -> bool:
+        """Install a round's resulting clusters as the next round's state.
+
+        ``merged_units`` is the list of ``(coords, radii)`` produced by
+        this round, one entry per surviving cluster. Rebuilds
+        ``coords``/``radii``/``i_orden``/``i_t`` from it.
+        """
+        if not merged_units:
+            logger.error("No clusters formed in CCA iteration.")
+            self.not_able_cca = True
+            return False
+
+        total = sum(unit[0].shape[0] for unit in merged_units)
+        coords_next = np.zeros((total, 3), dtype=self.coords.dtype)
+        radii_next = np.zeros(total, dtype=self.radii.dtype)
+        i_orden_next = np.zeros((len(merged_units), 3), dtype=int)
+
+        fill_idx = 0
+        for idx, (unit_coords, unit_radii) in enumerate(merged_units):
+            count = unit_coords.shape[0]
+            coords_next[fill_idx : fill_idx + count, :] = unit_coords
+            radii_next[fill_idx : fill_idx + count] = unit_radii
+            i_orden_next[idx, 0] = fill_idx
+            i_orden_next[idx, 1] = fill_idx + count - 1
+            i_orden_next[idx, 2] = count
+            fill_idx += count
+
+        self.coords = coords_next
+        self.radii = radii_next
+        self.i_orden = i_orden_next
+        self.i_t = len(merged_units)
+        return True
+
+    def _run_iteration_backtracking(self) -> bool:
+        """One CCA round that retries partners instead of aborting.
+
+        The production pairing strategy. Where the greedy path commits to
+        a partner per cluster up front and fails the entire round (and
+        thus the whole PCA+CCA attempt) the moment any one chosen pair
+        will not stick, this one reacts to the *actual* sticking outcome:
+        on failure it tries the cluster's next feasible partner.
+
+        This distinction is the whole point.
+        docs/source/matching_pairing.md showed that choosing better pairs
+        up front from the cheap gamma-feasibility graph does not help,
+        because that graph is necessary-but-not-sufficient - it cannot
+        predict which feasible-looking pairs actually stick. Only a real
+        attempt tells you that, so only a strategy that reacts to real
+        attempts can exploit what docs/source/pairing_frustration.md
+        measured: in ~97% of hard-regime round failures, some *other*
+        pairing of the very same pool would have worked.
+
+        Cost is bounded by ``cca_backtracking_max_partners`` attempts per
+        cluster, against a baseline that discards the round's successful
+        merges and restarts PCA from scratch (up to 20 times).
+        """
+        from .matching import build_feasibility_graph
+
+        pool_size = self.i_t
+        logger.info(
+            f"--- CCA Iteration Start (backtracking) - Clusters: {pool_size} ---"
+        )
+
+        cluster_props = self._compute_cluster_props()
+        adj = build_feasibility_graph(
+            cluster_props, self._calculate_cca_gamma, CCA_PAIRING_FACTOR
+        )
+        nodes = [i for i in range(self.i_t) if cluster_props[i][0] > 0.0]
+        if not nodes:
+            logger.error("CCA round has no non-empty clusters.")
+            self.not_able_cca = True
+            return False
+
+        unpaired = set(nodes)
+        merged_units: list = []
+        n_merges = 0
+        n_pass_through = 0
+        # Edges proven not to stick this round; never retried from the
+        # other endpoint either, since sticking is symmetric.
+        failed_edges: set[frozenset] = set()
+        max_partners = max(1, int(self.algorithm_config.cca_backtracking_max_partners))
+        allow_pass_through = bool(self.algorithm_config.cca_backtracking_pass_through)
+
+        while unpaired:
+            # Most-constrained-first: handle the cluster with the fewest
+            # remaining options while it still has any, rather than
+            # stranding it after its only partners are taken. The index
+            # tiebreak keeps this deterministic for a given seed.
+            k = min(unpaired, key=lambda i: (len(adj[i] & unpaired), i))
+            unpaired.discard(k)
+
+            partners = [
+                p
+                for p in adj[k]
+                if p in unpaired and frozenset((k, p)) not in failed_edges
+            ]
+            partners.sort(key=lambda p: (len(adj[p] & unpaired), p))
+
+            merged_partner = None
+            merged_result = None
+            for attempt_index, partner in enumerate(partners[:max_partners]):
+                result = self._attempt_pair_merge(
+                    k,
+                    partner,
+                    cluster_props,
+                    pool_size=pool_size,
+                    attempt_index=attempt_index,
+                )
+                if result is not None:
+                    merged_partner = partner
+                    merged_result = result
+                    if attempt_index > 0:
+                        self._backtrack_rescued_merges += 1
+                        logger.info(
+                            f"Backtracking rescued pair ({k}, {partner}) "
+                            f"on partner attempt {attempt_index + 1}."
+                        )
+                    break
+                failed_edges.add(frozenset((k, partner)))
+                self._backtrack_failed_edges += 1
+
+            if merged_result is not None and merged_partner is not None:
+                unpaired.discard(merged_partner)
+                merged_units.append(merged_result)
+                n_merges += 1
+                continue
+
+            # No partner stuck. Carrying the cluster into the next round
+            # unmerged keeps every *other* successful merge in this round,
+            # which is precisely what the old abort-the-round behaviour
+            # threw away.
+            if not allow_pass_through and partners:
+                logger.error(
+                    f"Cluster {k} found no workable partner and pass-through is disabled."
+                )
+                self.not_able_cca = True
+                return False
+            coords_k, radii_k = self._get_cluster_data(k)
+            if coords_k.shape[0] > 0:
+                merged_units.append((coords_k, radii_k))
+                n_pass_through += 1
+
+        # A round where nothing merged makes no progress; letting it
+        # continue would spin forever on an unchanged pool.
+        if n_merges == 0 and pool_size > 1:
+            logger.error(
+                f"CCA round made no progress: {pool_size} clusters, none merged."
+            )
+            self.not_able_cca = True
+            return False
+
+        if n_pass_through:
+            self._pass_through_clusters += n_pass_through
+            logger.info(
+                f"CCA round: {n_merges} merged, {n_pass_through} passed through unmerged."
+            )
+
+        self._round_index += 1
+        if not self._assemble_next_round(merged_units):
+            return False
+        logger.info(f"--- CCA Iteration End - Clusters Remaining: {self.i_t} ---")
+        return True
+
     def _run_iteration(self) -> bool:
         """Performs one iteration of the CCA process."""
+        if str(self.algorithm_config.cca_pairing_strategy).lower() == "backtracking":
+            return self._run_iteration_backtracking()
+
         logger.info(f"--- CCA Iteration Start - Clusters: {self.i_t} ---")
 
         # Sort clusters by size (optional, matches Fortran)
@@ -307,67 +626,9 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
                 considered[k] = 1
             else:  # Handle a pair (k, other)
                 # logger.info(f"Attempting to stick pair ({k}, {other})")
-                stick_result = self._perform_cca_sticking_with_expansion(
-                    k, other, cluster_props_cache
+                stick_result = self._attempt_pair_merge(
+                    k, other, cluster_props_cache, pool_size=self.i_t
                 )
-
-                # Try soft relaxation fallback if enabled and rigid sticking failed
-                if (
-                    stick_result is None
-                    and self.algorithm_config.cca_soft_relaxation_enabled
-                    and self.algorithm_config.cca_soft_relaxation_fallback_only
-                ):
-                    self._soft_relaxation_attempts += 1
-                    logger.info(
-                        f"Rigid sticking failed for pair ({k}, {other}), "
-                        f"trying soft relaxation fallback..."
-                    )
-                    stick_result = self._try_soft_relaxation_sticking(
-                        k, other, cluster_props_cache
-                    )
-                    if stick_result is not None:
-                        self._soft_relaxation_successes += 1
-                        logger.info(
-                            f"Soft relaxation succeeded for pair ({k}, {other})"
-                        )
-
-                # Try drop-rescue if enabled and every prior fallback failed
-                # (docs/source/drop_rescue.md). Depends on the overlap
-                # census populated by _perform_cca_sticking_with_expansion's
-                # failure path above - self.algorithm_config's validator
-                # guarantees cca_overlap_census_enabled is also True
-                # whenever cca_drop_rescue_enabled is.
-                if (
-                    stick_result is None
-                    and self.algorithm_config.cca_drop_rescue_enabled
-                    and self._last_overlap_census is not None
-                    and self._last_overlap_failure_geometry is not None
-                ):
-                    from .rescue import (
-                        retry_sticking_with_drops,
-                        select_drop_candidates,
-                    )
-
-                    drop = select_drop_candidates(
-                        self._last_overlap_census,
-                        self.algorithm_config.cca_drop_rescue_max_particles,
-                        self.algorithm_config.cca_drop_rescue_max_fraction,
-                    )
-                    if drop is not None:
-                        self._drop_rescue_attempts += 1
-                        drop_idx1, drop_idx2 = drop
-                        c1, r1, c2, r2 = self._last_overlap_failure_geometry
-                        stick_result = retry_sticking_with_drops(
-                            c1, r1, c2, r2, drop_idx1, drop_idx2, self.tol_ov
-                        )
-                        if stick_result is not None:
-                            self._drop_rescue_successes += 1
-                            self._particles_dropped_total += len(drop_idx1) + len(
-                                drop_idx2
-                            )
-                            logger.info(
-                                f"Drop-rescue succeeded for pair ({k}, {other})"
-                            )
 
                 if stick_result is None:
                     logger.info(
@@ -436,6 +697,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         self.radii = radii_next
         self.i_orden = i_orden_next
         self.i_t = num_clusters_next
+        self._round_index += 1
 
         logger.info(f"--- CCA Iteration End - Clusters Remaining: {self.i_t} ---")
         return True  # Iteration successful

@@ -217,9 +217,11 @@ class TestGeneratePairsMatchingStrategy:
         )
         assert not np.any(paired_status[should_be_paired] == 0)
 
-    def test_greedy_strategy_is_unaffected_default(self):
-        cfg = OrchestratorAlgorithmConfig()
-        assert cfg.cca_pairing_strategy == "greedy"
+    def test_backtracking_is_the_default_strategy(self):
+        assert OrchestratorAlgorithmConfig().cca_pairing_strategy == "backtracking"
+
+    def test_greedy_strategy_still_available_explicitly(self):
+        cfg = OrchestratorAlgorithmConfig(cca_pairing_strategy="greedy")
         agg = _make_aggregator(n=88, algorithm_config=cfg)
         result = agg._generate_pairs()
         assert result is not None

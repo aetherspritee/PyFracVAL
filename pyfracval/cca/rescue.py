@@ -59,18 +59,25 @@ def select_drop_candidates(
     docs/source/overlap_failure_census.md's severity-histogram data for
     what's actually observed.
 
+    Because the two caps combine with ``min``, the absolute one dominates
+    once clusters get large: at N=512's observed cluster-pair size of 100,
+    ``min(5, ceil(0.25*100))`` is still 5, so the relative budget never
+    actually engages no matter how it is set (docs/source/drop_rescue.md).
+    Setting ``max_drop_particles`` to 0 (or negative) therefore means "no
+    absolute cap - scale purely with cluster size", which is the only way
+    to get a genuinely N-aware budget.
+
     Returns (drop_idx1, drop_idx2) if within budget on both sides, else
     None (rescue not attempted - caller falls through to the existing
     round-abort behavior).
     """
-    budget1 = min(
-        max_drop_particles,
-        int(np.ceil(max_drop_fraction * census.cluster1_size)),
-    )
-    budget2 = min(
-        max_drop_particles,
-        int(np.ceil(max_drop_fraction * census.cluster2_size)),
-    )
+    relative1 = int(np.ceil(max_drop_fraction * census.cluster1_size))
+    relative2 = int(np.ceil(max_drop_fraction * census.cluster2_size))
+    if max_drop_particles > 0:
+        budget1 = min(max_drop_particles, relative1)
+        budget2 = min(max_drop_particles, relative2)
+    else:
+        budget1, budget2 = relative1, relative2
 
     if (
         census.n_particles_cluster1_offending > budget1

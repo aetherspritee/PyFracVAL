@@ -15,12 +15,24 @@ from ..logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
 
+# Allow gamma_pc to be slightly larger than sum_rmax when gating which
+# cluster pairs are even worth attempting. The Fortran is strict
+# (gamma_pc < sum_rmax); 10% of slack admits pairs that do frequently
+# stick in practice, at the cost of a small Df/kf deviation which is
+# logged when it happens (and which cca_gamma_measured_rg corrects for).
+CCA_PAIRING_FACTOR = 1.10
+
 
 class _PairingMixin:
     """Pair generation and Gamma_pc calculation methods."""
 
     def _calculate_cca_gamma(self, props1: Tuple, props2: Tuple) -> Tuple[bool, float]:
-        """Calculates Gamma_pc between two clusters based on their properties."""
+        """Calculates Gamma_pc between two clusters based on their properties.
+
+        ``rg1``/``rg2`` come from the props cache, which holds either the
+        scaling-law Rg (default) or the measured one when
+        ``cca_gamma_measured_rg`` is set - see :meth:`_cluster_rg`.
+        """
         m1, rg1, _, _, radii1 = props1
         m2, rg2, _, _, radii2 = props2
         return fractal.gamma_calculation(
@@ -32,7 +44,43 @@ class _PairingMixin:
             radii2,
             self.df,
             self.kf,
+            use_mass=bool(self.algorithm_config.cca_gamma_use_mass),
         )
+
+    def _cluster_rg(
+        self, coords: np.ndarray, radii: np.ndarray, scaling_law_rg: float
+    ) -> float:
+        """Radius of gyration to feed into Gamma for an existing cluster.
+
+        By default this is the scaling-law value the caller already
+        computed - what FracVAL does, and correct as long as every cluster
+        really does sit on the scaling law. It does not: the 1.10 pairing
+        relaxation factor and the adaptive overlap tolerance both accept
+        merges at a contact distance other than the exact Gamma, and
+        nothing ever measures the result, so the deviations compound
+        silently over a run's ~log2(N_subclusters) rounds.
+
+        With ``cca_gamma_measured_rg`` the *measured* Rg (paper Eq. 4) is
+        used instead. Because Eq. 6 is an identity relating the two
+        clusters' actual radii of gyration, their actual center-of-mass
+        separation, and the resulting aggregate's actual Rg, substituting
+        measured rg1/rg2 while keeping the scaling-law target for the
+        combined aggregate makes Gamma solve for "the separation that puts
+        the *result* back on the scaling law" - closing the loop rather
+        than assuming it never opened.
+
+        Note this identity holds for true masses; with the default
+        count-based Gamma (``cca_gamma_use_mass=False``) the correction is
+        approximate, so the two flags are best enabled together.
+        """
+        if not self.algorithm_config.cca_gamma_measured_rg:
+            return scaling_law_rg
+        if coords.shape[0] < 2:
+            # A lone monomer's measured Rg is sqrt(3/5)*r, which is not
+            # what the scaling law means by Rg for n=1; the scaling-law
+            # value is the meaningful input to Gamma here.
+            return scaling_law_rg
+        return fractal.compute_empirical_rg_polydisperse(coords, radii)
 
     def _identify_monomers(self) -> np.ndarray | None:
         """Creates an array mapping each active monomer index to its
@@ -69,24 +117,13 @@ class _PairingMixin:
             logger.error("Index out of bounds in _identify_monomers. Check i_orden.")
             return None
 
-    def _generate_pairs(self) -> np.ndarray | None:
-        """
-        Generates the ID_agglomerated matrix indicating potential pairs.
-        Applies a relaxation factor if the strict condition fails.
-        Returns the matrix or None on failure.
-        """
-        # --- RELAXATION FACTOR ---
-        # Allow gamma_pc to be slightly larger than sum_rmax if needed.
-        # Start with a higher value to test if it allows pairing.
-        # If this works, you might fine-tune it later (e.g., 1.10, 1.05).
-        CCA_PAIRING_FACTOR = 1.10  # Relaxed pairing (10% over sum_rmax; gamma expansion handles the rest)
-        strict_pairing_used = True  # Flag to track if relaxation was needed
-        # -------------------------
+    def _compute_cluster_props(self) -> dict:
+        """Build the ``cluster_idx -> (m, rg, cm, r_max, radii)`` cache.
 
-        id_agglomerated = np.zeros((self.i_t, self.i_t), dtype=int)
-        cluster_props = {}  # Cache properties
-
-        # Pre-calculate properties (as before)
+        Shared by every pairing strategy and by the sticking path, which
+        reuses these values rather than recomputing them per pair.
+        """
+        cluster_props = {}
         for i in range(self.i_t):
             coords_i, radii_i = self._get_cluster_data(i)
             if coords_i.shape[0] == 0:
@@ -98,10 +135,23 @@ class _PairingMixin:
                 self.df,
                 self.kf,  # Use target Df/kf
             )
+            rg_i = self._cluster_rg(coords_i, radii_i, rg_i)
             cluster_props[i] = (m_i, rg_i, cm_i, r_max_i, radii_i)
             logger.debug(
                 f"Cluster {i}: N={len(radii_i)}, Rg={rg_i:.3f}, Rmax={r_max_i:.3f}, Mass={m_i:.2e}"
             )
+        return cluster_props
+
+    def _generate_pairs(self) -> np.ndarray | None:
+        """
+        Generates the ID_agglomerated matrix indicating potential pairs.
+        Applies a relaxation factor if the strict condition fails.
+        Returns the matrix or None on failure.
+        """
+        strict_pairing_used = True  # Flag to track if relaxation was needed
+
+        id_agglomerated = np.zeros((self.i_t, self.i_t), dtype=int)
+        cluster_props = self._compute_cluster_props()
 
         pairing_strategy = str(
             getattr(self.algorithm_config, "cca_pairing_strategy", "greedy")

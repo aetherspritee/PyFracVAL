@@ -46,6 +46,61 @@ def calculate_mass(radii: np.ndarray) -> np.ndarray:
     return (4.0 / 3.0) * np.pi * (radii**3)
 
 
+def compute_empirical_rg_polydisperse(coords: np.ndarray, radii: np.ndarray) -> float:
+    """Radius of gyration of actual coordinates, including each primary
+    particle's own gyration radius (paper Eq. 4).
+
+    Differs from :func:`compute_empirical_rg`, which treats particles as
+    point masses and so omits the :math:`r_{g,i}^2` term below. That
+    omission is a constant offset for monodisperse input but grows with
+    polydispersity, and it makes the point-mass form **inconsistent with
+    the Gamma equation**, whose derivation (paper Appendix A, Eq. A.5)
+    carries the term throughout. Anything that has to agree with Gamma -
+    the measured-Rg feedback in ``cca/pairing.py``, the per-aggregate
+    quality record - must use this function; use
+    :func:`compute_empirical_rg` only where a point-mass Rg is what is
+    actually wanted.
+
+    The counterpart to :func:`calculate_rg`, which returns the radius of
+    gyration the fractal scaling law *prescribes* for a given particle
+    count. This one measures what a built aggregate actually has:
+
+    .. math::
+        R_g^2 = \\frac{1}{m_a}\\sum_i m_{p,i}[(R_i - R_c)^2 + r_{g,i}^2]
+
+    with :math:`r_{g,i}^2 = \\frac{3}{5}r_{p,i}^2` the primary particle's
+    own gyration radius and :math:`R_c` the mass-weighted center of mass
+    (Eq. 5). The :math:`r_{g,i}^2` term is what makes this valid for
+    polydisperse primary particles :cite:p:`Moran2019FracVAL`; dropping it
+    (as monodisperse treatments do) underestimates Rg for wide size
+    distributions.
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Nx3 particle coordinates.
+    radii : np.ndarray
+        N particle radii.
+
+    Returns
+    -------
+    float
+        Measured radius of gyration; 0.0 for an empty aggregate.
+    """
+    if coords.shape[0] == 0:
+        return 0.0
+
+    mass = calculate_mass(radii)
+    total_mass = float(np.sum(mass))
+    if total_mass <= 1e-12:
+        return 0.0
+
+    cm = np.sum(coords * mass[:, np.newaxis], axis=0) / total_mass
+    d_sq = np.sum((coords - cm) ** 2, axis=1)
+    rg_sq = float(np.sum(mass * (d_sq + 0.6 * radii**2)) / total_mass)
+    return float(np.sqrt(max(rg_sq, 0.0)))
+
+
 def calculate_rg(radii: np.ndarray, npp: int, df: float, kf: float) -> float:
     """Calculate the radius of gyration using the fractal scaling law.
 
@@ -102,7 +157,7 @@ def gamma_calculation(
     radii2: npt.NDArray,
     df: float,
     kf: float,
-    heuristic: bool = True,
+    use_mass: bool = False,
     all_radii: npt.NDArray | None = None,
 ) -> tuple[bool, float]:
     """
@@ -113,11 +168,27 @@ def gamma_calculation(
 
     Parameters
     ----------
+    use_mass : bool, default False
+        Which form of the Gamma equation to solve. ``False`` substitutes
+        particle *counts* for the masses, giving Filippov et al. (2000)
+        Eq. 7 - what the Fortran PCA does (``PCA_cca.f90``'s
+        ``Gamma_calculation`` takes ``n1, n2, n3``) and what this port has
+        historically done everywhere. ``True`` uses the true masses passed
+        in as ``m1``/``m2``, giving Moran et al. (2019) Eq. 6 - the
+        paper's central polydisperse contribution, and what the Fortran
+        *CCA* actually does (``CCA_module.f90:301``). Identical for
+        monodisperse primary particles; they diverge as polydispersity
+        grows. See NOTE.md 1.2.
     all_radii : np.ndarray, optional
         If provided, the geometric mean radius for rg3 is computed from this
         full set of radii (matching Fortran behaviour where R contains all N
         particles). When None the geometric mean is taken from the local
         combined set (radii1 + radii2).
+    rg3_override : float, optional
+        Use this radius of gyration for the *combined* aggregate instead of
+        deriving it from the scaling law. Only meaningful together with
+        measured (rather than scaling-law) rg1/rg2 - see
+        ``cca/pairing.py``'s measured-Rg feedback.
     """
     n1 = radii1.size
     n2 = radii2.size
@@ -125,7 +196,7 @@ def gamma_calculation(
     n3 = n1 + n2
     m3 = m1 + m2
 
-    if heuristic:
+    if not use_mass:
         m1 = n1
         m2 = n2
         m3 = n3
@@ -245,6 +316,11 @@ def compute_empirical_rg(coords: np.ndarray, radii: np.ndarray) -> float:
     Unlike ``calculate_rg`` which uses the fractal scaling law
     Rg = a*(N/kf)^(1/Df), this function measures Rg from the actual
     spatial distribution of particles.
+
+    Treats each particle as a point mass. See
+    :func:`compute_empirical_rg_polydisperse` for the form that also
+    carries each particle's own gyration radius (paper Eq. 4) - required
+    wherever the result has to be consistent with the Gamma equation.
 
     Parameters
     ----------

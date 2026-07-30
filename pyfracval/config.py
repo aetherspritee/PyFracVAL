@@ -255,11 +255,24 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_incremental_full_sync_period: int = 20
     cca_candidate_policy: str = "baseline"
     # --- Pairing strategy (docs/source/matching_pairing.md) ------------------
-    # "greedy" (default, production, unchanged) | "matching" (exact
-    # maximum-cardinality matching over the same cheap feasibility graph) |
-    # "matching_leaf_weighted" (matching with leaf-class edge weights as a
-    # tiebreaker among cardinality-optimal solutions).
-    cca_pairing_strategy: str = "greedy"
+    # "backtracking" (default, production) retries a cluster against its
+    # next feasible partner on a *real* sticking failure instead of
+    # aborting the round | "greedy" (the historical first-fit default) |
+    # "matching" (exact maximum-cardinality matching over the cheap
+    # feasibility graph) | "matching_leaf_weighted" (matching with
+    # leaf-class edge weights as a tiebreaker among cardinality-optimal
+    # solutions). See docs/source/backtracking_pairing.md and
+    # docs/source/matching_pairing.md.
+    cca_pairing_strategy: str = "backtracking"
+    # Cap on how many partners one cluster may be tried against per round
+    # before it is passed through unmerged. Bounds the worst-case cost of
+    # backtracking: a failed sticking attempt is expensive (every
+    # candidate pair x up to 360 rotations).
+    cca_backtracking_max_partners: int = 4
+    # When no partner sticks, carry the cluster into the next round
+    # unmerged rather than failing the attempt outright. A round that
+    # merges nothing at all still fails, so this cannot loop forever.
+    cca_backtracking_pass_through: bool = True
     cca_matching_leaf_class_weights: dict[str, float] = Field(
         default_factory=lambda: {"LL": 1.0, "LN": 0.6, "NN": 0.3}
     )
@@ -271,12 +284,35 @@ class OrchestratorAlgorithmConfig(BaseModel):
     # success/fail signal pyfracval/overlap.py's scalar checks give.
     cca_overlap_census_enabled: bool = False
     cca_overlap_census_max_pairs: int = 4096
+    # --- Gamma formulation (see NOTE.md 1.2) ---------------------------------
+    # False (default) computes Gamma with particle *counts* - Filippov
+    # et al. (2000) Eq. 7, which is what the Fortran PCA does and what
+    # this port has always done everywhere. True uses true (proportional
+    # to r^3) masses - Moran et al. (2019) Eq. 6, the paper's central
+    # polydisperse contribution and what the Fortran *CCA* actually does.
+    # The two are identical for monodisperse primary particles and
+    # diverge as rp_gstd grows.
+    cca_gamma_use_mass: bool = False
+    # Feed the *measured* radius of gyration of each already-built cluster
+    # into the next round's Gamma, instead of re-deriving it from the
+    # scaling law. Without this, per-merge deviations (the pairing
+    # relaxation factor, the adaptive overlap tolerance) accumulate
+    # uncorrected because nothing ever measures what was actually built.
+    cca_gamma_measured_rg: bool = False
+    # --- Per-merge event log (pyfracval/merge_log.py) ------------------------
+    # Path to a JSONL file receiving one record per CCA merge attempt.
+    # None disables it entirely (no file opened, no records built).
+    cca_merge_log_path: str | None = None
     # --- Drop-a-few-particles rescue (docs/source/drop_rescue.md) ------------
     # Opt-in; requires the overlap census above (auto-enabled when this is
     # True, see _validate_algorithm below). No backfill: a rescued merge
     # yields fewer than the requested N particles.
     cca_drop_rescue_enabled: bool = False
-    cca_drop_rescue_max_particles: int = 5  # absolute safety cap, per side
+    # Absolute safety cap per side; 0 disables it so the relative cap
+    # below scales the budget with cluster size instead (the two combine
+    # with min(), so a non-zero absolute cap dominates at large N - see
+    # docs/source/drop_rescue.md).
+    cca_drop_rescue_max_particles: int = 5
     cca_drop_rescue_max_fraction: float = 0.02  # relative cap, per side
     cca_score_topk_per_class: int = 32
     cca_retry_rotation_mode: str = "single"
