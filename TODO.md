@@ -8,20 +8,46 @@ git history has the detail).
 
 ## Open
 
-- [ ] **Act on the algorithm audit in `NOTE.md`** (2026-07-30: Fortran/
-      paper faithfulness audit + consolidated findings + paper roadmap).
-      Highest-value items it identifies, roughly in order:
-      (1) backtracking pairing + per-merge JSONL event log (extends the
-      existing backtracking item below); (2) **mass-vs-count Γ A/B** —
-      Python CCA defaults to `gamma_calculation(heuristic=True)` (counts,
-      Filippov Eq. 7) while the Fortran CCA uses true masses (Moran
-      Eq. 6); expose a flag and re-run the σ>1 boundary-sweep slices;
-      (3) measured-Rg feedback into Γ + per-aggregate final-quality
-      record (also structurally closes the catalog-leak class below);
-      (4) density-density correlation f(r) validator, then validate
-      densification against it (paper backbone); (5) feasibility-boundary
-      criterion from the existing sweep data.
-- [ ] **Catalog overlap leak**: some `cluster_index.csv` rows marked
+- [ ] **Re-run the boundary sweep against the new defaults.**
+      `docs/source/hard_regime_boundary_sweep.md`'s 4200-trial grid (and
+      its 72.4% overall figure) was measured with greedy first-fit
+      pairing and the overlap-acceptance bug both present. Backtracking
+      plus the overlap fix should move that boundary substantially; the
+      grid is the right instrument to say by how much, and the page
+      explicitly reserved itself as the baseline for exactly this.
+      Also worth re-running the σ>1 slices with `cca_gamma_use_mass=True`,
+      which showed the best Rg accuracy of any arm at N=128.
+- [ ] **Density-density correlation f(r) validator** (paper backbone).
+      Moran's own validation metric is f(r) and its Df−3 slope, not Rg —
+      an aggregate can match Rg while having the wrong internal
+      structure. Needed before densification (the one qualitative winner
+      in `docs/source/experiments.md`) can be claimed as paper-grade, and
+      before the pass-through behaviour backtracking introduces can be
+      claimed structurally harmless. See `NOTE.md` §3.3.
+- [ ] **Feasibility-boundary criterion** — predict Df_max(kf, σ, N)
+      rather than only measuring it, from the sweep data we already own.
+      Would let the tool warn before running instead of failing after
+      retries. `NOTE.md` §3.5.
+- [ ] **Reconcile the two empirical-Rg definitions.**
+      `fractal.compute_empirical_rg` (and `densify.py`'s private copy)
+      treat particles as point masses, omitting Eq. 4's per-particle
+      `r_g,i²` term; `fractal.compute_empirical_rg_polydisperse` (added
+      2026-07-30) implements it. The point-mass form is inconsistent with
+      the Γ derivation (Appendix A carries the term), so
+      `validate_fractal_structure`'s `rg_error_pct` — the basis of the
+      accuracy tables in `docs/source/experiments.md` — is biased low,
+      more so at high σ. Not changed unilaterally because it shifts every
+      previously-reported accuracy number and densify's convergence
+      target. Decide deliberately, then restate the affected tables.
+- [ ] **Catalog overlap leak** (likely root-caused 2026-07-30, needs
+      confirmation against the original artifact — see
+      `docs/source/backtracking_pairing.md`. PCA was emitting subclusters
+      with up to 0.75 internal overlap that it reported as successful,
+      and CCA propagated them untouched since it only ever checks
+      cluster-against-cluster. Fixed. But the leak's confirmed example is
+      a *monodisperse* `densify_retry` cluster, which that mechanism does
+      not obviously explain, so the item stays open until the original
+      failing config is re-run and checked): some `cluster_index.csv` rows marked
       `success=True` contain severe residual particle overlaps (confirmed
       example: 272 overlapping pairs, worst gap -1.02 radii, in a
       `densify_retry` N=512 cluster) — surfaced downstream as
@@ -36,15 +62,6 @@ git history has the detail).
       `tol_ov` checks look tight) is still open, as is how many other
       cataloged clusters are affected. See
       `docs/source/catalog_overlap_leak.md`.
-- [ ] Implement a **backtracking** CCA pairing strategy (retry a failed
-      pair's cluster with a different partner using the *real* sticking
-      outcome, not a precomputed graph). `docs/source/matching_pairing.md`
-      found that matching over the cheap upfront gamma-feasibility graph
-      does not work (+0.2pp over 4200 trials, statistically noise) because
-      that graph is too optimistic — geometrically-feasible does not mean
-      actually-sticks. A backtracking approach that reacts to a real stick
-      failure instead of trying to predict it upfront is the design the
-      evidence now points to.
 - [ ] Check whether drop-rescue behaves differently at a genuine
       **late CCA round** (partial progress: N=512's round-1 failures show
       a smaller relative offending-particle fraction than N=128's — 20%
@@ -57,6 +74,25 @@ git history has the detail).
       `docs/source/drop_rescue.md`'s corresponding section.
 
 ## Done (recent)
+
+- [x] **Backtracking CCA pairing, now the default** (`cca_pairing_strategy
+      = "backtracking"`), plus the four supporting items from `NOTE.md`.
+      Hard-regime single-shot success went **5.0% → 100%** (40 seeds,
+      N=128, Df=2.25, kf=0.95, σ=1.9); the easy regime is unchanged at
+      100% with zero backtracking activity, so it costs nothing where the
+      first partner already works. Along the way this exposed and fixed a
+      **pre-existing overlap-acceptance bug**: the adaptive-tolerance
+      path compared an early-terminated overlap scan (which returns the
+      first pair above `tol_ov`, not the maximum) against a 10x-larger
+      `relaxed_tol`, so placements whose real worst-case overlap was up
+      to 0.75 were accepted. 6/174 PCA subclusters were affected before
+      the fix, 0/169 after. Also landed: `cca_gamma_use_mass` (Moran
+      Eq. 6 vs Filippov Eq. 7), `cca_gamma_measured_rg`,
+      `pyfracval/merge_log.py` (opt-in per-merge JSONL),
+      `pyfracval/quality.py` (unconditional per-aggregate quality record
+      wired into `run_simulation`), and an N-aware drop-rescue budget
+      (`cca_drop_rescue_max_particles=0` disables the absolute cap).
+      See `docs/source/backtracking_pairing.md`.
 
 - [x] **Drop-a-few-particles rescue fallback** (Phase 3 of the roadmap,
       closes the item that used to be here). Added `pyfracval/cca/rescue.py`

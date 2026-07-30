@@ -1,5 +1,14 @@
 # NOTE.md — Algorithm audit, prior findings, and directions toward a "FracVAL V2" paper
 
+> **Status update (2026-07-30, same day):** §3.1, §3.2, §3.4a, §4.1 and
+> §4.3 have since been implemented and measured — backtracking pairing is
+> now the default and takes hard-regime single-shot success from 5% to
+> 100%. Implementing them also uncovered and fixed a pre-existing
+> overlap-acceptance bug that was silently producing invalid geometry
+> (see §1.3, and `docs/source/backtracking_pairing.md` for the full
+> write-up and numbers). §3.3 (f(r) validation) and §3.5 (feasibility
+> criterion) remain open and are the paper-facing work.
+
 Written 2026-07-30. Purpose: consolidate (a) a faithfulness audit of the
 Python rewrite against the original Fortran FracVAL and the Moran et al.
 2019 paper, (b) everything already tried and measured in this repo, and
@@ -123,6 +132,26 @@ Fortran original `docs/FracVAL/*.f90`.
    the rotation, constraints (Γ distance, point-touch, via later stages)
    are unaffected — but the orientation *distribution* differs slightly.
    Harmless in practice; note for completeness.
+
+### 1.3b Bug found in *this* port (fixed 2026-07-30)
+
+**Early-terminated overlap values compared against a larger threshold.**
+`overlap.calculate_max_overlap_*_fast` returns the first pair exceeding
+the `tolerance` it is given, not the maximum — correct for the binary
+"within `tol_ov`?" test it was designed for. But the adaptive-tolerance
+path compared that value against `relaxed_tol = 1e-5`, ten times larger,
+where it is only a lower bound. Placements whose first offending pair
+overlapped by 2.6e-6 were accepted while another pair overlapped by 0.43.
+Four sites (two PCA, two CCA). PCA therefore emitted subclusters with up
+to 0.75 internal overlap *reported as successful*, and CCA propagated
+them into the final aggregate untouched, since CCA only ever checks
+cluster-against-cluster and never re-validates within a cluster. Measured:
+6/174 subclusters affected before, 0/169 after. This is very likely the
+root cause of the catalog overlap leak. Not present in the Fortran, which
+has no adaptive-tolerance concept at all — it is a defect introduced by
+this port's own optimization, and a good cautionary example for the paper
+of how a sound fast path becomes unsound when its result is reused for a
+different comparison.
 
 ### 1.3 Bugs in the original Fortran (good "V2 paper" material)
 

@@ -10,6 +10,7 @@ pipeline_baseline
 experiments
 pairing_frustration
 matching_pairing
+backtracking_pairing
 overlap_failure_census
 drop_rescue
 catalog_overlap_leak
