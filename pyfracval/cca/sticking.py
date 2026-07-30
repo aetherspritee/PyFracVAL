@@ -68,8 +68,8 @@ class _StickingMixin:
 
         # --- Step 1: Translate Cluster 2 ---
         vec_cm1_p1 = coords1[cand1_idx] - cm1
-        vec_cm1_p1 /= np.linalg.norm(vec_cm1_p1)
-        if np.linalg.norm(vec_cm1_p1) < 1e-9:
+        vec_cm1_p1 /= geometry.norm3(vec_cm1_p1)
+        if geometry.norm3(vec_cm1_p1) < 1e-9:
             logger.warning("CCA Stick V1 - Selected particle coincides with CM1.")
             vec_cm1_p1 = np.array([1.0, 0.0, 0.0])  # Arbitrary direction
 
@@ -85,10 +85,10 @@ class _StickingMixin:
         point_valid = False
 
         # Re-calculate Dmin/max with translated coords2
-        dist1 = np.linalg.norm(coords1[cand1_idx] - cm1)
+        dist1 = geometry.norm3(coords1[cand1_idx] - cm1)
         d1_min = dist1 - radii1[cand1_idx]
         d1_max = dist1 + radii1[cand1_idx]
-        dist2 = np.linalg.norm(coords2[cand2_idx] - cm2)  # Use updated coords2/cm2
+        dist2 = geometry.norm3(coords2[cand2_idx] - cm2)  # Use updated coords2/cm2
         d2_min = dist2 - radii2[cand2_idx]
         d2_max = dist2 + radii2[cand2_idx]
 
@@ -149,14 +149,14 @@ class _StickingMixin:
         # Refine contact point to be on surface of particle cand1_idx
         # Vector from particle center towards the calculated contact_point
         vec_p1_contact = contact_point - coords1[cand1_idx]
-        vec_p1_contact /= np.linalg.norm(vec_p1_contact)
-        if np.linalg.norm(vec_p1_contact) < 1e-9:
+        vec_p1_contact /= geometry.norm3(vec_p1_contact)
+        if geometry.norm3(vec_p1_contact) < 1e-9:
             # logger.warning("CCA Stick V1 - Contact point direction undefined.")
             # If direction is undefined, maybe stick along original cm1-p1 vector?
             temp = coords1[cand1_idx] - cm1
             final_contact_point_p1 = coords1[cand1_idx] + radii1[
                 cand1_idx
-            ] * temp / np.linalg.norm(temp)
+            ] * temp / geometry.norm3(temp)
         else:
             final_contact_point_p1 = (
                 coords1[cand1_idx] + radii1[cand1_idx] * vec_p1_contact
@@ -168,8 +168,8 @@ class _StickingMixin:
         v1_rot = current_p1 - cm1
         v2_rot = target_p1 - cm1
 
-        norm_v1 = np.linalg.norm(v1_rot)
-        norm_v2 = np.linalg.norm(v2_rot)
+        norm_v1 = geometry.norm3(v1_rot)
+        norm_v2 = geometry.norm3(v2_rot)
 
         # Calculate rotation axis and angle
         rot_axis1 = np.zeros(3)
@@ -193,12 +193,12 @@ class _StickingMixin:
                     perform_rot1 = False  # No rotation needed
             else:  # Standard rotation
                 rot_angle1 = np.arccos(np.clip(dot_prod, -1.0, 1.0))
-                rot_axis1 = np.cross(v1_u, v2_u)
+                rot_axis1 = geometry.cross3(v1_u, v2_u)
         else:  # One vector is zero length
             perform_rot1 = False
 
         # Apply rotation 1
-        if perform_rot1 and np.linalg.norm(rot_axis1) > 1e-9 and abs(rot_angle1) > 1e-9:
+        if perform_rot1 and geometry.norm3(rot_axis1) > 1e-9 and abs(rot_angle1) > 1e-9:
             coords1_rel = coords1 - cm1
             coords1_rel_rotated = geometry.rodrigues_rotation(
                 coords1_rel, rot_axis1, rot_angle1
@@ -212,7 +212,7 @@ class _StickingMixin:
         sphere_A = np.concatenate((center_A, [radius_A]))
 
         center_B = cm2  # Use updated cm2
-        radius_B = np.linalg.norm(coords2[cand2_idx] - center_B)  # Use updated coords2
+        radius_B = geometry.norm3(coords2[cand2_idx] - center_B)  # Use updated coords2
         sphere_B = np.concatenate((center_B, [radius_B]))
 
         x_cp2, y_cp2, z_cp2, theta_a, vec_0, i_vec, j_vec, intersection_valid = (
@@ -223,7 +223,7 @@ class _StickingMixin:
             logger.debug(
                 f"CCA Stick V1 - Failed sphere intersection A/B. cand1={cand1_idx}, cand2={cand2_idx}"
             )
-            distAB = np.linalg.norm(center_A - center_B)
+            distAB = geometry.norm3(center_A - center_B)
             logger.debug(
                 f"  Dist={distAB:.4f}, R_A={radius_A:.4f}, R_B={radius_B:.4f}, Sum={radius_A + radius_B:.4f}"
             )
@@ -245,8 +245,8 @@ class _StickingMixin:
         v1_rot = current_p2 - cm2
         v2_rot = target_p2 - cm2
 
-        norm_v1 = np.linalg.norm(v1_rot)
-        norm_v2 = np.linalg.norm(v2_rot)
+        norm_v1 = geometry.norm3(v1_rot)
+        norm_v2 = geometry.norm3(v2_rot)
 
         rot_axis2 = np.zeros(3)
         rot_angle2 = 0.0
@@ -267,11 +267,11 @@ class _StickingMixin:
                     perform_rot2 = False
             else:
                 rot_angle2 = np.arccos(np.clip(dot_prod, -1.0, 1.0))
-                rot_axis2 = np.cross(v1_u, v2_u)
+                rot_axis2 = geometry.cross3(v1_u, v2_u)
         else:
             perform_rot2 = False
 
-        if perform_rot2 and np.linalg.norm(rot_axis2) > 1e-9 and abs(rot_angle2) > 1e-9:
+        if perform_rot2 and geometry.norm3(rot_axis2) > 1e-9 and abs(rot_angle2) > 1e-9:
             coords2_rel = coords2 - cm2
             coords2_rel_rotated = geometry.rodrigues_rotation(
                 coords2_rel, rot_axis2, rot_angle2

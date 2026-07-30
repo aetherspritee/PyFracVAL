@@ -23,6 +23,7 @@ that took seconds to minutes.
 import logging
 
 import numpy as np
+from scipy.spatial.distance import pdist
 
 from . import fractal
 
@@ -60,16 +61,14 @@ def max_self_overlap(
     if n < 2:
         return 0.0, 0
 
-    # pdist-style upper-triangle scan, vectorized in one shot. N is at
-    # most a few thousand here, so the N^2 intermediate is fine and far
-    # faster than a Python loop.
-    diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-    dist = np.sqrt(np.sum(diff * diff, axis=2))
-    r_sum = radii[:, np.newaxis] + radii[np.newaxis, :]
-
-    iu = np.triu_indices(n, k=1)
-    dist_u = dist[iu]
-    r_sum_u = r_sum[iu]
+    # pdist walks the upper triangle directly in C. Broadcasting to an
+    # (N, N, 3) difference array instead costs ~40x more time and a
+    # 101 MB temporary at N=2048 - which matters because this runs on
+    # every aggregate, not just when someone asks for diagnostics.
+    dist_u = pdist(coords)
+    # Matching pairwise radius sums, in the same (i<j) order pdist uses.
+    iu, ju = np.triu_indices(n, k=1)
+    r_sum_u = radii[iu] + radii[ju]
 
     with np.errstate(divide="ignore", invalid="ignore"):
         overlap = (r_sum_u - dist_u) / r_sum_u

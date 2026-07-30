@@ -20,6 +20,7 @@ FLOATING_POINT_ERROR
 """
 
 import logging
+import math
 from typing import Tuple
 
 import numpy as np
@@ -27,6 +28,36 @@ from numba import jit
 
 logger = logging.getLogger(__name__)
 FLOATING_POINT_ERROR = 1e-9
+
+
+def norm3(v) -> float:
+    """Euclidean norm of a single 3-vector.
+
+    ``np.linalg.norm`` is a general N-dimensional routine: it validates
+    axes, coerces inputs and dispatches, which costs about 1.3 us against
+    0.6 us here. That is irrelevant once per array and very relevant at
+    the ~20k calls per aggregate the CCA sticking path makes on plain
+    3-vectors (measured with benchmarks/profile_pipeline.py).
+    """
+    return math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+
+
+def cross3(a, b) -> np.ndarray:
+    """Cross product of two 3-vectors.
+
+    ``np.cross`` is dramatically worse than ``np.linalg.norm`` for this:
+    it supports 2- and 3-component inputs over arbitrary axes with
+    broadcasting, and pays roughly 21 us per call against 1.7 us for the
+    three explicit components. It is called from the rotation setup on
+    every sticking attempt.
+    """
+    return np.array(
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    )
 
 
 def rodrigues_rotation(
@@ -55,9 +86,10 @@ def rodrigues_rotation(
         If input `vectors` is not 1D (3,) or 2D (N, 3).
     """
     # No rotation if axis is zero
-    if np.linalg.norm(axis) < FLOATING_POINT_ERROR:
+    axis_norm = norm3(axis)
+    if axis_norm < FLOATING_POINT_ERROR:
         return vectors
-    axis /= np.linalg.norm(axis)
+    axis = axis / axis_norm
 
     cos_a = np.cos(angle)
     sin_a = np.sin(angle)
@@ -290,7 +322,7 @@ def two_sphere_intersection(
     if not valid:
         r1 = sphere_1[3]
         r2 = sphere_2[3]
-        distance = float(np.linalg.norm(sphere_2[:3] - sphere_1[:3]))
+        distance = norm3(sphere_2[:3] - sphere_1[:3])
         if distance > r1 + r2:
             logger.debug(
                 f"TSI: Spheres too far apart (d={distance:.4f}, r1+r2={r1 + r2:.4f})"
@@ -338,7 +370,7 @@ def spherical_cap_angle(sphere_1: np.ndarray, sphere_2: np.ndarray) -> float:
     d = x1**2 - x2**2 + y1**2 - y2**2 + z1**2 - z2**2 - r1**2 + r2**2
     t = (x1 * a + y1 * b + z1 * c + d) / (a * (x1 - x2) + b * (y1 - y2) + c * (z1 - z2))
 
-    distance = float(np.linalg.norm(sphere_2[:3] - sphere_1[:3]))
+    distance = norm3(sphere_2[:3] - sphere_1[:3])
     alpha_0 = np.arccos(
         np.clip((r1**2 + distance**2 - r2**2) / (2.0 * r1 * distance), -1.0, 1.0)
     )
@@ -392,13 +424,13 @@ def random_point_sc(
     center2 = spheres_2_ext[:3]
     r2_min, r2_max = float(spheres_2_ext[3]), float(spheres_2_ext[4])
 
-    if float(np.linalg.norm(center2 - center1)) < FLOATING_POINT_ERROR:
+    if norm3(center2 - center1) < FLOATING_POINT_ERROR:
         return invalid_ret
 
     if case == 1:
         sphere_1 = np.array([*center1, r1_max])
         phi_cr_max = spherical_cap_angle(sphere_1, np.array([*center2, r2_max]))
-        norm12 = float(np.linalg.norm(center1 - center2))
+        norm12 = norm3(center1 - center2)
         if (r1_max + r2_min) > norm12:
             phi_cr_min = spherical_cap_angle(sphere_1, np.array([*center2, r2_min]))
         else:
@@ -426,15 +458,15 @@ def random_point_sc(
     z = z1 + r1 * np.cos(phi_r)
 
     r12 = center2 - center1
-    norm_r12 = float(np.linalg.norm(r12))
+    norm_r12 = norm3(r12)
     if norm_r12 < FLOATING_POINT_ERROR:
         return invalid_ret
     r12 = r12 / norm_r12
 
     v1 = np.array([0.0, 0.0, 1.0])
     point_rel = np.array([x - x1, y - y1, z - z1])
-    cross_v1_r12 = np.cross(v1, r12)
-    cross_norm = float(np.linalg.norm(cross_v1_r12))
+    cross_v1_r12 = cross3(v1, r12)
+    cross_norm = norm3(cross_v1_r12)
     dot_v1_r12 = float(np.dot(v1, r12))
 
     if cross_norm < FLOATING_POINT_ERROR:

@@ -289,8 +289,24 @@ class _FallbacksMixin:
                     f"for pair ({cluster_idx1}, {cluster_idx2})"
                 )
 
-        leaf_mask_1 = self._leaf_mask_for_cluster(coords1_in, radii1_in)
-        leaf_mask_2 = self._leaf_mask_for_cluster(coords2_in, radii2_in)
+        # Leaf classification is O(n^2) per cluster and, under the
+        # production defaults, feeds nothing: the baseline candidate
+        # policy ignores it and the leaf/score counters are only printed
+        # when their profile flags are set. Computing it unconditionally
+        # cost ~3% of a N=1024 run to produce numbers nobody read.
+        _needs_leaf_info = (
+            str(self.algorithm_config.cca_candidate_policy).lower()
+            in {"leaf_soft", "leaf_score", "leaf_hybrid"}
+            or self.algorithm_config.profile_cca_leaf_stats
+            or self.algorithm_config.profile_cca_candidate_score
+            or self._merge_log is not None
+        )
+        if _needs_leaf_info:
+            leaf_mask_1 = self._leaf_mask_for_cluster(coords1_in, radii1_in)
+            leaf_mask_2 = self._leaf_mask_for_cluster(coords2_in, radii2_in)
+        else:
+            leaf_mask_1 = np.zeros(n1, dtype=bool)
+            leaf_mask_2 = np.zeros(n2, dtype=bool)
         if self.algorithm_config.profile_timing:
             self._t_select_candidates += perf_counter() - _t0
 
@@ -368,17 +384,21 @@ class _FallbacksMixin:
             leaf2 = bool(leaf_mask_2[cand2_idx])
             cand_cls = self._candidate_leaf_class(leaf1, leaf2)
             self._record_candidate_attempt(leaf1, leaf2)
-            cand_score = self._candidate_score(
-                coords1_in,
-                radii1_in,
-                cm1,
-                int(cand1_idx),
-                coords2_in,
-                radii2_in,
-                cm2,
-                int(cand2_idx),
-                float(gamma_pc),
-                cand_cls,
+            cand_score = (
+                0.0
+                if not _needs_leaf_info
+                else self._candidate_score(
+                    coords1_in,
+                    radii1_in,
+                    cm1,
+                    int(cand1_idx),
+                    coords2_in,
+                    radii2_in,
+                    cm2,
+                    int(cand2_idx),
+                    float(gamma_pc),
+                    cand_cls,
+                )
             )
             self._record_candidate_score_attempt(cand_score)
             # logger.info(f"  CCA Stick ({cluster_idx1},{cluster_idx2}): Trying pair ({cand1_idx}, {cand2_idx}). Attempt {attempt+1}/{len(_candidate_indices)}")

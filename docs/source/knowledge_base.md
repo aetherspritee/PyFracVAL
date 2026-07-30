@@ -18,6 +18,7 @@ hard_regime_boundary_sweep
 boundary_sweep_v2
 correlation_validation
 feasibility_criterion
+profiling
 full_stability_sweep
 gpu_acceleration
 ```

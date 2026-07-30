@@ -37,6 +37,24 @@ git history has the detail).
 
 ## Done (recent)
 
+- [x] **Profiled the pipeline and took ~1.3x** (`benchmarks/profile_pipeline.py`,
+      `docs/source/profiling.md`). Three findings, none in the JIT'd
+      overlap kernels: `np.cross` on 3-vectors costs 21us (12.4x slower
+      than explicit component arithmetic) and the CCA sticking path made
+      ~19.5k norm / ~1.5k cross calls per aggregate; `quality.max_self_overlap`
+      built an (N,N,3) array, a self-inflicted regression costing 211ms
+      and a 101MB temporary at N=2048 where pdist takes 5ms; and leaf
+      masks (O(n^2) per cluster) plus candidate scores were computed on
+      every sticking call although nothing reads them under production
+      defaults. End-to-end 1.13-1.39x, growing with N. Results unchanged
+      and still bit-reproducible.
+
+- [x] **Measured densification's actual working range** — it converges
+      only when the target Df is within ~0.02 of the source, i.e. when it
+      does essentially nothing. Residual overlap grows monotonically with
+      compression (0.08 at dDf=0.05, 0.52 at dDf=0.5). See the table in
+      `docs/source/correlation_validation.md`.
+
 - [x] **f(r) structural validator** (`pyfracval/correlation.py`) — the
       paper's own validation metric, validated against a filled ball
       (recovers Df=3.0+-0.6) before being trusted. Using it produced the
