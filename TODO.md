@@ -110,7 +110,7 @@ git history has the detail).
       be answered with a measurement rather than re-litigated. See
       `docs/source/drop_rescue.md`'s new section and
       `benchmarks/drop_rescue_after_backtracking.py`.
-- [x] **Per-merge statistics tooling** — `benchmarks/analyze_merge_log.py`
+- [x] **Per-merge statistics tooling** — `benchmarks/analyze_event_log.py`
       aggregates the JSONL merge log into failure-mode breakdowns,
       per-round failure rates, search effort, how close failures came, and
       offending-particle counts. Using it immediately exposed three
@@ -135,7 +135,7 @@ git history has the detail).
       to 0.75 were accepted. 6/174 PCA subclusters were affected before
       the fix, 0/169 after. Also landed: mass-based CCA Gamma (Moran
       Eq. 6) with optional per-particle densities, `cca_gamma_measured_rg`,
-      `pyfracval/merge_log.py` (opt-in per-merge JSONL),
+      `pyfracval/event_log.py` (opt-in structured JSONL),
       `pyfracval/quality.py` (unconditional per-aggregate quality record
       wired into `run_simulation`), and an N-aware drop-rescue budget
       (`cca_drop_rescue_max_particles=0` disables the absolute cap).

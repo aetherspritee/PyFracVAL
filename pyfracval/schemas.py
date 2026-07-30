@@ -153,10 +153,28 @@ class OverlapCensus(BaseModel):
         default_factory=list, description="Indices of offending particles in cluster 2."
     )
     max_overlap_fraction: float = Field(
-        ..., description="Largest single-pair overlap fraction observed."
+        ...,
+        description=(
+            "Largest single-pair overlap, normalized by min(r_i, r_j) - "
+            "densify.py's convention, measuring how deeply the smaller "
+            "particle is penetrated. NOT comparable to tol_ov."
+        ),
     )
     mean_overlap_fraction: float = Field(
-        ..., description="Mean overlap fraction across all overlapping pairs."
+        ..., description="Mean of the min(r_i, r_j)-normalized overlaps."
+    )
+    max_overlap_fraction_of_rsum: float = Field(
+        default=0.0,
+        description=(
+            "Largest single-pair overlap normalized by (r_i + r_j). This is "
+            "the convention tol_ov, pyfracval/overlap.py and quality.py use, "
+            "so this is the field to compare against the configured "
+            "tolerance. For wide size distributions it is much smaller than "
+            "max_overlap_fraction."
+        ),
+    )
+    mean_overlap_fraction_of_rsum: float = Field(
+        default=0.0, description="Mean of the (r_i + r_j)-normalized overlaps."
     )
     severity_histogram: dict[str, int] = Field(
         default_factory=dict,

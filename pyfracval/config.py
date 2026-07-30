@@ -297,10 +297,16 @@ class OrchestratorAlgorithmConfig(BaseModel):
     # relaxation factor, the adaptive overlap tolerance) accumulate
     # uncorrected because nothing ever measures what was actually built.
     cca_gamma_measured_rg: bool = False
-    # --- Per-merge event log (pyfracval/merge_log.py) ------------------------
-    # Path to a JSONL file receiving one record per CCA merge attempt.
-    # None disables it entirely (no file opened, no records built).
-    cca_merge_log_path: str | None = None
+    # --- Structured event log (pyfracval/event_log.py) -----------------------
+    # Path to a JSONL file receiving one record per CCA merge attempt, per
+    # PCA subcluster failure, and per completed run, each stamped with the
+    # simulation parameters so pooled sweep logs stay sliceable. None
+    # disables it entirely (no file opened, no records built).
+    #
+    # Setting this auto-enables the overlap census (see the validator
+    # below): "how many particles overlap, and by how much" is the whole
+    # point of the failure records, and the census is what measures it.
+    event_log_path: str | None = None
     # --- Drop-a-few-particles rescue (docs/source/drop_rescue.md) ------------
     # Opt-in; requires the overlap census above (auto-enabled when this is
     # True, see _validate_algorithm below). No backfill: a rescued merge
@@ -371,11 +377,17 @@ class OrchestratorAlgorithmConfig(BaseModel):
     profile_cca_candidate_score: bool = False
 
     @model_validator(mode="after")
-    def _drop_rescue_requires_census(self) -> "OrchestratorAlgorithmConfig":
-        """cca_drop_rescue_enabled needs a populated overlap census to act
-        on - auto-enable it rather than silently no-op-ing if a caller sets
-        drop-rescue without also setting the census flag."""
-        if self.cca_drop_rescue_enabled and not self.cca_overlap_census_enabled:
+    def _features_requiring_census(self) -> "OrchestratorAlgorithmConfig":
+        """Auto-enable the overlap census for the features that are
+        meaningless without it, rather than silently no-op-ing.
+
+        drop-rescue needs the census to know *which* particles to drop.
+        The event log needs it to answer "how many particles overlap and
+        by how much" on a failure - the question the log mainly exists to
+        answer, and one the scalar early-exit overlap check cannot.
+        """
+        needs_census = self.cca_drop_rescue_enabled or bool(self.event_log_path)
+        if needs_census and not self.cca_overlap_census_enabled:
             self.cca_overlap_census_enabled = True
         return self
 

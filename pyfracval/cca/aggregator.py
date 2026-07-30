@@ -86,6 +86,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         algorithm_config: OrchestratorAlgorithmConfig | None = None,
         initial_densities: np.ndarray | None = None,
         deadline: float | None = None,
+        event_log=None,
     ):
         if initial_coords.shape[0] != n_total or initial_radii.shape[0] != n_total:
             raise ValueError(
@@ -219,12 +220,15 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         # _last_overlap_census) and drained by _record_merge_event.
         self._round_index: int = 1
         self._last_sticking_stats: dict = {}
-        self._merge_log = None
-        merge_log_path = self.algorithm_config.cca_merge_log_path
-        if merge_log_path:
-            from ..merge_log import MergeEventLog
+        # Shared with the caller when one exists (so merge, PCA-failure
+        # and run records land in the same file with the same run_id);
+        # otherwise created here so library users of CCAggregator alone
+        # still get merge records.
+        self._merge_log = event_log
+        if self._merge_log is None and self.algorithm_config.event_log_path:
+            from ..event_log import EventLog
 
-            self._merge_log = MergeEventLog(merge_log_path)
+            self._merge_log = EventLog(self.algorithm_config.event_log_path)
 
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations
@@ -449,16 +453,26 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         if self._merge_log is None:
             return
 
-        from ..merge_log import MergeEvent
+        from ..event_log import MergeEvent
 
         stats = self._last_sticking_stats or {}
         census = self._last_overlap_census
         n_offending = None
+        n_pairs_overlapping = None
+        max_ov_rsum = None
+        max_ov_rmin = None
         if census is not None and not outcome.startswith("stuck"):
             n_offending = int(
                 census.n_particles_cluster1_offending
                 + census.n_particles_cluster2_offending
             )
+            n_pairs_overlapping = int(census.n_pairs_overlapping)
+            # Both denominators, explicitly: _of_rsum is the one
+            # comparable to tol_ov, _of_rmin measures how deeply the
+            # smaller particle is penetrated. They differ by a large
+            # factor for wide size distributions.
+            max_ov_rsum = float(census.max_overlap_fraction_of_rsum)
+            max_ov_rmin = float(census.max_overlap_fraction)
 
         self._merge_log.record(
             MergeEvent(
@@ -477,6 +491,9 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
                 rotations_used=int(stats.get("rotations_used", 0)),
                 min_overlap=float(stats.get("min_overlap", float("inf"))),
                 n_offending_particles=n_offending,
+                n_pairs_overlapping=n_pairs_overlapping,
+                max_overlap_of_rsum=max_ov_rsum,
+                max_overlap_of_rmin=max_ov_rmin,
                 n_particles_dropped=int(n_dropped),
                 attempt_index=int(attempt_index),
             )

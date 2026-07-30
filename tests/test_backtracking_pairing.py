@@ -6,7 +6,7 @@ import numpy as np
 
 from pyfracval.cca import CCAggregator
 from pyfracval.config import OrchestratorAlgorithmConfig
-from pyfracval.merge_log import MergeEvent, MergeEventLog
+from pyfracval.event_log import EventLog, MergeEvent
 
 
 def _make_aggregator(n=88, n_per_cluster=8, algorithm_config=None, seed=7):
@@ -39,7 +39,7 @@ def _make_aggregator(n=88, n_per_cluster=8, algorithm_config=None, seed=7):
 class TestMergeEventLog:
     def test_writes_one_jsonl_record_per_event(self, tmp_path):
         path = tmp_path / "merges.jsonl"
-        log = MergeEventLog(path)
+        log = EventLog(path)
         for i in range(3):
             log.record(
                 MergeEvent(
@@ -63,7 +63,7 @@ class TestMergeEventLog:
 
     def test_infinite_min_overlap_serializes_as_null(self, tmp_path):
         path = tmp_path / "merges.jsonl"
-        log = MergeEventLog(path)
+        log = EventLog(path)
         log.record(
             MergeEvent(
                 round_index=1,
@@ -85,7 +85,7 @@ class TestMergeEventLog:
         # A file where a directory should be: mkdir must fail.
         blocker = tmp_path / "blocker"
         blocker.write_text("not a directory")
-        log = MergeEventLog(blocker / "sub" / "merges.jsonl")
+        log = EventLog(blocker / "sub" / "merges.jsonl")
         log.record(
             MergeEvent(
                 round_index=1,
@@ -116,7 +116,7 @@ class TestBacktrackingPairing:
 
     def test_records_merge_events_when_log_configured(self, tmp_path):
         path = tmp_path / "merges.jsonl"
-        cfg = OrchestratorAlgorithmConfig(cca_merge_log_path=str(path))
+        cfg = OrchestratorAlgorithmConfig(event_log_path=str(path))
         agg = _make_aggregator(algorithm_config=cfg)
         agg.run_cca()
 

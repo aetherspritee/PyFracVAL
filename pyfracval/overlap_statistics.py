@@ -54,15 +54,28 @@ def _cross_overlap_pairs_kernel(
     densify.py's single-set self-overlap kernel, idx1 and idx2 index two
     distinct arrays, not the same one.
 
-    overlap_fraction uses the same definition as densify.py's kernel:
-    (r_sum - dist) / min(r_i, r_j), 0 at exact contact, growing as the
-    spheres interpenetrate further relative to the smaller radius.
+    Returns *two* overlap fractions per pair, because this codebase uses
+    two different denominators and conflating them is a real hazard when
+    the numbers end up side by side in one record:
+
+    - ``ov_rmin = (r_sum - dist) / min(r_i, r_j)`` - densify.py's
+      convention, which measures penetration relative to the smaller
+      sphere (how much of the small particle is swallowed).
+    - ``ov_rsum = (r_sum - dist) / r_sum`` - the convention ``tol_ov``,
+      pyfracval/overlap.py's acceptance test and quality.py all use, and
+      therefore the only one directly comparable to the configured
+      tolerance.
+
+    For wide size distributions these differ by a large factor (min(r) can
+    be a small fraction of r_sum), so reporting only one of them under the
+    bare name "overlap fraction" invites misreading.
     """
     n1 = coords1.shape[0]
     n2 = coords2.shape[0]
     pair_i = np.empty(max_pairs, dtype=np.int64)
     pair_j = np.empty(max_pairs, dtype=np.int64)
     pair_ov = np.empty(max_pairs, dtype=np.float64)
+    pair_ov_rsum = np.empty(max_pairs, dtype=np.float64)
     count = 0
 
     for i in range(n1):
@@ -79,13 +92,15 @@ def _cross_overlap_pairs_kernel(
             if dist_sq < r_sum * r_sum:
                 dist = np.sqrt(dist_sq) if dist_sq > 0 else 1e-12
                 ov = (r_sum - dist) / min(ri, radii2[j])
+                ov_rsum = (r_sum - dist) / r_sum
                 if count < max_pairs:
                     pair_i[count] = i
                     pair_j[count] = j
                     pair_ov[count] = ov
+                    pair_ov_rsum[count] = ov_rsum
                     count += 1
 
-    return pair_i[:count], pair_j[:count], pair_ov[:count]
+    return pair_i[:count], pair_j[:count], pair_ov[:count], pair_ov_rsum[:count]
 
 
 def _severity_histogram(overlaps: np.ndarray) -> dict[str, int]:
@@ -108,7 +123,7 @@ def compute_overlap_census(
     """Run the full cross-overlap scan and package the result as an
     OverlapCensus. Cost is O(n1*n2) with no early exit - intended to run
     once, on a failed attempt, never on the hot path."""
-    pair_i, pair_j, pair_ov = _cross_overlap_pairs_kernel(
+    pair_i, pair_j, pair_ov, pair_ov_rsum = _cross_overlap_pairs_kernel(
         np.ascontiguousarray(coords1, dtype=np.float64),
         np.ascontiguousarray(radii1, dtype=np.float64),
         np.ascontiguousarray(coords2, dtype=np.float64),
@@ -128,6 +143,8 @@ def compute_overlap_census(
         offending_indices_cluster2=offending2,
         max_overlap_fraction=float(pair_ov.max()) if n_pairs else 0.0,
         mean_overlap_fraction=float(pair_ov.mean()) if n_pairs else 0.0,
+        max_overlap_fraction_of_rsum=float(pair_ov_rsum.max()) if n_pairs else 0.0,
+        mean_overlap_fraction_of_rsum=float(pair_ov_rsum.mean()) if n_pairs else 0.0,
         severity_histogram=_severity_histogram(pair_ov),
         cluster1_size=int(coords1.shape[0]),
         cluster2_size=int(coords2.shape[0]),

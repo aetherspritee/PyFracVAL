@@ -19,6 +19,7 @@ boundary_sweep_v2
 correlation_validation
 feasibility_criterion
 profiling
+event_logging
 full_stability_sweep
 gpu_acceleration
 ```

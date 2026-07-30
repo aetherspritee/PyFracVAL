@@ -224,15 +224,16 @@ testing that the code runs.
 
 ## Per-merge statistics
 
-`cca_merge_log_path` writes one JSONL record per merge attempt
-(`pyfracval/merge_log.py`): round, pool size, both cluster sizes, Γ,
+`event_log_path` writes one JSONL record per merge attempt
+(`pyfracval/event_log.py`): round, pool size, both cluster sizes, Γ,
 `sum_rmax`, candidate pairs available and tried, rotations used, best
-overlap reached, outcome, and - when the census is on - how many
-particles were offending. `attempt_index` distinguishes "first partner
-worked" from "third partner worked". Off by default; nothing is opened or
-built when unset.
+overlap reached, outcome, and how many particles were offending.
+`attempt_index` distinguishes "first partner worked" from "third partner
+worked". The same log also carries PCA-failure and per-run records — see
+[event_logging.md](event_logging.md). Off by default; nothing is opened
+or built when unset.
 
-`benchmarks/analyze_merge_log.py` aggregates those records. Run over 25
+`benchmarks/analyze_event_log.py` aggregates those records. Run over 25
 hard-regime trials (412 merge attempts, 24/25 aggregates completed):
 
 ```

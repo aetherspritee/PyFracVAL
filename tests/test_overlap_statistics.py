@@ -35,7 +35,7 @@ class TestCrossOverlapPairsKernel:
         coords2 = np.array([[10.0, 0.0, 0.0]])
         radii2 = np.array([1.0])
 
-        pair_i, pair_j, pair_ov = _cross_overlap_pairs_kernel(
+        pair_i, pair_j, pair_ov, _ = _cross_overlap_pairs_kernel(
             coords1, radii1, coords2, radii2, max_pairs=100
         )
         assert len(pair_i) == 0
@@ -49,7 +49,7 @@ class TestCrossOverlapPairsKernel:
         coords2 = np.array([[2.0, 0.0, 0.0]])
         radii2 = np.array([1.0])
 
-        pair_i, _, _ = _cross_overlap_pairs_kernel(
+        pair_i, _, _, _ = _cross_overlap_pairs_kernel(
             coords1, radii1, coords2, radii2, max_pairs=100
         )
         assert len(pair_i) == 0
@@ -61,7 +61,7 @@ class TestCrossOverlapPairsKernel:
         coords2 = np.array([[0.5, 0.0, 0.0]])
         radii2 = np.array([1.0])
 
-        pair_i, pair_j, pair_ov = _cross_overlap_pairs_kernel(
+        pair_i, pair_j, pair_ov, _ = _cross_overlap_pairs_kernel(
             coords1, radii1, coords2, radii2, max_pairs=100
         )
         assert list(pair_i) == [0]
@@ -77,7 +77,7 @@ class TestCrossOverlapPairsKernel:
         coords2 = np.array([[0.0, 0.0, 0.0]])
         radii2 = np.array([1.0])
 
-        pair_i, pair_j, pair_ov = _cross_overlap_pairs_kernel(
+        pair_i, pair_j, pair_ov, _ = _cross_overlap_pairs_kernel(
             coords1, radii1, coords2, radii2, max_pairs=100
         )
         assert len(pair_i) == 3
@@ -90,7 +90,7 @@ class TestCrossOverlapPairsKernel:
         coords2 = np.zeros((n, 3))
         radii2 = np.ones(n)
 
-        pair_i, _, _ = _cross_overlap_pairs_kernel(
+        pair_i, _, _, _ = _cross_overlap_pairs_kernel(
             coords1, radii1, coords2, radii2, max_pairs=5
         )
         assert len(pair_i) == 5

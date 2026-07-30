@@ -128,6 +128,47 @@ def run_simulation(
     )
 
 
+def _record_run(
+    event_log,
+    outcome,
+    start_time,
+    diagnostics=None,
+    quality=None,
+    n_actual=0,
+    n_dropped=0,
+    extra=None,
+):
+    """Emit the one-per-run summary record, if a log is attached.
+
+    Kept in one place so every exit path reports the same shape - a
+    failure taxonomy is only usable if abandoned runs are recorded as
+    carefully as successful ones.
+    """
+    if event_log is None:
+        return
+    from .event_log import RunEvent
+
+    diagnostics = diagnostics or {}
+    quality = quality or {}
+    event_log.record(
+        RunEvent(
+            outcome=outcome,
+            failure_stage=diagnostics.get("failure_stage"),
+            failure_reason=diagnostics.get("failure_reason"),
+            attempts_used=int(diagnostics.get("attempts_used", 0) or 0),
+            elapsed_s=time.time() - start_time,
+            n_particles_actual=int(n_actual),
+            n_particles_dropped=int(n_dropped),
+            max_residual_overlap=quality.get("max_residual_overlap"),
+            n_overlapping_pairs=quality.get("n_overlapping_pairs"),
+            overlap_ok=quality.get("overlap_ok"),
+            measured_rg=quality.get("measured_rg"),
+            rg_error_pct=quality.get("rg_error_pct"),
+            extra=extra or {},
+        )
+    )
+
+
 def _run_simulation_core(
     iteration,
     sim_config_dict,
@@ -141,6 +182,34 @@ def _run_simulation_core(
 ):
     """Core simulation logic, given a resolved algorithm_config to pass through."""
     start_time = time.time()
+
+    # Failure attribution is tracked unconditionally. It used to be
+    # written only when a caller passed `diagnostics`, which meant the
+    # run record - the thing a failure taxonomy is built from - could
+    # only say "PCA or CCA". When the caller does pass a dict this *is*
+    # that dict, so their view is unchanged.
+    diag: dict[str, Any] = diagnostics if diagnostics is not None else {}
+
+    # One log per run, shared by every stage, so merge / pca_failure /
+    # run records carry the same run_id and the same physics context and
+    # can be sliced together once pooled across a sweep.
+    event_log = None
+    if algorithm_config.event_log_path:
+        from .event_log import EventLog
+
+        event_log = EventLog(
+            algorithm_config.event_log_path,
+            context={
+                "N": sim_params.N,
+                "Df": sim_params.Df,
+                "kf": sim_params.kf,
+                "rp_g": sim_params.rp_g,
+                "rp_gstd": sim_params.rp_gstd,
+                "tol_ov": sim_params.tol_ov,
+                "seed": sim_params.seed,
+                "iteration": iteration,
+            },
+        )
 
     if sim_params.seed is not None:
         rng = np.random.default_rng(sim_params.seed)
@@ -166,12 +235,12 @@ def _run_simulation_core(
                     f"run_simulation: wall-clock budget of {max_runtime_seconds}s "
                     f"exhausted after {elapsed:.1f}s (attempt {attempt}). Aborting."
                 )
-                if diagnostics is not None:
-                    diagnostics["failure_stage"] = "TIMEOUT"
-                    diagnostics["failure_reason"] = (
-                        f"wall-clock budget of {max_runtime_seconds}s exhausted"
-                    )
-                    diagnostics["attempts_used"] = attempt - 1
+                diag["failure_stage"] = "TIMEOUT"
+                diag["failure_reason"] = (
+                    f"wall-clock budget of {max_runtime_seconds}s exhausted"
+                )
+                diag["attempts_used"] = attempt - 1
+                _record_run(event_log, "failed", start_time, diag)
                 return False, None, None
 
         # 1+2. Generate AND shuffle radii every attempt (Fortran does both per restart)
@@ -184,10 +253,9 @@ def _run_simulation_core(
             )
         except ValueError as e:
             logger.error(f"Error generating radii on attempt {attempt}: {e}")
-            if diagnostics is not None:
-                diagnostics["failure_stage"] = "RADII_GEN"
-                diagnostics["failure_reason"] = str(e)
-                diagnostics["attempts_used"] = attempt
+            diag["failure_stage"] = "RADII_GEN"
+            diag["failure_reason"] = str(e)
+            diag["attempts_used"] = attempt
             continue
         # Radii are shuffled every attempt. When densities are supplied they
         # must ride the *same* permutation, otherwise each particle would
@@ -240,12 +308,26 @@ def _run_simulation_core(
                 f"PCA Subclustering failed on attempt {attempt} "
                 f"(Failed on Subcluster {failed_subcluster_num}). Retrying with new shuffle..."
             )
-            if diagnostics is not None:
-                diagnostics["failure_stage"] = "PCA"
-                diagnostics["failure_reason"] = (
-                    f"failed on subcluster {failed_subcluster_num}"
+            if event_log is not None:
+                from .event_log import PcaFailureEvent
+
+                info = dict(subcluster_runner.pca_failure_info or {})
+                event_log.record(
+                    PcaFailureEvent(
+                        subcluster_index=int(info.get("subcluster_index", -1)),
+                        subcluster_size=int(info.get("subcluster_size", 0)),
+                        particle_index=int(info.get("particle_index", -1)),
+                        reason=str(info.get("reason", "unknown")),
+                        search_attempts=int(info.get("search_attempts", 0)),
+                        n_candidates=int(info.get("n_candidates", 0)),
+                        gamma_real=bool(info.get("gamma_real", True)),
+                        gamma_pc=float(info.get("gamma_pc", 0.0)),
+                        extra={"attempt": attempt},
+                    )
                 )
-                diagnostics["attempts_used"] = attempt
+            diag["failure_stage"] = "PCA"
+            diag["failure_reason"] = f"failed on subcluster {failed_subcluster_num}"
+            diag["attempts_used"] = attempt
             continue  # retry with a new shuffle
 
         # Retrieve PCA results
@@ -256,12 +338,28 @@ def _run_simulation_core(
             logger.warning(
                 f"PCA returned invalid results on attempt {attempt} despite reporting success. Retrying..."
             )
-            if diagnostics is not None:
-                diagnostics["failure_stage"] = "PCA"
-                diagnostics["failure_reason"] = (
-                    "PCA returned invalid results despite reporting success"
+            if event_log is not None:
+                from .event_log import PcaFailureEvent
+
+                info = dict(subcluster_runner.pca_failure_info or {})
+                event_log.record(
+                    PcaFailureEvent(
+                        subcluster_index=int(info.get("subcluster_index", -1)),
+                        subcluster_size=int(info.get("subcluster_size", 0)),
+                        particle_index=int(info.get("particle_index", -1)),
+                        reason=str(info.get("reason", "unknown")),
+                        search_attempts=int(info.get("search_attempts", 0)),
+                        n_candidates=int(info.get("n_candidates", 0)),
+                        gamma_real=bool(info.get("gamma_real", True)),
+                        gamma_pc=float(info.get("gamma_pc", 0.0)),
+                        extra={"attempt": attempt},
+                    )
                 )
-                diagnostics["attempts_used"] = attempt
+            diag["failure_stage"] = "PCA"
+            diag["failure_reason"] = (
+                "PCA returned invalid results despite reporting success"
+            )
+            diag["attempts_used"] = attempt
             continue
 
         # 4. Cluster-Cluster Aggregation
@@ -291,6 +389,7 @@ def _run_simulation_core(
             rng=rng,
             algorithm_config=algorithm_config,
             initial_densities=subcluster_runner.all_densities,
+            event_log=event_log,
             # Let CCA abandon a single attempt once the budget is spent.
             # The per-attempt loop below only checks the clock *between*
             # attempts, which cannot interrupt one long attempt - and
@@ -312,26 +411,29 @@ def _run_simulation_core(
             logger.warning(
                 f"CCA Aggregation failed on attempt {attempt}. Retrying with new shuffle..."
             )
-            if diagnostics is not None:
-                diagnostics["failure_stage"] = "CCA"
-                diagnostics["failure_reason"] = "CCA aggregation failed"
-                diagnostics["attempts_used"] = attempt
-                census = getattr(cca_runner, "_last_overlap_census", None)
-                diagnostics["overlap_census"] = (
-                    census.model_dump() if census is not None else None
-                )
+            diag["failure_stage"] = "CCA"
+            diag["failure_reason"] = "CCA aggregation failed"
+            diag["attempts_used"] = attempt
+            census = getattr(cca_runner, "_last_overlap_census", None)
+            diag["overlap_census"] = census.model_dump() if census is not None else None
             continue  # retry with a new shuffle
 
         # Both PCA and CCA succeeded on this attempt
         logger.info(f"PCA+CCA succeeded on attempt {attempt}.")
-        if diagnostics is not None:
-            diagnostics["failure_stage"] = None
-            diagnostics["failure_reason"] = None
-            diagnostics["attempts_used"] = attempt
+        diag["failure_stage"] = None
+        diag["failure_reason"] = None
+        diag["attempts_used"] = attempt
         break
     else:
         # All attempts exhausted
         logger.error(f"PCA Subclustering failed after {max_attempts} attempts.")
+        _record_run(
+            event_log,
+            "failed",
+            start_time,
+            diag,
+            extra={"attempts_exhausted": max_attempts},
+        )
         return False, None, None
 
     # 5. Prepare Results (Only if CCA succeeded)
@@ -477,5 +579,14 @@ def _run_simulation_core(
     end_time = time.time()
     logger.info(
         f"===== Aggregate {iteration} Finished Successfully ({end_time - start_time:.2f} seconds) ====="
+    )
+    _record_run(
+        event_log,
+        "success",
+        start_time,
+        diag,
+        quality=quality,
+        n_actual=n_actual,
+        n_dropped=max(0, sim_params.N - n_actual),
     )
     return True, final_coords, final_radii

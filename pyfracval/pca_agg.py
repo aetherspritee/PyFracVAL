@@ -150,6 +150,10 @@ class PCAggregator:
         self.sum_log_radii: float = 0.0  # Running sum of log(radii) for geo mean
 
         self.not_able_pca: bool = False
+        #: Populated when PCA gives up, describing *which* mechanism
+        #: failed and where. Read by Subclusterer to emit a structured
+        #: pca_failure event; None while the run is healthy.
+        self.failure_info: dict | None = None
 
     def _random_point_sphere(self) -> tuple[float, float]:
         """Generates random angles (theta, phi) for a point on a sphere."""
@@ -1126,6 +1130,10 @@ class PCAggregator:
             search_attempt = 0
             max_search_attempts = self.N
             sticking_successful = False
+            # Recorded for the failure event: how many partners the last
+            # search actually offered, which separates "nothing to try"
+            # from "tried several and all overlapped".
+            last_candidate_count = 0
             # Persistent set of monomers already tried at position k.
             # Must survive across search attempts so that each retry swaps in a
             # DIFFERENT monomer (mirrors Fortran's `considerados` array which
@@ -1161,6 +1169,21 @@ class PCAggregator:
                     logger.error(
                         f"PCA failed Search/Swap for k={k} (Attempt {search_attempt}). No valid gamma/candidates found even after swaps."
                     )
+                    # Structured record of *which* PCA mechanism failed.
+                    # "no candidate at a workable Gamma distance" and
+                    # "candidates existed but all overlapped" have
+                    # different causes and different fixes, and a failure
+                    # taxonomy that cannot separate them is not much use.
+                    self.failure_info = {
+                        "particle_index": int(k),
+                        "reason": (
+                            "gamma_not_real" if not gamma_real else "no_candidates"
+                        ),
+                        "search_attempts": int(search_attempt),
+                        "n_candidates": 0,
+                        "gamma_real": bool(gamma_real),
+                        "gamma_pc": float(gamma_pc),
+                    }
                     self.not_able_pca = True
                     return None  # Cannot continue if search itself fails
 
@@ -1182,6 +1205,7 @@ class PCAggregator:
                 candidates_to_try = utils.shuffle_array(
                     candidates_list.copy(), rng=self._rng
                 )
+                last_candidate_count = len(candidates_to_try)
                 logger.debug(
                     f"PCA k={k}, Attempt {search_attempt}: Trying {len(candidates_to_try)} candidates: {candidates_to_try}"
                 )
@@ -1471,6 +1495,14 @@ class PCAggregator:
                     f"PCA failed at k={k}. Could not find non-overlapping position "
                     f"after {max_search_attempts} search/swap attempts."
                 )
+                self.failure_info = {
+                    "particle_index": int(k),
+                    "reason": "all_candidates_overlapped",
+                    "search_attempts": int(max_search_attempts),
+                    "n_candidates": int(last_candidate_count),
+                    "gamma_real": True,
+                    "gamma_pc": float(gamma_pc),
+                }
                 self.not_able_pca = True
                 return None  # Critical failure
 

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def _run_single_subcluster(
     args: tuple[Any, ...],
-) -> tuple[int, np.ndarray | None, np.ndarray | None]:
+) -> tuple[int, np.ndarray | None, np.ndarray | None, dict | None]:
     """Run PCA for one subcluster; used as the Pool worker.
 
     Parameters
@@ -82,9 +82,16 @@ def _run_single_subcluster(
         )
         result = pca_runner.run()
         if result is not None and not pca_runner.not_able_pca:
-            return idx, result, pca_runner.densities
+            return idx, result, pca_runner.densities, None
 
-    return idx, None, None
+    # Report the *last* attempt's failure detail. Earlier attempts used
+    # different radii draws, so the last one is the representative
+    # description of why this subcluster could not be built.
+    failure = dict(pca_runner.failure_info or {})
+    failure.setdefault("reason", "unknown")
+    failure["subcluster_index"] = int(idx)
+    failure["subcluster_size"] = int(num_particles)
+    return idx, None, None, failure
 
 
 class Subclusterer(BaseModel):
@@ -159,6 +166,9 @@ class Subclusterer(BaseModel):
     number_clusters: int = Field(default=0)
     not_able_pca: bool = Field(default=False)
     number_clusters_processed: int = Field(default=0)
+    #: Structured description of the PCA failure that stopped this run,
+    #: forwarded from the failing PCAggregator. None while healthy.
+    pca_failure_info: dict | None = Field(default=None)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -368,23 +378,27 @@ class Subclusterer(BaseModel):
             with ctx.Pool() as pool:
                 results_unordered = pool.map(_run_single_subcluster, worker_args)
             # Results come back in submission order (pool.map preserves order)
-            results: list[tuple[int, np.ndarray | None, np.ndarray | None]] = (
-                results_unordered
-            )
+            results: list[
+                tuple[int, np.ndarray | None, np.ndarray | None, dict | None]
+            ] = results_unordered
         else:
             logger.info(f"Running {self.number_clusters} subclusters sequentially.")
             results = [_run_single_subcluster(args) for args in worker_args]
 
         # --- Assemble results in order ---
         current_fill_idx = 0
-        for i, (returned_idx, subcluster_data, subcluster_densities) in enumerate(
-            results
-        ):
+        for i, (
+            returned_idx,
+            subcluster_data,
+            subcluster_densities,
+            subcluster_failure,
+        ) in enumerate(results):
             self.number_clusters_processed = i
             num_particles_in_subcluster = int(subcluster_sizes[i])
 
             if subcluster_data is None:
                 logger.error(f"PCA failed for subcluster {i + 1} after all attempts.")
+                self.pca_failure_info = subcluster_failure
                 self.not_able_pca = True
                 return False
 
