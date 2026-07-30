@@ -237,24 +237,27 @@ class PCAggregator:
         self,
         m2: float,
         rg2: float,
-        use_mass: bool | None = None,
+        use_mass: bool = False,
     ) -> tuple[bool, float]:
         """
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
 
-        Follows ``pca_gamma_use_mass`` (default False, count-based)
-        unless overridden - deliberately the opposite default to CCA's
-        ``gamma_use_mass``, matching the Fortran, because the mass form
-        is not consistent when the second body is a single monomer. See
-        the config field's comment for the measurement, and NOTE.md 1.2.
+        Solves the **count** form, unlike CCA which solves the mass form.
+        This mirrors the Fortran (``PCA_cca.f90``'s ``Gamma_calculation``
+        takes ``n1, n2, n3``) and is not a stylistic choice: Eq. 6's mass
+        moments are only consistent with a count-derived scaling-law Rg
+        when both bodies are aggregates that law describes. Here the
+        second body is a single monomer, whose scaling-law Rg is
+        meaningless at n=1 while its mass can rival the whole growing
+        cluster's under a wide size distribution. Measured at sigma=1.9,
+        N=12, 150 seeds: the mass form builds 1/150 subclusters against
+        93/150 for counts.
 
-        Note this only governs which scalars enter the Gamma equation.
+        This governs only which scalars enter the Gamma equation.
         Everything mass-weighted in PCA's own bookkeeping - ``self.mass``,
         ``self.m1``, the running center of mass - is density-aware
-        regardless.
+        regardless, so supplying densities still shapes the subcluster.
         """
-        if use_mass is None:
-            use_mass = bool(self.algorithm_config.pca_gamma_use_mass)
         return fractal.gamma_calculation(
             self.m1,
             self.rg1,

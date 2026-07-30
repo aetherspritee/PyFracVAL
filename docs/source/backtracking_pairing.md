@@ -48,20 +48,22 @@ same metric [pairing_frustration.md](pairing_frustration.md) and
 [drop_rescue.md](drop_rescue.md) use, and directly comparable to their
 2.5% figure).
 
-Hard regime (N=128, Df=2.25, kf=0.95, σ=1.9):
+Hard regime (N=128, Df=2.25, kf=0.95, σ=1.9). These runs predate mass
+becoming CCA's unconditional Γ form, so the "Γ" column records what was
+varied at the time; the pairing comparison is unaffected by it.
 
 | Config | Success | Merges rescued by backtracking | avg \|Rg error\| |
 |---|---:|---:|---:|
 | Greedy first-fit (previous default) | 5.0% (2/40) | - | 1.08% |
-| **Backtracking (new default)** | **100.0% (40/40)** | 93 | 1.40% |
-| Backtracking + mass-based Γ | 95.0% (38/40) | 98 | 0.52% |
+| **Backtracking** | **100.0% (40/40)** | 93 | 1.40% |
+| Backtracking, mass-based Γ (now unconditional) | 95.0% (38/40) | 98 | 0.52% |
 | Backtracking + measured-Rg Γ | 80.0% (32/40) | 140 | 1.59% |
-| Backtracking + both | 90.0% (36/40) | 149 | 1.67% |
+| Backtracking + mass + measured-Rg | 90.0% (36/40) | 149 | 1.67% |
 
 Easy control regime (N=128, Df=1.8, kf=1.0, σ=1.5): every arm is 100%,
-so nothing regresses in the safe region. The Γ flags do measurably
+so nothing regresses in the safe region. The Γ variants do measurably
 improve accuracy there, where success is not at stake: avg \|Rg error\|
-falls from 2.01% (default) to 1.11% (measured-Rg) to 0.31% (both).
+falls from 2.01% to 1.11% (measured-Rg) to 0.31% (mass + measured-Rg).
 
 "Merges rescued" counts merges that succeeded only because a *later*
 partner was tried - the direct measure of what backtracking buys. It is
@@ -118,35 +120,109 @@ that page's own open questions are not all closed by this fix.
 Regression coverage: `tests/test_aggregate_quality.py` pins the three
 seeds that reproduced the bug plus a 60-seed sweep.
 
-## The two Γ flags
+## The Γ form
 
-Both default off; both are faithfulness/accuracy knobs rather than
-stability ones, and the table above is the evidence for keeping them
-opt-in.
+There is deliberately **no "use masses vs counts" configuration flag**.
+Mass weighting is expressed entirely through the optional per-particle
+`densities` argument, and which form of Γ each stage solves is a property
+of that stage's geometry rather than a user preference.
 
-- `cca_gamma_use_mass` - solve Γ with true (∝r³) masses, Moran et al.
-  (2019) Eq. 6, instead of substituting particle counts (Filippov et al.
-  2000 Eq. 7). The Fortran **CCA** uses masses; the Fortran **PCA** uses
-  counts; this port used counts everywhere. Identical for monodisperse
-  input, divergent as σ grows. Best measured Rg accuracy of any arm
-  (0.52% hard, 1.56% easy), at a small and not-clearly-significant
-  success cost (38/40 vs 40/40). PCA deliberately stays on counts so each
-  stage matches its own Fortran counterpart.
-- `cca_gamma_measured_rg` - feed each cluster's *measured* Rg (Eq. 4,
-  including the per-particle gyration term) into the next Γ instead of
-  re-deriving it from the scaling law, so deviations introduced by the
-  1.10 pairing relaxation factor and the adaptive tolerance cannot
-  accumulate uncorrected. Improves accuracy in the easy regime
-  (2.01% → 1.11%) but *costs* hard-regime success (100% → 80%): measured
-  Rg for a frustrated cluster runs below the scaling-law value, which
-  raises Γ, which makes the pairing gate reject more edges (pass-throughs
-  rise from 175 to 581).
+It is worth being precise about why those are different questions, since
+they look similar. Three weightings are distinguishable:
 
-Because Eq. 6 is an identity in the true masses, the measured-Rg
-correction is only exact when `cca_gamma_use_mass` is also set; the two
-are best evaluated together.
+| Weighting | Meaning | Where |
+|---|---|---|
+| counts (`n₁, n₂, n₃`) | every particle equal regardless of size | PCA |
+| mass, uniform density (∝ r³) | weight by volume — `densities=None` | CCA |
+| mass, per-particle density (∝ r³ρ) | full heterogeneous case | CCA |
 
-## Per-merge event log
+So `densities=None` is *not* the count form: it is volume weighting,
+which is the physically correct default. Counts are only reachable as
+PCA's internal behaviour, where they are required (below).
+
+The remaining Γ knob is:
+
+- **`cca_gamma_measured_rg` (default `False`)** - feed each cluster's
+  *measured* Rg (Eq. 4, including the per-particle gyration term) into
+  the next Γ instead of re-deriving it from the scaling law, so
+  deviations introduced by the 1.10 pairing relaxation factor and the
+  adaptive tolerance cannot accumulate uncorrected. Improves accuracy in
+  the easy regime (2.01% → 1.11%) but *costs* hard-regime success
+  (100% → 80%): measured Rg for a frustrated cluster runs below the
+  scaling-law value, which raises Γ, which makes the pairing gate reject
+  more edges (pass-throughs rise from 175 to 581).
+
+For reference, the mass-vs-count comparison measured before the count
+form was retired from CCA (150 hard-regime seeds): counts reached
+146/150 success at 1.74% mean \|Rg error\|, masses 138/150 at 1.22%.
+Masses trade a few points of success for meaningfully better fidelity,
+and are the only form that can represent heterogeneity at all.
+
+### Why PCA keeps counts while CCA uses masses
+
+This looked at first like an inconsistency in the original Fortran worth
+reporting upstream (`PCA_cca.f90`'s `Gamma_calculation` takes `n1, n2,
+n3`; `CCA_module.f90` uses Σ(4π/3)r³). Measuring it says otherwise -
+applying the mass form to PCA is catastrophic:
+
+| PCA Γ form | Subclusters built (σ=1.9, N=12, 150 seeds) |
+|---|---:|
+| counts (default) | 93/150 (62.0%) |
+| masses | 1/150 (0.7%) |
+
+The reason is that Eq. 6's mass moments are only consistent with a
+*count*-derived scaling-law Rg when both bodies are aggregates that law
+actually describes. In PCA the second body is a single monomer: its
+scaling-law Rg is meaningless at n=1, while its mass can rival the entire
+growing cluster's under a wide size distribution. Mixing the two bases
+produces Γ values that admit almost no candidates.
+
+So the Fortran's split is necessary, not accidental — which is why it is
+hard-coded per stage rather than exposed as a flag someone could set to a
+value that does not work. Note it governs only which *scalars* enter Γ:
+everything mass-weighted in PCA's own bookkeeping (`self.mass`,
+`self.m1`, the running center of mass) is density-aware regardless, so
+supplying densities still shapes the subclusters.
+
+## Densities
+
+Per-particle densities are optional (`np.ndarray | None`; `None` means
+uniform, and every density-aware quantity then reduces exactly to its
+single-material form). Supply them to `PCAggregator`, `Subclusterer`,
+`CCAggregator`, or `run_simulation(..., densities=...)`.
+
+This is what mass-based Γ is really for. Polydispersity alone only makes
+mass a *steeper* function of radius; heterogeneity breaks the function
+entirely. Once two particles of equal size can have different densities,
+no count- or radius-derived weighting can place the center of mass or the
+radius of gyration correctly, and Γ - which is built from exactly those
+quantities - is wrong in a way that grows with the density contrast.
+
+The implementation invariant is that a density follows its **particle**,
+never its array slot. That is not automatic anywhere in this pipeline:
+PCA swaps particles between indices, subclustering splits and reassembles
+them, CCA reorders and concatenates clusters every round, and drop-rescue
+removes some. Each is a chance for densities to desynchronise from radii
+silently. Concretely:
+
+- PCA swaps `initial_densities` in lockstep with
+  `initial_radii`/`initial_mass`, and records a placement-ordered
+  `self.densities` - callers cannot reconstruct the output order from
+  the input order.
+- `Subclusterer` splits densities per subcluster and reassembles from
+  each PCA run's own output ordering.
+- CCA rebuilds densities at the merge boundary in `_attempt_pair_merge`
+  rather than threading them through every sticking routine, which is
+  sound because every path (rigid, soft relaxation, FFT docking,
+  drop-rescue) emits rows as `[cluster1..., cluster2...]` in the parents'
+  order. A length mismatch raises rather than silently misattributing.
+- `run_simulation` shuffles radii and densities under one shared
+  permutation.
+
+`tests/test_densities.py` tests this invariant directly rather than
+testing that the code runs.
+
+## Per-merge statistics
 
 `cca_merge_log_path` writes one JSONL record per merge attempt
 (`pyfracval/merge_log.py`): round, pool size, both cluster sizes, Γ,
@@ -155,6 +231,44 @@ overlap reached, outcome, and - when the census is on - how many
 particles were offending. `attempt_index` distinguishes "first partner
 worked" from "third partner worked". Off by default; nothing is opened or
 built when unset.
+
+`benchmarks/analyze_merge_log.py` aggregates those records. Run over 25
+hard-regime trials (412 merge attempts, 24/25 aggregates completed):
+
+```
+Outcome breakdown            By CCA round
+  stuck              60.2%     round  success  failure  fail rate
+  failed_overlap     39.6%       1      122      103      45.8%
+  failed_no_candidates 0.2%      2       64       42      39.6%
+                                 3       31       16      34.0%
+Merges rescued by trying        4       24        3      11.1%
+a later partner: 65 (26.2%      5        7        0       0.0%
+of all successes)
+```
+
+Three things worth reading off this:
+
+1. **Failures are overwhelmingly `failed_overlap`, not
+   `failed_no_candidates`.** Candidate pairs exist; none of them work.
+   That is a geometry problem, not a search-coverage problem, and is
+   consistent with every candidate-ordering experiment in
+   [experiments.md](experiments.md) having come out flat.
+2. **Failures are not near-misses.** The best overlap a failing merge
+   reaches has median **0.126** - two particles overlapping by an eighth
+   of their combined radii - against a `tol_ov` of 1e-6. Nothing about
+   finer rotation sampling closes a gap that size, which explains why
+   broadening the rotation search never helped.
+3. **Failure rate falls monotonically with round** (45.8% → 0%). Round 1,
+   merging the fresh PCA subclusters, is where the difficulty is
+   concentrated - confirming quantitatively what
+   [pairing_frustration.md](pairing_frustration.md) found by other means,
+   and explaining why backtracking (which operates within a round) has so
+   much to work with.
+
+The Γ feasibility margin `(sum_rmax - gamma)/sum_rmax` overlaps almost
+completely between successes (median 0.432) and failures (median 0.462) -
+direct evidence that the cheap upfront gate cannot predict sticking, and
+therefore why reacting to real outcomes beats pre-filtering.
 
 ## Per-aggregate quality record
 

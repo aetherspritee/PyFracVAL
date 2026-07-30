@@ -15,8 +15,10 @@ git history has the detail).
       plus the overlap fix should move that boundary substantially; the
       grid is the right instrument to say by how much, and the page
       explicitly reserved itself as the baseline for exactly this.
-      Also worth re-running the σ>1 slices with `cca_gamma_use_mass=True`,
-      which showed the best Rg accuracy of any arm at N=128.
+      Note the sweep is now substantially more expensive in
+      *infeasible* corners: backtracking tries several partners per
+      cluster before giving up, so a hopeless configuration burns far
+      more time than greedy's immediate bail did.
 - [ ] **Density-density correlation f(r) validator** (paper backbone).
       Moran's own validation metric is f(r) and its Df−3 slope, not Rg —
       an aggregate can match Rg while having the wrong internal
@@ -86,8 +88,8 @@ git history has the detail).
       first pair above `tol_ov`, not the maximum) against a 10x-larger
       `relaxed_tol`, so placements whose real worst-case overlap was up
       to 0.75 were accepted. 6/174 PCA subclusters were affected before
-      the fix, 0/169 after. Also landed: `cca_gamma_use_mass` (Moran
-      Eq. 6 vs Filippov Eq. 7), `cca_gamma_measured_rg`,
+      the fix, 0/169 after. Also landed: mass-based CCA Gamma (Moran
+      Eq. 6) with optional per-particle densities, `cca_gamma_measured_rg`,
       `pyfracval/merge_log.py` (opt-in per-merge JSONL),
       `pyfracval/quality.py` (unconditional per-aggregate quality record
       wired into `run_simulation`), and an N-aware drop-rescue budget

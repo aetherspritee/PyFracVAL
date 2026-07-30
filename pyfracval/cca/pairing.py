@@ -29,6 +29,12 @@ class _PairingMixin:
     def _calculate_cca_gamma(self, props1: Tuple, props2: Tuple) -> Tuple[bool, float]:
         """Calculates Gamma_pc between two clusters based on their properties.
 
+        Always solves the mass form (Moran et al. 2019 Eq. 6), which is
+        what the Fortran CCA does and the only form that can represent a
+        heterogeneous aggregate. Per-particle densities enter through the
+        cached cluster masses; with ``densities=None`` those masses are
+        proportional to r^3 and this reduces to the uniform-density case.
+
         ``rg1``/``rg2`` come from the props cache, which holds either the
         scaling-law Rg (default) or the measured one when
         ``cca_gamma_measured_rg`` is set - see :meth:`_cluster_rg`.
@@ -44,7 +50,7 @@ class _PairingMixin:
             radii2,
             self.df,
             self.kf,
-            use_mass=bool(self.algorithm_config.gamma_use_mass),
+            use_mass=True,
         )
 
     def _cluster_rg(

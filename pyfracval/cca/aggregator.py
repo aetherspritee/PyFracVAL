@@ -9,6 +9,7 @@ candidate selection, sticking, and fallback logic to the mixins in
 
 import logging
 import math
+import time
 from typing import Tuple
 
 import numpy as np
@@ -84,6 +85,7 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         rng: np.random.Generator | None = None,
         algorithm_config: OrchestratorAlgorithmConfig | None = None,
         initial_densities: np.ndarray | None = None,
+        deadline: float | None = None,
     ):
         if initial_coords.shape[0] != n_total or initial_radii.shape[0] != n_total:
             raise ValueError(
@@ -126,6 +128,14 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         self.i_t = self.i_orden.shape[0]  # Current number of clusters
 
         self.not_able_cca = False
+        # Absolute time.time() after which the run gives up mid-flight.
+        # Without this the only wall-clock check lives between whole
+        # PCA+CCA attempts, so a single attempt is uninterruptible - and
+        # backtracking made single attempts far more expensive in
+        # infeasible regimes, since it tries several partners per cluster
+        # before conceding instead of bailing on the first failure.
+        self.deadline = deadline
+        self.timed_out = False
 
         # Timing accumulators (used when self.algorithm_config.profile_timing is True)
         self._t_cluster_props: float = 0.0
@@ -248,6 +258,18 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
             # Or handle as error? Let's proceed with caution.
 
         return cluster_coords, cluster_radii
+
+    def _out_of_time(self) -> bool:
+        """True once the wall-clock deadline has passed (latching)."""
+        if self.deadline is None:
+            return False
+        if self.timed_out:
+            return True
+        if time.time() >= self.deadline:
+            self.timed_out = True
+            logger.warning("CCA aborting: wall-clock deadline reached mid-aggregation.")
+            return True
+        return False
 
     def _get_cluster_densities(self, cluster_idx: int) -> np.ndarray | None:
         """Densities of one cluster's particles, or None for uniform density."""
@@ -550,6 +572,9 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         allow_pass_through = bool(self.algorithm_config.cca_backtracking_pass_through)
 
         while unpaired:
+            if self._out_of_time():
+                self.not_able_cca = True
+                return False
             # Most-constrained-first: handle the cluster with the fewest
             # remaining options while it still has any, rather than
             # stranding it after its only partners are taken. The index
@@ -567,6 +592,11 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
             merged_partner = None
             merged_result = None
             for attempt_index, partner in enumerate(partners[:max_partners]):
+                # Each extra partner is a full candidate/rotation search;
+                # stop spending them once the budget is gone.
+                if self._out_of_time():
+                    self.not_able_cca = True
+                    return False
                 result = self._attempt_pair_merge(
                     k,
                     partner,

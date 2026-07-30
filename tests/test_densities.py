@@ -45,16 +45,14 @@ class TestCalculateMass:
         np.testing.assert_allclose(scaled, 2.5 * plain)
 
 
-class TestGammaDefaults:
-    def test_cca_defaults_to_mass_pca_to_counts(self):
-        # The two stages deliberately differ. Eq. 6's mass moments are
-        # only consistent with a count-based scaling-law Rg when both
-        # bodies are aggregates; PCA's second body is a single monomer,
-        # where the mass form admits almost no candidates (measured:
-        # 1/150 subclusters built vs 93/150 for counts).
+class TestGammaFormPerStage:
+    def test_no_user_facing_mass_toggle_remains(self):
+        # Mass weighting is expressed by the densities argument alone.
+        # Which Gamma form a stage solves is a property of that stage's
+        # geometry, not something callers should be choosing.
         cfg = OrchestratorAlgorithmConfig()
-        assert cfg.gamma_use_mass is True
-        assert cfg.pca_gamma_use_mass is False
+        assert not hasattr(cfg, "gamma_use_mass")
+        assert not hasattr(cfg, "pca_gamma_use_mass")
 
     def test_pca_still_builds_subclusters_under_defaults(self):
         rng = np.random.default_rng(0)

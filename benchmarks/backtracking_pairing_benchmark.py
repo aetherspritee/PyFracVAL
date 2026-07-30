@@ -12,10 +12,13 @@ instead: on failure, try the cluster's next feasible partner.
 This script measures the resulting success rate, plus the two Gamma
 faithfulness/stability flags added alongside it:
 
-- ``gamma_use_mass``: true masses (Moran Eq. 6, what the Fortran CCA
-  does) instead of particle counts (Filippov Eq. 7).
 - ``cca_gamma_measured_rg``: feed each cluster's *measured* Rg into the
   next Gamma so per-merge deviations cannot accumulate.
+
+The Gamma form itself is no longer configurable: CCA always solves the
+mass form (Moran Eq. 6) and PCA always the count form, because the mass
+form is unusable when the second body is a single monomer. Mass weighting
+is expressed through the optional per-particle ``densities`` argument.
 
 Methodology is deliberately identical to benchmarks/drop_rescue_accuracy.py
 and benchmarks/pairing_frustration_probe.py: single-shot PCA+CCA attempts
@@ -66,15 +69,6 @@ CONFIGS = {
     "backtracking": OrchestratorAlgorithmConfig(cca_pairing_strategy="backtracking"),
     "backtracking_measured_rg": OrchestratorAlgorithmConfig(
         cca_pairing_strategy="backtracking",
-        cca_gamma_measured_rg=True,
-    ),
-    "backtracking_mass_gamma": OrchestratorAlgorithmConfig(
-        cca_pairing_strategy="backtracking",
-        gamma_use_mass=True,
-    ),
-    "backtracking_mass_and_measured": OrchestratorAlgorithmConfig(
-        cca_pairing_strategy="backtracking",
-        gamma_use_mass=True,
         cca_gamma_measured_rg=True,
     ),
 }

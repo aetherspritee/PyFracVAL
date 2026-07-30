@@ -282,6 +282,16 @@ def _run_simulation_core(
             rng=rng,
             algorithm_config=algorithm_config,
             initial_densities=subcluster_runner.all_densities,
+            # Let CCA abandon a single attempt once the budget is spent.
+            # The per-attempt loop below only checks the clock *between*
+            # attempts, which cannot interrupt one long attempt - and
+            # backtracking makes individual attempts much more expensive
+            # in regimes where nothing is going to work anyway.
+            deadline=(
+                start_time + max_runtime_seconds
+                if max_runtime_seconds is not None
+                else None
+            ),
         )
         cca_result = cca_runner.run_cca()
         cca_end_time = time.time()

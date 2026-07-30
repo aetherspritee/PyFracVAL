@@ -172,6 +172,34 @@ class TestBacktrackingPairing:
         assert agg.not_able_cca
 
 
+class TestDeadline:
+    def test_expired_deadline_aborts_before_any_merge(self):
+        # run_simulation only checks the clock *between* attempts, so a
+        # single long attempt used to be uninterruptible - and
+        # backtracking made single attempts much more expensive in
+        # regimes where nothing works.
+        agg = _make_aggregator()
+        agg.deadline = 0.0  # already in the past
+        result = agg.run_cca()
+        assert result is None
+        assert agg.not_able_cca
+        assert agg.timed_out
+
+    def test_no_deadline_never_times_out(self):
+        agg = _make_aggregator()
+        assert agg.deadline is None
+        assert agg._out_of_time() is False
+        assert agg.run_cca() is not None
+
+    def test_generous_deadline_does_not_interfere(self):
+        import time
+
+        agg = _make_aggregator()
+        agg.deadline = time.time() + 3600.0
+        assert agg.run_cca() is not None
+        assert not agg.timed_out
+
+
 class TestGammaFormulationFlags:
     def test_mass_and_count_gamma_agree_for_monodisperse(self):
         from pyfracval.fractal import gamma_calculation
