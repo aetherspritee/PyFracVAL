@@ -19,6 +19,7 @@ from ..experimental.pair_prefilters import (
     surface_accessible_mask,
 )
 from ..experimental.soft_relaxation import soft_sticking
+from ..logs import TRACE_LEVEL_NUM
 
 logger = logging.getLogger(__name__)
 
@@ -375,6 +376,12 @@ class _FallbacksMixin:
         sticking_successful = False
         final_coords1 = None
         final_coords2 = None
+        # Checked once here, not per rotation: `logger.trace(f"...")`
+        # builds and formats the message *before* trace() can test the
+        # level, so an unguarded call costs a float format on every
+        # rotation even though nothing is logged. Same pattern as
+        # pairing.py's greedy loop.
+        _trace_on = logger.isEnabledFor(TRACE_LEVEL_NUM)
 
         attempts_tried = 0
         best_overlap = float("inf")
@@ -537,9 +544,10 @@ class _FallbacksMixin:
                         current_coords2 = coords2_batch[best_idx]
                         cov_max = overlaps[best_idx]
 
-                        logger.trace(
-                            f"    CCA Batch rotation {intento}: Found valid config with overlap={cov_max:.4e}"
-                        )  # pyright: ignore
+                        if _trace_on:
+                            logger.trace(  # pyright: ignore
+                                f"    CCA Batch rotation {intento}: Found valid config with overlap={cov_max:.4e}"
+                            )
                         break  # Exit rotation loop
                     else:
                         # No valid configuration in this batch
@@ -571,9 +579,10 @@ class _FallbacksMixin:
                                 used_adaptive_tol = True
                                 break
 
-                        logger.trace(
-                            f"    CCA Batch {batch_start}-{batch_end}: Best overlap={cov_max:.4e} at attempt {intento}"
-                        )  # pyright: ignore
+                        if _trace_on:
+                            logger.trace(  # pyright: ignore
+                                f"    CCA Batch {batch_start}-{batch_end}: Best overlap={cov_max:.4e} at attempt {intento}"
+                            )
 
                         # Continue to next batch
                         intento = batch_end
@@ -659,9 +668,10 @@ class _FallbacksMixin:
 
                     coords1_stick = coords1_rotated
                     current_coords2 = coords2_rotated
-                    logger.trace(  # pyright: ignore
-                        f"    Rotation {intento} [{retry_mode}]: Overlap = {cov_max:.4e}"
-                    )
+                    if _trace_on:
+                        logger.trace(  # pyright: ignore
+                            f"    Rotation {intento} [{retry_mode}]: Overlap = {cov_max:.4e}"
+                        )
 
                     if intento >= adaptive_tol_threshold and cov_max <= relaxed_tol:
                         # cov_max early-exits at tol_ov and is only a lower
@@ -700,14 +710,11 @@ class _FallbacksMixin:
                 )
                 if true_final_overlap < best_overlap:
                     best_overlap = float(true_final_overlap)
-            self._last_sticking_stats.update(
-                {
-                    "candidates_tried": attempts_tried,
-                    "rotations_used": int(intento),
-                    "min_overlap": best_overlap,
-                    "used_adaptive_tol": bool(used_adaptive_tol),
-                }
-            )
+            stats = self._last_sticking_stats
+            stats["candidates_tried"] = attempts_tried
+            stats["rotations_used"] = int(intento)
+            stats["min_overlap"] = best_overlap
+            stats["used_adaptive_tol"] = bool(used_adaptive_tol)
 
             # Check if overlap is acceptable
             if cov_max <= self.tol_ov or used_adaptive_tol:

@@ -55,6 +55,59 @@ class _StickingMixin:
             Tuple: (coords1_out, cm1_out, coords2_out, cm2_out, theta_a, vec_0, i_vec, j_vec)
                    Returns (None, ..., None) on failure.
         """
+        # Fused compiled path for the default ext_case=0 geometry.
+        # _cca_sticking_v1_interpreted stays authoritative for ext_case=1
+        # (spherical-cap sampling) and as the readable reference; the two
+        # are pinned to agree in tests/test_sticking_kernel.py.
+        #
+        # The two angles the sphere-sphere intersections would have drawn
+        # are sampled here rather than inside the kernel, so the RNG
+        # stream stays owned by this object, in the same order, and runs
+        # stay reproducible.
+        if self.ext_case == 0:
+            coords1_in, radii1, cm1_in = cluster1_data
+            coords2_in, radii2, cm2_in = cluster2_data
+            theta_a = 2.0 * math.pi * self._rng.random()
+            theta_b = 2.0 * math.pi * self._rng.random()
+            (
+                coords1_out,
+                coords2_out,
+                cm2_out,
+                vec_0,
+                i_vec,
+                j_vec,
+                ok,
+            ) = cca_kernels.cca_sticking_v1_kernel(
+                np.ascontiguousarray(coords1_in, dtype=np.float64),
+                np.ascontiguousarray(radii1, dtype=np.float64),
+                np.ascontiguousarray(cm1_in, dtype=np.float64),
+                np.ascontiguousarray(coords2_in, dtype=np.float64),
+                np.ascontiguousarray(radii2, dtype=np.float64),
+                np.ascontiguousarray(cm2_in, dtype=np.float64),
+                int(cand1_idx),
+                int(cand2_idx),
+                float(gamma_pc),
+                theta_a,
+                theta_b,
+            )
+            if not ok:
+                return (None, None, None, 0.0, np.zeros(4), np.zeros(3), np.zeros(3))
+            return coords1_out, coords2_out, cm2_out, theta_b, vec_0, i_vec, j_vec
+
+        return self._cca_sticking_v1_interpreted(
+            cluster1_data, cluster2_data, cand1_idx, cand2_idx, gamma_pc, gamma_real
+        )
+
+    def _cca_sticking_v1_interpreted(
+        self, cluster1_data, cluster2_data, cand1_idx, cand2_idx, gamma_pc, gamma_real
+    ):
+        """Readable reference implementation of the sticking placement.
+
+        Handles both ext_case values and is what ext_case=1 actually
+        runs. Kept as the definition of correct behaviour that
+        :func:`pyfracval.cca_kernels.cca_sticking_v1_kernel` is validated
+        against, rather than being deleted once the compiled path existed.
+        """
         coords1_in, radii1, cm1_in = cluster1_data
         coords2_in, radii2, cm2_in = cluster2_data
         n1 = coords1_in.shape[0]

@@ -37,7 +37,7 @@ git history has the detail).
 
 ## Done (recent)
 
-- [x] **Profiled the pipeline and took ~1.3x** (`benchmarks/profile_pipeline.py`,
+- [x] **Profiled the pipeline and took up to 1.8x** (`benchmarks/profile_pipeline.py`,
       `docs/source/profiling.md`). Three findings, none in the JIT'd
       overlap kernels: `np.cross` on 3-vectors costs 21us (12.4x slower
       than explicit component arithmetic) and the CCA sticking path made
@@ -46,8 +46,15 @@ git history has the detail).
       and a 101MB temporary at N=2048 where pdist takes 5ms; and leaf
       masks (O(n^2) per cluster) plus candidate scores were computed on
       every sticking call although nothing reads them under production
-      defaults. End-to-end 1.13-1.39x, growing with N. Results unchanged
-      and still bit-reproducible.
+      defaults. Then fused the whole ext_case=0 sticking placement into
+      one numba kernel (`cca_kernels.cca_sticking_v1_kernel`), pinned
+      bit-for-bit against the interpreted reference in
+      `tests/test_sticking_kernel.py` by hoisting its two RNG draws out
+      as arguments; its self time fell 5.8x. End-to-end 1.18-1.80x,
+      growing with N and with regime difficulty. Results unchanged and
+      still bit-reproducible. Also recorded a miss: guarding eager
+      `logger.trace(f"...")` f-strings is correct but measured no gain,
+      and cProfile self-time over-attributed the caller that led there.
 
 - [x] **Measured densification's actual working range** — it converges
       only when the target Df is within ~0.02 of the source, i.e. when it

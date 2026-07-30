@@ -10,6 +10,7 @@ import math
 from typing import Set, Tuple
 
 import numpy as np
+from scipy.spatial.distance import pdist
 
 logger = logging.getLogger(__name__)
 
@@ -101,13 +102,17 @@ class _CandidatesMixin:
         if n == 1:
             return np.ones(1, dtype=bool)
 
-        diffs = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-        d_sq = np.sum(diffs * diffs, axis=2)
-        r_sum = radii[:, np.newaxis] + radii[np.newaxis, :]
-        thr_sq = (r_sum + 1.0e-9) * (r_sum + 1.0e-9)
-        contact = d_sq <= thr_sq
-        np.fill_diagonal(contact, False)
-        degree = np.sum(contact, axis=1)
+        # Upper triangle only, via pdist: broadcasting to an (n, n, 3)
+        # difference array costs several times the memory and time for
+        # the same answer, and this runs per cluster per sticking call
+        # whenever leaf information is actually consumed.
+        dist = pdist(coords)
+        iu, ju = np.triu_indices(n, k=1)
+        contact = dist <= (radii[iu] + radii[ju] + 1.0e-9)
+
+        degree = np.zeros(n, dtype=np.int64)
+        np.add.at(degree, iu[contact], 1)
+        np.add.at(degree, ju[contact], 1)
         return degree <= 1
 
     def _record_candidate_attempt(self, leaf1: bool, leaf2: bool) -> str:

@@ -23,11 +23,12 @@ batch_rotate_cluster_cca
 """
 
 import logging
+import math
 
 import numpy as np
 from numba import jit, prange
 
-from .geometry import rodrigues_rotation
+from .geometry import _two_sphere_intersection_kernel, rodrigues_rotation
 
 logger = logging.getLogger(__name__)
 
@@ -363,3 +364,261 @@ def batch_rotate_cluster_cca(
             rotated_clusters[i] = coords2_in.copy()
 
     return rotated_clusters
+
+
+@jit(nopython=True, fastmath=True, cache=True)
+def _rotate_about_point(coords, centre, ax, ay, az, angle):
+    """Rotate every row of `coords` about `centre` by `angle` around axis (ax,ay,az).
+
+    Axis need not be normalised; a degenerate axis or angle leaves the
+    coordinates untouched.
+    """
+    n = coords.shape[0]
+    out = np.empty((n, 3), dtype=np.float64)
+    axis_norm = math.sqrt(ax * ax + ay * ay + az * az)
+    if axis_norm < 1e-12 or abs(angle) < 1e-12:
+        for i in range(n):
+            out[i, 0] = coords[i, 0]
+            out[i, 1] = coords[i, 1]
+            out[i, 2] = coords[i, 2]
+        return out
+
+    inv = 1.0 / axis_norm
+    kx = ax * inv
+    ky = ay * inv
+    kz = az * inv
+    cos_a = math.cos(angle)
+    sin_a = math.sin(angle)
+    one_minus_cos = 1.0 - cos_a
+    cx0 = centre[0]
+    cy0 = centre[1]
+    cz0 = centre[2]
+
+    for i in range(n):
+        vx = coords[i, 0] - cx0
+        vy = coords[i, 1] - cy0
+        vz = coords[i, 2] - cz0
+        kdv = kx * vx + ky * vy + kz * vz
+        crx = ky * vz - kz * vy
+        cry = kz * vx - kx * vz
+        crz = kx * vy - ky * vx
+        out[i, 0] = cx0 + vx * cos_a + crx * sin_a + kx * kdv * one_minus_cos
+        out[i, 1] = cy0 + vy * cos_a + cry * sin_a + ky * kdv * one_minus_cos
+        out[i, 2] = cz0 + vz * cos_a + crz * sin_a + kz * kdv * one_minus_cos
+    return out
+
+
+@jit(nopython=True, fastmath=True, cache=True)
+def _align_rotation(v1x, v1y, v1z, v2x, v2y, v2z):
+    """Axis and angle rotating vector v1 onto vector v2.
+
+    Returns ``(ax, ay, az, angle, do_rotate)``. Mirrors the branch
+    structure of the interpreted implementation exactly, including the
+    anti-parallel case (where any perpendicular axis is valid) and the
+    already-aligned case (where no rotation is applied at all).
+    """
+    n1 = math.sqrt(v1x * v1x + v1y * v1y + v1z * v1z)
+    n2 = math.sqrt(v2x * v2x + v2y * v2y + v2z * v2z)
+    if n1 <= 1e-9 or n2 <= 1e-9:
+        return 0.0, 0.0, 0.0, 0.0, False
+
+    u1x = v1x / n1
+    u1y = v1y / n1
+    u1z = v1z / n1
+    u2x = v2x / n2
+    u2y = v2y / n2
+    u2z = v2z / n2
+    dot = u1x * u2x + u1y * u2y + u1z * u2z
+
+    if abs(dot) > 1.0 - 1e-9:
+        if dot < 0.0:
+            # Anti-parallel: pick any axis perpendicular to u1.
+            if abs(u1x) < 1e-9 and abs(u1y) < 1e-9:
+                return 1.0, 0.0, 0.0, math.pi, True
+            return -u1y, u1x, 0.0, math.pi, True
+        return 0.0, 0.0, 0.0, 0.0, False
+
+    if dot > 1.0:
+        dot = 1.0
+    elif dot < -1.0:
+        dot = -1.0
+    angle = math.acos(dot)
+    ax = u1y * u2z - u1z * u2y
+    ay = u1z * u2x - u1x * u2z
+    az = u1x * u2y - u1y * u2x
+    return ax, ay, az, angle, True
+
+
+@jit(nopython=True, fastmath=True, cache=True)
+def cca_sticking_v1_kernel(
+    coords1_in,
+    radii1,
+    cm1,
+    coords2_in,
+    radii2,
+    cm2_in,
+    cand1_idx,
+    cand2_idx,
+    gamma_pc,
+    theta_a,
+    theta_b,
+):
+    """Fused ``ext_case=0`` sticking placement.
+
+    The interpreted version of this spends most of its time on numpy
+    dispatch for 3-vectors rather than on arithmetic: per N=1024
+    aggregate it drove ~30k norm calls, ~24k array allocations and ~20k
+    zeros. Fusing the whole placement into one compiled function removes
+    all of that, and lets the two cluster transforms run as tight loops.
+
+    Randomness is hoisted out: the two angles the sphere-sphere
+    intersections would have sampled are passed in, so this stays pure
+    and the caller keeps sole ownership of the RNG stream (which is what
+    makes runs reproducible).
+
+    Returns ``(coords1_out, coords2_out, cm2_out, vec0, i_vec, j_vec,
+    ok)``; ``ok`` is False when either intersection has no solution, in
+    which case the arrays are meaningless and the caller must skip them.
+    """
+    zeros4 = np.zeros(4, dtype=np.float64)
+    zeros3 = np.zeros(3, dtype=np.float64)
+
+    coords2 = coords2_in.copy()
+
+    # --- Step 1: translate cluster 2 so |CM2 - CM1| == gamma_pc ---
+    vx = coords1_in[cand1_idx, 0] - cm1[0]
+    vy = coords1_in[cand1_idx, 1] - cm1[1]
+    vz = coords1_in[cand1_idx, 2] - cm1[2]
+    vnorm = math.sqrt(vx * vx + vy * vy + vz * vz)
+    if vnorm < 1e-12:
+        vx, vy, vz = 1.0, 0.0, 0.0
+    else:
+        vx /= vnorm
+        vy /= vnorm
+        vz /= vnorm
+
+    cm2x = cm1[0] + gamma_pc * vx
+    cm2y = cm1[1] + gamma_pc * vy
+    cm2z = cm1[2] + gamma_pc * vz
+    dx = cm2x - cm2_in[0]
+    dy = cm2y - cm2_in[1]
+    dz = cm2z - cm2_in[2]
+    for i in range(coords2.shape[0]):
+        coords2[i, 0] += dx
+        coords2[i, 1] += dy
+        coords2[i, 2] += dz
+
+    cm2 = np.empty(3, dtype=np.float64)
+    cm2[0] = cm2x
+    cm2[1] = cm2y
+    cm2[2] = cm2z
+
+    # --- Step 2: first contact point, on the D1max/D2max spheres ---
+    p1x = coords1_in[cand1_idx, 0]
+    p1y = coords1_in[cand1_idx, 1]
+    p1z = coords1_in[cand1_idx, 2]
+    d1 = math.sqrt((p1x - cm1[0]) ** 2 + (p1y - cm1[1]) ** 2 + (p1z - cm1[2]) ** 2)
+    d1_max = d1 + radii1[cand1_idx]
+
+    q2x = coords2[cand2_idx, 0]
+    q2y = coords2[cand2_idx, 1]
+    q2z = coords2[cand2_idx, 2]
+    d2 = math.sqrt((q2x - cm2x) ** 2 + (q2y - cm2y) ** 2 + (q2z - cm2z) ** 2)
+    d2_max = d2 + radii2[cand2_idx]
+
+    sph1 = np.empty(4, dtype=np.float64)
+    sph1[0] = cm1[0]
+    sph1[1] = cm1[1]
+    sph1[2] = cm1[2]
+    sph1[3] = d1_max
+    sph2 = np.empty(4, dtype=np.float64)
+    sph2[0] = cm2x
+    sph2[1] = cm2y
+    sph2[2] = cm2z
+    sph2[3] = d2_max
+
+    (cx, cy, cz, _x0, _y0, _z0, _r0, _ix, _iy, _iz, _jx, _jy, _jz, valid) = (
+        _two_sphere_intersection_kernel(sph1, sph2, theta_a)
+    )
+    if not valid:
+        return coords1_in, coords2, cm2, zeros4, zeros3, zeros3, False
+
+    # Push the sampled point out onto candidate 1's own surface.
+    ux = cx - p1x
+    uy = cy - p1y
+    uz = cz - p1z
+    unorm = math.sqrt(ux * ux + uy * uy + uz * uz)
+    if unorm < 1e-9:
+        tx = p1x - cm1[0]
+        ty = p1y - cm1[1]
+        tz = p1z - cm1[2]
+        tnorm = math.sqrt(tx * tx + ty * ty + tz * tz)
+        target_x = p1x + radii1[cand1_idx] * tx / tnorm
+        target_y = p1y + radii1[cand1_idx] * ty / tnorm
+        target_z = p1z + radii1[cand1_idx] * tz / tnorm
+    else:
+        target_x = p1x + radii1[cand1_idx] * ux / unorm
+        target_y = p1y + radii1[cand1_idx] * uy / unorm
+        target_z = p1z + radii1[cand1_idx] * uz / unorm
+
+    # --- Step 3: rotate cluster 1 so candidate 1 reaches that point ---
+    ax, ay, az, angle, do_rot = _align_rotation(
+        p1x - cm1[0],
+        p1y - cm1[1],
+        p1z - cm1[2],
+        target_x - cm1[0],
+        target_y - cm1[1],
+        target_z - cm1[2],
+    )
+    if do_rot:
+        coords1 = _rotate_about_point(coords1_in, cm1, ax, ay, az, angle)
+    else:
+        coords1 = coords1_in.copy()
+
+    # --- Step 4: second contact point (point-touch between candidates) ---
+    a_x = coords1[cand1_idx, 0]
+    a_y = coords1[cand1_idx, 1]
+    a_z = coords1[cand1_idx, 2]
+    sphA = np.empty(4, dtype=np.float64)
+    sphA[0] = a_x
+    sphA[1] = a_y
+    sphA[2] = a_z
+    sphA[3] = radii1[cand1_idx] + radii2[cand2_idx]
+
+    b_x = coords2[cand2_idx, 0]
+    b_y = coords2[cand2_idx, 1]
+    b_z = coords2[cand2_idx, 2]
+    radius_b = math.sqrt((b_x - cm2x) ** 2 + (b_y - cm2y) ** 2 + (b_z - cm2z) ** 2)
+    sphB = np.empty(4, dtype=np.float64)
+    sphB[0] = cm2x
+    sphB[1] = cm2y
+    sphB[2] = cm2z
+    sphB[3] = radius_b
+
+    (ex, ey, ez, x0, y0, z0, r0, ix, iy, iz, jx, jy, jz, valid2) = (
+        _two_sphere_intersection_kernel(sphA, sphB, theta_b)
+    )
+    if not valid2:
+        return coords1, coords2, cm2, zeros4, zeros3, zeros3, False
+
+    # --- Step 5: rotate cluster 2 so candidate 2 reaches that point ---
+    ax2, ay2, az2, angle2, do_rot2 = _align_rotation(
+        b_x - cm2x, b_y - cm2y, b_z - cm2z, ex - cm2x, ey - cm2y, ez - cm2z
+    )
+    if do_rot2:
+        coords2 = _rotate_about_point(coords2, cm2, ax2, ay2, az2, angle2)
+
+    vec0 = np.empty(4, dtype=np.float64)
+    vec0[0] = x0
+    vec0[1] = y0
+    vec0[2] = z0
+    vec0[3] = r0
+    i_vec = np.empty(3, dtype=np.float64)
+    i_vec[0] = ix
+    i_vec[1] = iy
+    i_vec[2] = iz
+    j_vec = np.empty(3, dtype=np.float64)
+    j_vec[0] = jx
+    j_vec[1] = jy
+    j_vec[2] = jz
+    return coords1, coords2, cm2, vec0, i_vec, j_vec, True
