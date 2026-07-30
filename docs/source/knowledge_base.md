@@ -12,6 +12,7 @@ pairing_frustration
 matching_pairing
 overlap_failure_census
 drop_rescue
+catalog_overlap_leak
 hard_regime_boundary_sweep
 full_stability_sweep
 gpu_acceleration
