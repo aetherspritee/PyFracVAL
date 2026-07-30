@@ -8,6 +8,34 @@ git history has the detail).
 
 ## Open
 
+- [ ] **Act on the algorithm audit in `NOTE.md`** (2026-07-30: Fortran/
+      paper faithfulness audit + consolidated findings + paper roadmap).
+      Highest-value items it identifies, roughly in order:
+      (1) backtracking pairing + per-merge JSONL event log (extends the
+      existing backtracking item below); (2) **mass-vs-count Γ A/B** —
+      Python CCA defaults to `gamma_calculation(heuristic=True)` (counts,
+      Filippov Eq. 7) while the Fortran CCA uses true masses (Moran
+      Eq. 6); expose a flag and re-run the σ>1 boundary-sweep slices;
+      (3) measured-Rg feedback into Γ + per-aggregate final-quality
+      record (also structurally closes the catalog-leak class below);
+      (4) density-density correlation f(r) validator, then validate
+      densification against it (paper backbone); (5) feasibility-boundary
+      criterion from the existing sweep data.
+- [ ] **Catalog overlap leak**: some `cluster_index.csv` rows marked
+      `success=True` contain severe residual particle overlaps (confirmed
+      example: 272 overlapping pairs, worst gap -1.02 radii, in a
+      `densify_retry` N=512 cluster) — surfaced downstream as
+      space-weathering's gap-factor scaling failing its own overlap
+      safety net. Two things confirmed so far: (1) a real, independent bug
+      in `main_runner.py`'s `densify_ok=False` handling (both branches use
+      the non-converged result identically, never rejected or retried,
+      never fed back into the catalog's `success` flag); (2) that bug does
+      *not* explain the example cluster above — densify never ran for it
+      (Rg was already at target, hit the no-op early-return). Where the
+      overlap actually enters PCA/CCA sticking (whose own per-step
+      `tol_ov` checks look tight) is still open, as is how many other
+      cataloged clusters are affected. See
+      `docs/source/catalog_overlap_leak.md`.
 - [ ] Implement a **backtracking** CCA pairing strategy (retry a failed
       pair's cluster with a different partner using the *real* sticking
       outcome, not a precomputed graph). `docs/source/matching_pairing.md`
