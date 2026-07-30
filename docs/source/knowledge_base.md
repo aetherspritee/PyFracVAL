@@ -16,6 +16,8 @@ drop_rescue
 catalog_overlap_leak
 hard_regime_boundary_sweep
 boundary_sweep_v2
+correlation_validation
+feasibility_criterion
 full_stability_sweep
 gpu_acceleration
 ```

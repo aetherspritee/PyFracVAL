@@ -129,3 +129,82 @@ class TestPcaProducesOverlapFreeSubclusters:
                 continue
             max_ov, _ = max_self_overlap(result[:, :3], result[:, 3])
             assert max_ov < 1e-9, f"seed {seed}: worst overlap {max_ov:.3e}"
+
+
+class TestDensifyReportsOverlapHonestly:
+    """Regression: densification must not report success while leaving
+    particles interpenetrating.
+
+    ``densify_aggregate`` used to return ``True`` as soon as the radius of
+    gyration matched, ignoring ``resolve_overlaps``' own verdict, and its
+    final self-overlap check handed the same array to the *two-cluster*
+    CCA helper (scoring every particle against itself at distance 0).
+    Radial compression creates overlaps faster than the push-apart step
+    removes them, so in practice every densified aggregate was reported
+    converged while carrying tens of percent of residual overlap.
+    """
+
+    def _source_aggregate(self, n=96, seed=5):
+        from pyfracval import particle_generation, utils
+        from pyfracval.cca import CCAggregator
+        from pyfracval.pca_subclusters import Subclusterer
+
+        rng = np.random.default_rng(seed)
+        radii = particle_generation.lognormal_pp_radii(1.5, 100.0, n, rng=rng)
+        radii = utils.shuffle_array(radii, rng=rng)
+        sub = Subclusterer(
+            initial_radii=radii,
+            df=1.8,
+            kf=1.0,
+            tol_ov=1e-6,
+            n_subcl_percentage=0.2,
+            rp_g=100.0,
+            rp_gstd=1.5,
+            rng=rng,
+            algorithm_config=OrchestratorAlgorithmConfig(),
+        )
+        if not sub.run_subclustering() or sub.not_able_pca:
+            return None
+        _, bad, cr, io, _ = sub.get_results()
+        if bad or cr is None:
+            return None
+        agg = CCAggregator(
+            initial_coords=cr[:, :3],
+            initial_radii=cr[:, 3],
+            initial_i_orden=io,
+            n_total=n,
+            df=1.8,
+            kf=1.0,
+            tol_ov=1e-6,
+            ext_case=0,
+            rng=rng,
+            algorithm_config=OrchestratorAlgorithmConfig(),
+        )
+        return agg.run_cca()
+
+    def test_reported_success_implies_overlap_free_geometry(self):
+        import pytest
+
+        from pyfracval.densify import densify_aggregate
+
+        built = self._source_aggregate()
+        if built is None:
+            pytest.skip("source aggregate did not build for this seed")
+        coords, radii = built
+
+        for target_df in (2.0, 2.2):
+            dc, dr, ok = densify_aggregate(
+                coords.copy(),
+                radii.copy(),
+                target_df=target_df,
+                target_kf=1.0,
+                tol_ov=1e-6,
+            )
+            max_ov, n_pairs = max_self_overlap(dc, dr)
+            if ok:
+                # The contract being pinned: a True verdict must mean the
+                # geometry is actually usable.
+                assert max_ov <= 1e-6, (
+                    f"densify reported success at Df={target_df} but left "
+                    f"{n_pairs} overlapping pairs, worst {max_ov:.3e}"
+                )

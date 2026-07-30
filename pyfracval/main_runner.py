@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 
 # Import necessary modules from your library
-from . import fractal, particle_generation, utils
+from . import feasibility, fractal, particle_generation, utils
 from .cca import CCAggregator
 from .config import OrchestratorAlgorithmConfig
 from .densify import densify_aggregate
@@ -104,6 +104,15 @@ def run_simulation(
 
     densities = fractal.resolve_densities(
         densities, sim_params.N, context="run_simulation densities"
+    )
+
+    # Advisory only: say up front when a request sits past the measured
+    # feasibility boundary, rather than letting the user discover it after
+    # twenty retries. Never blocks - the model is an empirical fit, and
+    # the sweep it came from found success at points earlier
+    # implementations could not reach at all.
+    feasibility.warn_if_difficult(
+        sim_params.Df, sim_params.kf, sim_params.rp_gstd, sim_params.N
     )
 
     return _run_simulation_core(
@@ -366,10 +375,23 @@ def _run_simulation_core(
             final_radii = densified_radii
             n_actual = final_coords.shape[0]
         else:
-            logger.warning("Densification did not fully converge; using best result.")
-            final_coords = densified_coords
-            final_radii = densified_radii
-            n_actual = final_coords.shape[0]
+            # Previously both branches used the densified result
+            # identically, so a non-converged densification was saved and
+            # catalogued as a success. It is not a near-miss when it
+            # fails: radial compression leaves particles deeply
+            # interpenetrating, so the geometry is physically invalid
+            # rather than slightly off. Keep the pre-densification
+            # aggregate, which is valid but sits at the source Df/kf, and
+            # say so loudly - the caller's Df/kf was not achieved.
+            logger.error(
+                "Densification did not converge (target Df/kf not reached with "
+                "valid geometry). Falling back to the UNDENSIFIED aggregate, "
+                f"which sits at the source Df={source_df}/kf={source_kf}, not the "
+                f"requested Df={sim_params.Df}/kf={sim_params.kf}. See "
+                "aggregate_properties.rg_error_pct in the saved metadata."
+            )
+            if diagnostics is not None:
+                diagnostics["densify_failed"] = True
 
     # Calculate final properties including Rg
     final_rg = 0.0

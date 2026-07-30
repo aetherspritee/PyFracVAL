@@ -450,7 +450,15 @@ def densify_aggregate(
             best_coords = resolved
             best_rg_error = rg_error
 
-        if rg_error <= rg_rtol:
+        # Both conditions are required. Reporting success on rg_error
+        # alone - ignoring resolve_overlaps' own verdict, as this did -
+        # returns geometry that hits the target radius of gyration while
+        # its particles interpenetrate, because radial compression creates
+        # overlaps faster than the push-apart step removes them. Measured
+        # before this guard: every densified N=512 aggregate carried
+        # 37-69% residual overlap and was still reported as converged.
+        # See docs/source/catalog_overlap_leak.md.
+        if rg_error <= rg_rtol and success:
             return resolved, radii, True
 
     elif method == "voronoi":
@@ -502,9 +510,12 @@ def densify_aggregate(
         logger.error(f"Densify: unknown method '{method}'. Use 'radial' or 'voronoi'.")
         return best_coords, radii, False
 
-    max_cov = overlap.calculate_max_overlap_cca_auto(
-        best_coords, radii, best_coords, radii, tolerance=tol_ov
-    )
+    # Self-overlap, so compare each particle only against *other*
+    # particles. Handing the same array to the two-cluster CCA helper
+    # would score every particle against itself at distance 0, i.e. an
+    # overlap of exactly 1.0 for every aggregate.
+    pair_i, _, pair_ov = _find_overlaps(best_coords, radii, max_pairs=len(radii) * 10)
+    max_cov = float(np.max(pair_ov)) if len(pair_i) else 0.0
     overlap_ok = max_cov <= tol_ov
     final_rg = _compute_empirical_rg(best_coords, radii)
     rg_ok = abs(final_rg - rg_target) / rg_target <= rg_rtol * 2

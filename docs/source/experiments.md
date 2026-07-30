@@ -1,5 +1,21 @@
 # CCA Sticking Method Comparison
 
+```{warning}
+**The densification conclusion on this page has been withdrawn**
+(2026-07-30). Its "100% success, 20x faster" result counted aggregates
+that were geometrically invalid - every densified aggregate measured
+carried 43-69% residual particle overlap - and it was scored on radius of
+gyration, which densification optimizes directly and which therefore
+cannot tell a real Df=2.1 aggregate from a compressed Df=1.8 one. Checked
+against the density-density correlation function, densified aggregates
+land ~0.5 below their target Df. See
+[correlation_validation.md](correlation_validation.md).
+
+The rest of this page - every *rigid-search* comparison - is unaffected,
+and its central finding still holds: search strategy is not the lever.
+[backtracking_pairing.md](backtracking_pairing.md) shows what is.
+```
+
 This page retrospectively compares the CCA (cluster-cluster aggregation)
 sticking strategies evaluated between early and mid-2026. The production
 default is vanilla Fibonacci-spiral sticking with an incremental

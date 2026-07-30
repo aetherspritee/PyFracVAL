@@ -8,17 +8,6 @@ git history has the detail).
 
 ## Open
 
-- [ ] **Density-density correlation f(r) validator** (paper backbone).
-      Moran's own validation metric is f(r) and its Df−3 slope, not Rg —
-      an aggregate can match Rg while having the wrong internal
-      structure. Needed before densification (the one qualitative winner
-      in `docs/source/experiments.md`) can be claimed as paper-grade, and
-      before the pass-through behaviour backtracking introduces can be
-      claimed structurally harmless. See `NOTE.md` §3.3.
-- [ ] **Feasibility-boundary criterion** — predict Df_max(kf, σ, N)
-      rather than only measuring it, from the sweep data we already own.
-      Would let the tool warn before running instead of failing after
-      retries. `NOTE.md` §3.5.
 - [ ] **Reconcile the two empirical-Rg definitions.**
       `fractal.compute_empirical_rg` (and `densify.py`'s private copy)
       treat particles as point masses, omitting Eq. 4's per-particle
@@ -30,41 +19,51 @@ git history has the detail).
       more so at high σ. Not changed unilaterally because it shifts every
       previously-reported accuracy number and densify's convergence
       target. Decide deliberately, then restate the affected tables.
-- [ ] **Catalog overlap leak** (likely root-caused 2026-07-30, needs
-      confirmation against the original artifact — see
-      `docs/source/backtracking_pairing.md`. PCA was emitting subclusters
-      with up to 0.75 internal overlap that it reported as successful,
-      and CCA propagated them untouched since it only ever checks
-      cluster-against-cluster. Fixed. But the leak's confirmed example is
-      a *monodisperse* `densify_retry` cluster, which that mechanism does
-      not obviously explain, so the item stays open until the original
-      failing config is re-run and checked): some `cluster_index.csv` rows marked
-      `success=True` contain severe residual particle overlaps (confirmed
-      example: 272 overlapping pairs, worst gap -1.02 radii, in a
-      `densify_retry` N=512 cluster) — surfaced downstream as
-      space-weathering's gap-factor scaling failing its own overlap
-      safety net. Two things confirmed so far: (1) a real, independent bug
-      in `main_runner.py`'s `densify_ok=False` handling (both branches use
-      the non-converged result identically, never rejected or retried,
-      never fed back into the catalog's `success` flag); (2) that bug does
-      *not* explain the example cluster above — densify never ran for it
-      (Rg was already at target, hit the no-op early-return). Where the
-      overlap actually enters PCA/CCA sticking (whose own per-step
-      `tol_ov` checks look tight) is still open, as is how many other
-      cataloged clusters are affected. See
-      `docs/source/catalog_overlap_leak.md`.
-- [ ] Check whether drop-rescue behaves differently at a genuine
-      **late CCA round** (partial progress: N=512's round-1 failures show
-      a smaller relative offending-particle fraction than N=128's — 20%
-      vs 37.5% — a real trend, but every hard-regime failure at both N
-      still happens at round 1, so the original "two already-large
-      aggregates" scenario remains untested). Needs a probe that
-      specifically waits for or forces a later-round failure rather than
-      sampling whichever round fails first. See
-      `docs/source/overlap_failure_census.md`'s N=512 addendum and
-      `docs/source/drop_rescue.md`'s corresponding section.
+- [ ] **Densification needs a compression scheme that preserves
+      structure**, if it is to be useful at all. It currently matches Rg
+      by radial compression while producing neither the target fractal
+      dimension (f(r) says ~0.5 low) nor valid geometry (overlap
+      resolution does not converge). Both are now detected and reported
+      honestly rather than silently accepted, so the feature fails loudly
+      instead of emitting garbage — but it does not work. Lower priority
+      than it was: backtracking reaches the hard regime directly, which
+      was densification's whole reason for existing. See
+      `docs/source/correlation_validation.md`.
+- [ ] **Catalog overlap leak — re-check the original artifact.** The
+      densify path is now root-caused and fixed (see Done below), which
+      matches the leak's confirmed example being a `densify_retry`
+      cluster. Re-run that exact config and confirm the leak is gone
+      before closing. `docs/source/catalog_overlap_leak.md`.
 
 ## Done (recent)
+
+- [x] **f(r) structural validator** (`pyfracval/correlation.py`) — the
+      paper's own validation metric, validated against a filled ball
+      (recovers Df=3.0+-0.6) before being trusted. Using it produced the
+      session's biggest negative result: **densification does not produce
+      the requested fractal dimension.** At target Df=2.1 a native
+      aggregate measures 2.03 from f(r) while a densified one measures
+      1.52, and densified aggregates land closer to their *source* Df
+      than their target — while having *better* Rg agreement, which is
+      exactly the blind spot Rg-only validation has. Also found every
+      densified aggregate carried 43-69% residual particle overlap.
+      Root-caused and fixed three separate defects (densify ignored
+      `resolve_overlaps`' verdict and returned success on Rg alone; its
+      self-overlap check compared the aggregate against itself via the
+      two-cluster helper, scoring every particle against itself at
+      distance 0; and `main_runner` used the densified result identically
+      whether the flag was True or False). This closes the catalog
+      overlap leak for the densify path. `experiments.md`'s densification
+      conclusion is withdrawn. See `docs/source/correlation_validation.md`.
+- [x] **Predictive feasibility criterion** (`pyfracval/feasibility.py`,
+      fitted by `benchmarks/fit_feasibility_boundary.py`). Logistic model
+      over Df, kf, log sigma, log N with Df*kf and Df*log(sigma)
+      interactions, fitted to boundary_sweep_v2's 4200 trials: 97.7%
+      agreement with the measured >=50% feasibility call, trial-weighted
+      MAE 0.035. `run_simulation` now warns up front when a request sits
+      past the boundary, naming the Df that *would* be reliable, and
+      discloses when it is extrapolating. Advisory, never blocks. See
+      `docs/source/feasibility_criterion.md`.
 
 - [x] **Re-ran the Df/kf/sigma/N boundary sweep against the new defaults**
       (`configs/boundary_sweep_v2.toml`, same grid/seeds as the original).

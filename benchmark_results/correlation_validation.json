@@ -1,0 +1,337 @@
+{
+  "native_df1.8": {
+    "arm": {
+      "Df": 1.8,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "densify": false
+    },
+    "n_success": 6,
+    "df_from_fr_mean": 1.6390072855129285,
+    "df_from_fr_std": 0.045236549653141965,
+    "df_error": -0.16099271448707153,
+    "fit_r_squared_mean": 0.9831258537203,
+    "mean_abs_rg_error_pct": 1.1583070052267386,
+    "n_overlap_violations": 0,
+    "rows": [
+      {
+        "seed": 1,
+        "df_from_fr": 1.62316258489737,
+        "fit_r_squared": 0.9842486919738254,
+        "fit_points": 12,
+        "rg_error_pct": -1.2073692715646593,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 2,
+        "df_from_fr": 1.6730407740479485,
+        "fit_r_squared": 0.9802515761178159,
+        "fit_points": 12,
+        "rg_error_pct": -1.196545473522667,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 3,
+        "df_from_fr": 1.646210364753698,
+        "fit_r_squared": 0.964581886878745,
+        "fit_points": 12,
+        "rg_error_pct": -1.2011722128427738,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 4,
+        "df_from_fr": 1.6744886739364566,
+        "fit_r_squared": 0.9949306752004443,
+        "fit_points": 12,
+        "rg_error_pct": -1.0699573003263587,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 5,
+        "df_from_fr": 1.5465015439446543,
+        "fit_r_squared": 0.9894684593798483,
+        "fit_points": 12,
+        "rg_error_pct": -1.248659101838057,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 6,
+        "df_from_fr": 1.6706397714974452,
+        "fit_r_squared": 0.9852738327711213,
+        "fit_points": 12,
+        "rg_error_pct": -1.0261386712659162,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      }
+    ]
+  },
+  "native_df2.1": {
+    "arm": {
+      "Df": 2.1,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "densify": false
+    },
+    "n_success": 6,
+    "df_from_fr_mean": 2.0272782753612373,
+    "df_from_fr_std": 0.04385988602526659,
+    "df_error": -0.07272172463876281,
+    "fit_r_squared_mean": 0.9889778361070557,
+    "mean_abs_rg_error_pct": 1.538919773633266,
+    "n_overlap_violations": 0,
+    "rows": [
+      {
+        "seed": 1,
+        "df_from_fr": 1.9898475138690344,
+        "fit_r_squared": 0.9909125275286813,
+        "fit_points": 11,
+        "rg_error_pct": 1.3801122297716133,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 2,
+        "df_from_fr": 2.1045949587275024,
+        "fit_r_squared": 0.979246388195845,
+        "fit_points": 11,
+        "rg_error_pct": 1.627121429858844,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 3,
+        "df_from_fr": 2.0222137252825974,
+        "fit_r_squared": 0.9932618583351221,
+        "fit_points": 11,
+        "rg_error_pct": 1.449587127521833,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 4,
+        "df_from_fr": 2.0470845289941377,
+        "fit_r_squared": 0.9900481245821797,
+        "fit_points": 11,
+        "rg_error_pct": 1.7569896497616089,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 5,
+        "df_from_fr": 1.9663997482894922,
+        "fit_r_squared": 0.9891763086029641,
+        "fit_points": 11,
+        "rg_error_pct": 1.1883311251390287,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      },
+      {
+        "seed": 6,
+        "df_from_fr": 2.03352917700466,
+        "fit_r_squared": 0.9912218093975416,
+        "fit_points": 11,
+        "rg_error_pct": 1.831377079746668,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      }
+    ]
+  },
+  "densified_df2.1": {
+    "arm": {
+      "Df": 2.1,
+      "kf": 1.0,
+      "rp_gstd": 1.5,
+      "densify": true
+    },
+    "n_success": 6,
+    "df_from_fr_mean": 1.516457823035621,
+    "df_from_fr_std": 0.04716462830806375,
+    "df_error": -0.5835421769643792,
+    "fit_r_squared_mean": 0.9803948497628795,
+    "mean_abs_rg_error_pct": 0.2583566207951001,
+    "n_overlap_violations": 6,
+    "rows": [
+      {
+        "seed": 1,
+        "df_from_fr": 1.4832049386896338,
+        "fit_r_squared": 0.9755805495891844,
+        "fit_points": 11,
+        "rg_error_pct": 0.24002619352562982,
+        "max_residual_overlap": 0.45089739823735775,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 2,
+        "df_from_fr": 1.5383418465675867,
+        "fit_r_squared": 0.9759126921319026,
+        "fit_points": 11,
+        "rg_error_pct": 0.25454711370504035,
+        "max_residual_overlap": 0.4536407127519238,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 3,
+        "df_from_fr": 1.4859191061710837,
+        "fit_r_squared": 0.962999943541561,
+        "fit_points": 11,
+        "rg_error_pct": 0.25185740255402106,
+        "max_residual_overlap": 0.4508044456344923,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 4,
+        "df_from_fr": 1.5785509136832,
+        "fit_r_squared": 0.991793627719401,
+        "fit_points": 11,
+        "rg_error_pct": 0.27875409341102986,
+        "max_residual_overlap": 0.4710365502601183,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 5,
+        "df_from_fr": 1.4481823561615992,
+        "fit_r_squared": 0.9882740147919135,
+        "fit_points": 11,
+        "rg_error_pct": 0.311454359128997,
+        "max_residual_overlap": 0.4513823814123621,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 6,
+        "df_from_fr": 1.564547776940622,
+        "fit_r_squared": 0.9878082708033142,
+        "fit_points": 11,
+        "rg_error_pct": 0.2135005624458825,
+        "max_residual_overlap": 0.43083252210324746,
+        "overlap_ok": false,
+        "n_particles": 512
+      }
+    ]
+  },
+  "native_df2.3": {
+    "arm": {
+      "Df": 2.3,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "densify": false
+    },
+    "n_success": 1,
+    "df_from_fr_mean": 2.3680589735415802,
+    "df_from_fr_std": 0.0,
+    "df_error": 0.06805897354158041,
+    "fit_r_squared_mean": 0.9693641298925215,
+    "mean_abs_rg_error_pct": 5.087423678770316,
+    "n_overlap_violations": 0,
+    "rows": [
+      {
+        "seed": 6,
+        "df_from_fr": 2.3680589735415802,
+        "fit_r_squared": 0.9693641298925215,
+        "fit_points": 10,
+        "rg_error_pct": 5.087423678770316,
+        "max_residual_overlap": 0.0,
+        "overlap_ok": true,
+        "n_particles": 512
+      }
+    ]
+  },
+  "densified_df2.3": {
+    "arm": {
+      "Df": 2.3,
+      "kf": 1.0,
+      "rp_gstd": 1.9,
+      "densify": true
+    },
+    "n_success": 6,
+    "df_from_fr_mean": 1.8338043997286972,
+    "df_from_fr_std": 0.06234469744405675,
+    "df_error": -0.4661956002713026,
+    "fit_r_squared_mean": 0.9708374096055464,
+    "mean_abs_rg_error_pct": 1.724798143932419,
+    "n_overlap_violations": 6,
+    "rows": [
+      {
+        "seed": 1,
+        "df_from_fr": 1.8247764093067829,
+        "fit_r_squared": 0.9763925983686971,
+        "fit_points": 10,
+        "rg_error_pct": 1.9277892639310001,
+        "max_residual_overlap": 0.6701836002471447,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 2,
+        "df_from_fr": 1.9024842514211713,
+        "fit_r_squared": 0.9744962913819926,
+        "fit_points": 10,
+        "rg_error_pct": 1.8705452833476819,
+        "max_residual_overlap": 0.6522212147592968,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 3,
+        "df_from_fr": 1.7284975640516569,
+        "fit_r_squared": 0.9685192313303026,
+        "fit_points": 10,
+        "rg_error_pct": 1.188164302149455,
+        "max_residual_overlap": 0.6387713614930707,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 4,
+        "df_from_fr": 1.7822471262949238,
+        "fit_r_squared": 0.9685848160146187,
+        "fit_points": 10,
+        "rg_error_pct": 2.027522319720779,
+        "max_residual_overlap": 0.6376103305320348,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 5,
+        "df_from_fr": 1.8774130989383455,
+        "fit_r_squared": 0.9634768657762636,
+        "fit_points": 10,
+        "rg_error_pct": 1.6527266813090493,
+        "max_residual_overlap": 0.6872962687253455,
+        "overlap_ok": false,
+        "n_particles": 512
+      },
+      {
+        "seed": 6,
+        "df_from_fr": 1.8874079483593038,
+        "fit_r_squared": 0.9735546547614049,
+        "fit_points": 10,
+        "rg_error_pct": 1.6820410131365493,
+        "max_residual_overlap": 0.6782410710665697,
+        "overlap_ok": false,
+        "n_particles": 512
+      }
+    ]
+  }
+}

@@ -3,6 +3,21 @@
 This module follows the PCA stage of the FracVAL workflow described in
 :cite:p:`Moran2019FracVAL`, with fractal scaling context from
 :cite:p:`Filippov2000Tunable`.
+
+.. note::
+   PCA solves the Gamma equation with particle **counts**, while
+   :mod:`pyfracval.cca` solves it with true **masses**. That is not an
+   oversight in either place. The scaling law supplying ``Rg`` is a
+   function of particle count, and mass-weighting is only consistent with
+   it when both merging bodies are aggregates the law describes - here
+   the second body is a single monomer, whose scaling-law ``Rg`` is
+   meaningless at n=1 while its mass can still be a large fraction of the
+   growing cluster's. Using masses here builds 1/150 subclusters where
+   counts build 93/150. See :meth:`PCAggregator._gamma_calculation` for
+   the full argument and the measurement.
+
+   Per-particle densities still matter in this stage: they feed
+   ``self.mass``, ``self.m1`` and the running center of mass.
 """
 
 import logging
@@ -239,24 +254,101 @@ class PCAggregator:
         rg2: float,
         use_mass: bool = False,
     ) -> tuple[bool, float]:
-        """
-        Calculates Gamma_pc for adding the next monomer (aggregate 2).
+        r"""Distance Gamma_pc at which to place the next monomer.
 
-        Solves the **count** form, unlike CCA which solves the mass form.
-        This mirrors the Fortran (``PCA_cca.f90``'s ``Gamma_calculation``
-        takes ``n1, n2, n3``) and is not a stylistic choice: Eq. 6's mass
-        moments are only consistent with a count-derived scaling-law Rg
-        when both bodies are aggregates that law describes. Here the
-        second body is a single monomer, whose scaling-law Rg is
-        meaningless at n=1 while its mass can rival the whole growing
-        cluster's under a wide size distribution. Measured at sigma=1.9,
-        N=12, 150 seeds: the mass form builds 1/150 subclusters against
-        93/150 for counts.
+        Solves the **count** form of the Gamma equation, unlike CCA which
+        solves the **mass** form. That asymmetry is deliberate, is what
+        the original Fortran does, and is load-bearing rather than
+        cosmetic - see the module docstring for the short version and the
+        derivation below for why.
 
-        This governs only which scalars enter the Gamma equation.
+        Background
+        ----------
+        Both forms come from the same identity (:cite:p:`Moran2019FracVAL`
+        Eq. 6, derived in its Appendix A), relating two bodies being
+        merged to the result:
+
+        .. math::
+            m^2 R_g^2 = m\,(m_1 R_{g1}^2 + m_2 R_{g2}^2) + \Gamma^2 m_1 m_2
+
+        Substituting particle counts for the masses gives Filippov et al.
+        (2000) Eq. 7, which is exact only when every particle has the same
+        mass. FracVAL's contribution was to use true masses so that
+        *polydisperse* aggregates preserve Df and kf individually, and its
+        CCA stage does exactly that.
+
+        Why counts are nonetheless correct here
+        ---------------------------------------
+        The identity is exact in the masses, but it is not solved in
+        isolation: :math:`R_g` for the *result* is supplied by the
+        scaling law
+
+        .. math:: R_{g} = a\,(n/k_f)^{1/D_f}
+
+        which is a function of the particle **count** :math:`n`, not of
+        mass. The two are mutually consistent only while every body
+        involved is an aggregate that the scaling law actually describes.
+
+        In CCA that holds: both bodies are clusters of many particles, so
+        their scaling-law :math:`R_g` is meaningful and the mass form is
+        both more faithful and better behaved.
+
+        In PCA it does not. The second body is a *single monomer*, for
+        which:
+
+        - its scaling-law :math:`R_g` is meaningless at :math:`n=1` (the
+          code substitutes the sphere's own :math:`\sqrt{3/5}\,r`), while
+        - its **mass** is not small at all. Under a wide size
+          distribution a single large monomer can carry a sizeable
+          fraction of the whole growing cluster's mass, since
+          :math:`m \propto r^3`.
+
+        So the mass-weighted left-hand side and the count-derived
+        :math:`R_g` on the right describe different objects, and
+        :math:`\Gamma^2` comes out of that mismatch either negative
+        (reported as "gamma not real") or far too large to admit any
+        candidate monomer on the existing cluster's surface. The
+        aggregation then stalls.
+
+        This is measurable rather than theoretical. At
+        :math:`\sigma_{p,geo}=1.9`, N=12 particles per subcluster, 150
+        seeds:
+
+        ===================  ==========================
+        PCA Gamma form       Subclusters built
+        ===================  ==========================
+        counts (this one)    93/150  (62.0%)
+        masses               1/150   (0.7%)
+        ===================  ==========================
+
+        Hence the Fortran's split between its two stages is not the
+        inconsistency it first appears to be, and this behaviour is fixed
+        per stage rather than exposed as a configuration flag someone
+        could set to a value that cannot work.
+
+        Scope
+        -----
+        This governs **only** which scalars enter the Gamma equation.
         Everything mass-weighted in PCA's own bookkeeping - ``self.mass``,
-        ``self.m1``, the running center of mass - is density-aware
-        regardless, so supplying densities still shapes the subcluster.
+        ``self.m1``, and the running center of mass - is computed from
+        real masses and is density-aware, so supplying per-particle
+        densities still shapes the resulting subcluster's geometry.
+
+        Parameters
+        ----------
+        m2 : float
+            Mass of the monomer being added.
+        rg2 : float
+            Radius of gyration of that monomer, :math:`\sqrt{3/5}\,r`.
+        use_mass : bool, default False
+            Escape hatch for experiments only. See above for why the
+            default is what it is.
+
+        Returns
+        -------
+        tuple[bool, float]
+            ``(gamma_real, gamma_pc)``; ``gamma_real`` is False when the
+            equation has no real solution for this pairing.
         """
         return fractal.gamma_calculation(
             self.m1,
