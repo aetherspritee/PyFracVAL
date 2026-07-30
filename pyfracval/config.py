@@ -285,20 +285,34 @@ class OrchestratorAlgorithmConfig(BaseModel):
     cca_overlap_census_enabled: bool = False
     cca_overlap_census_max_pairs: int = 4096
     # --- Gamma formulation (see NOTE.md 1.2) ---------------------------------
+    # --- CCA merge equation ---
     # True (default) solves Gamma with true masses - Moran et al. (2019)
     # Eq. 6, the paper's central polydisperse contribution, and what the
     # Fortran CCA does. False substitutes particle *counts* (Filippov
-    # et al. 2000 Eq. 7), which is what the Fortran PCA does and what this
-    # port historically did everywhere; kept as an opt-in alternative for
-    # reproducing that behaviour.
+    # et al. 2000 Eq. 7), which is what this port historically did; kept
+    # as an opt-in alternative for reproducing that behaviour.
     #
-    # The two are identical only for uniform-density monodisperse primary
+    # The two coincide only for uniform-density monodisperse primary
     # particles. Counts cannot represent a heterogeneous aggregate at all:
-    # once particles differ in density, mass is no longer a function of
+    # once particles differ in density, mass stops being a function of
     # radius, so any count- or radius-derived weighting misplaces the
-    # center of mass and the radius of gyration. Applies to both PCA and
-    # CCA.
+    # center of mass and the radius of gyration.
     gamma_use_mass: bool = True
+    # --- PCA monomer-addition equation ---
+    # Deliberately defaults to counts, unlike CCA above, matching the
+    # Fortran PCA (PCA_cca.f90's Gamma_calculation takes n1, n2, n3).
+    #
+    # This is not an inconsistency in the original: Eq. 6's mass moments
+    # are only consistent with a *count*-based scaling-law Rg when both
+    # bodies are aggregates large enough for that law to describe them. In
+    # PCA the second body is a single monomer, whose scaling-law Rg is
+    # meaningless at n=1 while its mass can rival the whole growing
+    # cluster's for a wide size distribution. Mixing the two bases
+    # produces Gamma values that admit almost no candidates: measured at
+    # sigma=1.9, N=12, 150 seeds, mass-based PCA built 1/150 subclusters
+    # against 93/150 for counts. Left configurable for experiments, but
+    # turning it on is not advisable.
+    pca_gamma_use_mass: bool = False
     # Feed the *measured* radius of gyration of each already-built cluster
     # into the next round's Gamma, instead of re-deriving it from the
     # scaling law. Without this, per-merge deviations (the pairing

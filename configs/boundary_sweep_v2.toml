@@ -1,0 +1,67 @@
+# boundary_sweep_v2.toml
+#
+# Re-run of hard_regime_boundary_sweep.toml's grid against the post-2026-07-30
+# defaults: backtracking pairing, the overlap-acceptance fix, and mass-based
+# Gamma. Identical grid/seeds/trials so the resulting map is directly
+# comparable to docs/source/hard_regime_boundary_sweep.md's 72.4% baseline.
+#
+# Original header follows.
+#
+# hard_regime_boundary_sweep.toml
+# Maps the Df/kf/rp_gstd/N stability boundary around PyFracVAL's known
+# "hard regime" (Df=2.25, kf=0.95, rp_gstd=1.9 - see docs/source/experiments.md).
+#
+# Motivation
+# ----------
+# An earlier coarser characterization (Df step 0.2, kf in [1.0..2.2] step
+# 0.2, rp_gstd in {1.0, 1.25, 1.5}, N in {128,256,384,512}, 3 seeds) found
+# Df is the dominant stability parameter, with a sign-flipping Df x kf
+# interaction: at low Df larger kf helps, at high Df smaller kf helps. N
+# and rp_gstd are secondary, mostly amplifying instability where Df/kf is
+# already marginal.
+#
+# Two gaps in that coverage, both directly on the path to our own
+# established hard regime:
+#   - kf only went down to 1.0 (our hard regime uses kf=0.95, just below
+#     that floor)
+#   - rp_gstd was capped at 1.5 (our hard regime uses 1.9, well above)
+#
+# This sweep bridges both gaps with a finer grid (Df/kf step 0.1 instead of
+# 0.2), extends Df past that earlier max (2.4) up to 2.5, and includes N up
+# to 1024 (N>512 was previously untested). Run against the *current*
+# implementation as a baseline - this is what a future pairing-choice fix
+# (see benchmarks/pairing_frustration_probe.py and
+# docs/source/pairing_frustration.md) would be compared against.
+#
+# Grid: 8 Df x 7 kf x 3 sigma x 5 N x 5 seeds = 4200 trials
+# Single-trial timing check (N=1024): easy corner ~1s, hardest corner
+# (Df=2.5,kf=0.8,sigma=1.9) ~16s (exhausts 20 internal retries quickly).
+# Expected wall-clock on 16 local cores: well under an hour.
+#
+# Run with:
+#   devenv shell -- uv run python benchmarks/stability_sweep.py \
+#       --config configs/hard_regime_boundary_sweep.toml
+
+sizes     = [64, 128, 256, 512, 1024]
+sigmas    = [1.0, 1.5, 1.9]
+
+df_values = [1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5]
+kf_values = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
+
+trials    = 5
+save_raw  = true
+output_dir = "benchmark_results/boundary_sweep_v2"
+
+[dask]
+enable = true
+# scheduler_address unset -> local cluster using all available cores
+
+[simulation]
+rp_g               = 100.0
+tol_ov             = 1.0e-6
+n_subcl_percentage = 0.1
+ext_case           = 0
+# Generous relative to observed worst-case single-trial cost (~16s for the
+# hardest corner at N=1024) - bounds pathological cases without needlessly
+# capping legitimately-slow-but-succeeding large-N runs.
+trial_timeout      = 120

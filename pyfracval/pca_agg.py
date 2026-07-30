@@ -242,16 +242,19 @@ class PCAggregator:
         """
         Calculates Gamma_pc for adding the next monomer (aggregate 2).
 
-        Follows ``gamma_use_mass`` (default True, mass-based) unless
-        overridden. Note the Fortran PCA solves Gamma with *counts*
-        (``PCA_cca.f90``'s ``Gamma_calculation`` takes ``n1, n2, n3``),
-        unlike the Fortran CCA which uses true masses - so
-        ``gamma_use_mass=False`` is what reproduces the original PCA
-        exactly. Mass is the default here anyway because counts cannot
-        represent per-particle densities at all. See NOTE.md 1.2.
+        Follows ``pca_gamma_use_mass`` (default False, count-based)
+        unless overridden - deliberately the opposite default to CCA's
+        ``gamma_use_mass``, matching the Fortran, because the mass form
+        is not consistent when the second body is a single monomer. See
+        the config field's comment for the measurement, and NOTE.md 1.2.
+
+        Note this only governs which scalars enter the Gamma equation.
+        Everything mass-weighted in PCA's own bookkeeping - ``self.mass``,
+        ``self.m1``, the running center of mass - is density-aware
+        regardless.
         """
         if use_mass is None:
-            use_mass = bool(self.algorithm_config.gamma_use_mass)
+            use_mass = bool(self.algorithm_config.pca_gamma_use_mass)
         return fractal.gamma_calculation(
             self.m1,
             self.rg1,

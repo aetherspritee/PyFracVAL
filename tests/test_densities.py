@@ -45,6 +45,38 @@ class TestCalculateMass:
         np.testing.assert_allclose(scaled, 2.5 * plain)
 
 
+class TestGammaDefaults:
+    def test_cca_defaults_to_mass_pca_to_counts(self):
+        # The two stages deliberately differ. Eq. 6's mass moments are
+        # only consistent with a count-based scaling-law Rg when both
+        # bodies are aggregates; PCA's second body is a single monomer,
+        # where the mass form admits almost no candidates (measured:
+        # 1/150 subclusters built vs 93/150 for counts).
+        cfg = OrchestratorAlgorithmConfig()
+        assert cfg.gamma_use_mass is True
+        assert cfg.pca_gamma_use_mass is False
+
+    def test_pca_still_builds_subclusters_under_defaults(self):
+        rng = np.random.default_rng(0)
+        built = 0
+        for seed in range(30):
+            rng = np.random.default_rng(seed)
+            radii = particle_generation.lognormal_pp_radii(1.9, 100.0, 12, rng=rng)
+            runner = PCAggregator(
+                radii,
+                1.79,
+                1.40,
+                1e-6,
+                rng=rng,
+                algorithm_config=OrchestratorAlgorithmConfig(),
+            )
+            result = runner.run()
+            built += result is not None and not runner.not_able_pca
+        # Guards against re-defaulting PCA to mass-based Gamma, which
+        # drops this to roughly 1%.
+        assert built >= 10, f"only {built}/30 subclusters built under defaults"
+
+
 class TestResolveDensities:
     def test_none_stays_none(self):
         assert resolve_densities(None, 5) is None
