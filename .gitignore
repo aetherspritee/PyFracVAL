@@ -4,6 +4,9 @@
 # Pre-publication material - never commit (see PAPER.md header)
 PAPER.md
 paper_geometric_boundary.py
+RESEARCH_PROMPT.md
+paper_fortran_harness.py
+benchmark_results/fortran_headtohead/
 RESULTS*/
 *.speedscope.json
 cluster_data/
