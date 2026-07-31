@@ -23,6 +23,32 @@ logger = logging.getLogger(__name__)
 CCA_PAIRING_FACTOR = 1.10
 
 
+def cluster_surface_reach(r_max: float, radii) -> float:
+    """Furthest a cluster's particle *surface* reaches from its centre of mass.
+
+    The pairing gate must compare Gamma against this, not against
+    ``r_max`` alone. ``r_max`` is the distance to the furthest particle's
+    *centre*; a placement only needs the two clusters' surfaces to touch,
+    which buys another particle radius on each side.
+
+    The difference is negligible for a 500-particle cluster (~14%) and
+    decisive for a 3-particle one, where the radii are a large fraction
+    of the whole reach. Screening on ``r_max`` therefore discarded pairs
+    that were perfectly placeable: measured at sigma=1.0, Df=1.4, N=8,
+    Gamma=5.50 against r_max sum 4.02 (rejected) but surface reach 6.02
+    (feasible). Those cells simply never generated.
+
+    This also makes the screen consistent with the candidate test it
+    gates, which already works in surface terms - paper Eq. 10 is
+    ``D_i1+ + D_j2+ >= Gamma`` with ``D+ = d + r``.
+    """
+    import numpy as _np
+
+    if radii is None or len(radii) == 0:
+        return float(r_max)
+    return float(r_max) + float(_np.max(radii))
+
+
 class _PairingMixin:
     """Pair generation and Gamma_pc calculation methods."""
 
@@ -251,7 +277,9 @@ class _PairingMixin:
                 props2 = (m2, rg2, None, r_max2, radii2)
 
                 gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
-                sum_rmax = r_max1 + r_max2
+                sum_rmax = cluster_surface_reach(
+                    r_max1, radii1
+                ) + cluster_surface_reach(r_max2, radii2)
 
                 # --- Check Strict and Relaxed Conditions ---
                 strict_condition = gamma_real and gamma_pc < sum_rmax
@@ -360,7 +388,9 @@ class _PairingMixin:
             props1 = (m1, rg1, None, r_max1, cluster_props[i][4])
             props2 = (m2, rg2, None, r_max2, cluster_props[j][4])
             gamma_real, gamma_pc = self._calculate_cca_gamma(props1, props2)
-            sum_rmax = r_max1 + r_max2
+            sum_rmax = cluster_surface_reach(
+                r_max1, cluster_props[i][4]
+            ) + cluster_surface_reach(r_max2, cluster_props[j][4])
             if not (gamma_real and gamma_pc < sum_rmax):
                 strict_pairing_used = False
                 logger.warning(

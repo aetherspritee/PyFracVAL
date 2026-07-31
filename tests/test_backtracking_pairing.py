@@ -145,10 +145,14 @@ class TestBacktrackingPairing:
         np.testing.assert_allclose(np.sort(radii_after), radii_before)
 
     def test_zero_progress_round_fails_instead_of_looping(self):
-        # Two clusters so far apart that no gamma-feasible edge exists:
-        # nothing can merge, so the round must fail rather than spin.
+        # A round that cannot merge anything must fail rather than spin on
+        # an unchanged pool. Forced here with a very low Df and kf, which
+        # makes the scaling law demand a centre-of-mass separation far
+        # beyond anything two two-particle clusters can reach - note the
+        # separation has to come from Gamma, not from where the clusters
+        # happen to sit, since sticking translates them anyway.
         coords = np.array(
-            [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [1e6, 0.0, 0.0], [1e6 + 2.0, 0.0, 0.0]]
+            [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [50.0, 0.0, 0.0], [52.0, 0.0, 0.0]]
         )
         radii = np.ones(4)
         i_orden = np.array([[0, 1, 2], [2, 3, 2]])
@@ -157,8 +161,8 @@ class TestBacktrackingPairing:
             initial_radii=radii,
             initial_i_orden=i_orden,
             n_total=4,
-            df=1.8,
-            kf=1.0,
+            df=1.05,
+            kf=0.1,
             tol_ov=1e-6,
             ext_case=0,
             rng=np.random.default_rng(0),

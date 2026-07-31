@@ -18,6 +18,8 @@ both `_generate_pairs()` and any future caller.
 
 from typing import Callable
 
+from .pairing import cluster_surface_reach
+
 Adjacency = dict[int, set[int]]
 
 
@@ -58,7 +60,9 @@ def build_feasibility_graph(
             props2 = (m2, rg2, None, r_max2, radii2)
 
             gamma_real, gamma_pc = gamma_fn(props1, props2)
-            sum_rmax = r_max1 + r_max2
+            sum_rmax = cluster_surface_reach(r_max1, radii1) + cluster_surface_reach(
+                r_max2, radii2
+            )
             if gamma_real and gamma_pc < sum_rmax * pairing_factor:
                 adj[i].add(j)
                 adj[j].add(i)
