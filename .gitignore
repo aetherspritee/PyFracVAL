@@ -187,3 +187,8 @@ devenv.local.nix
 # docs/requirements.txt is generated fresh by the docs CI workflow from
 # the pyproject.toml docs dependency group - see .github/workflows/docs.yml
 docs/requirements.txt
+
+# Raw structured event logs (pyfracval/event_log.py). A full boundary
+# sweep writes hundreds of MB of these; commit the analyzed summaries
+# (event_summary.json) instead, same as for aggregate .dat files.
+benchmark_results/**/events.jsonl

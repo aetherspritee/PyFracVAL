@@ -1,70 +1,59 @@
 # Drop-a-Few-Particles Rescue
 
-The idea: when a CCA sticking failure is localized - only a handful of
-particles are actually overlapping, not a fundamental incompatibility -
-drop those particles and keep going rather than discarding the whole
-attempt. [overlap_failure_census.md](overlap_failure_census.md) already
-found that at N=128 hard regime, this premise mostly doesn't hold (median
-9/24 particles implicated, not "a few"). This page implements the
-mechanism anyway, and reports what actually happens when it's used, at
-both the conservative default budget and a more permissive one.
+When a CCA sticking failure is localized — only a handful of particles
+overlapping, rather than a fundamental incompatibility — the failing
+particles could in principle be dropped and the merge kept, instead of
+discarding the whole attempt.
+[overlap_failure_census.md](overlap_failure_census.md) found that in the
+N=128 hard regime this premise mostly does not hold (median 9/24
+particles implicated). This page describes the mechanism, implemented
+regardless to test the premise directly, and reports its measured
+behaviour at the conservative default budget and a more permissive one.
 
-## Scoping decision: no backfill
-
-A rescued merge produces fewer than the requested N particles - dropped
-particles are not regenerated elsewhere. `AggregateProperties.n_particles_dropped`
-records the shortfall in the saved output metadata so it's never silent.
-This was an explicit decision, not an oversight: backfilling would mean
-re-entering the PCA/CCA loop for the dropped particles, a substantially
-larger feature than detect-and-drop.
+The conclusion, re-evaluated after backtracking pairing landed, is that
+the feature should remain disabled; the measurements supporting this are
+given below.
 
 ## Method
 
 `pyfracval/cca/rescue.py`:
 
-- `select_drop_candidates(census, max_drop_particles, max_drop_fraction)`
-  decides whether a failure is within budget, using
+- `select_drop_candidates(census, max_drop_particles,
+  max_drop_fraction)` decides whether a failure is within budget, using
   [overlap_failure_census.md](overlap_failure_census.md)'s
-  `OverlapCensus` data. Budget per side is
-  `min(max_drop_particles, ceil(max_drop_fraction * cluster_size))` - an
-  absolute safety cap and a relative one, so a small cluster can't lose a
-  large fraction of itself just because the fixed count allows it.
-- `retry_sticking_with_drops(...)` does *not* re-run the full
-  candidate/rotation search on a reduced cluster pair (which would need
-  plumbing a raw-coordinates entry point through the whole
-  `_perform_cca_sticking` machinery). Instead it takes the *exact*
-  geometry the overlap census was computed against - the placement that
-  was already tried and already failed - removes the identified
-  offending particles from it, and checks whether that specific placement
-  is now overlap-free. If some other pair is still too close, the rescue
-  fails; no second search is attempted.
+  `OverlapCensus` data. The budget per side is
+  `min(max_drop_particles, ceil(max_drop_fraction * cluster_size))` —
+  an absolute cap and a relative one, so a small cluster cannot lose a
+  large fraction of itself merely because the fixed count allows it.
+- `retry_sticking_with_drops(...)` does not re-run the full
+  candidate/rotation search on a reduced cluster pair (which would
+  require a raw-coordinates entry point through the whole
+  `_perform_cca_sticking` machinery). It takes the exact geometry the
+  overlap census was computed against — the placement already tried and
+  already failed — removes the identified offending particles, and
+  checks whether that placement is now overlap-free. If another pair
+  remains too close, the rescue fails; no second search is attempted.
 
-Wired into `aggregator.py::_run_iteration` as a third fallback tier after
-soft relaxation, gated on `cca_drop_rescue_enabled` (default `False`,
-auto-enables `cca_overlap_census_enabled` when set).
+The rescue is wired into `aggregator.py::_run_iteration` as a third
+fallback tier after soft relaxation, gated on
+`cca_drop_rescue_enabled` (default `False`; enabling it auto-enables
+`cca_overlap_census_enabled`).
 
-One correctness fix this feature required: `_run_iteration` pre-allocates
-`coords_next`/`radii_next` sized to the particle count entering the
-round, then fills them as pairs are processed. Every particle from every
-cluster previously always carried forward unchanged, so the array was
-always filled exactly full - once particles can be dropped, that's no
-longer true, and the arrays now need to be trimmed to the actual fill
-count before being carried into the next round (previously-latent, now
-fixed: `_run_iteration`'s output is now trimmed, a no-op whenever nothing
-was dropped). `_identify_monomers` had a related but purely cosmetic
-issue - it sized its scratch array to `self.N` (the originally-requested
-total) instead of the currently-active particle count, spuriously
-logging every dropped particle's index as "unassigned" every round after
-a drop. Both fixed together.
+A rescued merge produces fewer than the requested N particles; dropped
+particles are not regenerated.
+`AggregateProperties.n_particles_dropped` records the shortfall in the
+saved metadata. This scoping was deliberate: backfilling would require
+re-entering the PCA/CCA loop for the dropped particles, a substantially
+larger feature than detect-and-drop.
 
 ## Results
 
-### Success rate and fractal accuracy
+### Against the greedy-pairing baseline
 
 `benchmarks/drop_rescue_accuracy.py`: same hard-regime single-shot
 methodology as `pairing_frustration_probe.py` (N=128, Df=2.25, kf=0.95,
-σ=1.9, 40 seeds), comparing baseline (no rescue) against drop-rescue at
-the config defaults and at a more permissive budget.
+σ=1.9, 40 seeds), comparing no rescue against drop-rescue at the config
+defaults and at a more permissive budget.
 
 | Config | Success rate | Rescued successes | Avg particles dropped | Avg Rg error | Rg within 5% |
 |---|---:|---:|---:|---:|---:|
@@ -72,126 +61,131 @@ the config defaults and at a more permissive budget.
 | Drop-rescue, default budget (max 5 particles, 2% per side) | 2.5% (1/40) | 0 | 0.0 | -0.89% | 1/1 |
 | Drop-rescue, relaxed budget (max 5 particles, 25% per side) | 7.5% (3/40) | 2 | 4.0 | +0.46% | 3/3 |
 
-The default budget has **zero measurable effect**: at a cluster-pair size
-of 24 (the fixed size every hard-regime failure happens at, per
+The default budget has no measurable effect. At the cluster-pair size
+of 24 (the fixed size of every hard-regime failure, per
 [overlap_failure_census.md](overlap_failure_census.md)), a 2%-per-side
-relative cap allows dropping `ceil(0.02*12) = 1` particle per side -
-nowhere near enough given a median of 9/24 particles implicated. This is
-the conservative default working as intended, not a bug: it would rather
-rescue nothing than aggressively restructure a cluster.
+relative cap allows dropping `ceil(0.02*12) = 1` particle per side —
+far below the median of 9/24 particles implicated. This is the
+conservative default operating as designed rather than a defect: it
+rescues nothing rather than aggressively restructure a cluster.
 
 The relaxed budget (up to 25% per side, still capped at 5 particles
-absolute) triples the single-shot success rate and, on the small sample
-of rescued successes obtained, shows no obvious fractal-accuracy penalty
-(Rg error actually landed *closer* to zero than the unrescued baseline's
-single success, though n=1 vs n=3 is too small to call that a real
-difference either way).
+absolute) triples the single-shot success rate. On the small sample of
+rescued successes, no fractal-accuracy penalty is apparent (Rg error
+landed closer to zero than the unrescued baseline's single success,
+though n=1 vs. n=3 does not support a conclusion in either direction).
 
 Raw output: `benchmark_results/drop_rescue_accuracy.json`.
 
-### Larger N: a real trend, but not the whole answer
+### Larger N
 
-[overlap_failure_census.md](overlap_failure_census.md)'s N=512 comparison
-(added after this page's initial budget validation) shows the *relative*
-offending-particle fraction shrinking with N (20% at N=512 vs. 37.5% at
-N=128) - a real signal in the direction the "5 out of 512" framing hoped
-for. But the *absolute* count needed (median 20 at N=512) still exceeds
-what either budget tested above allows: at N=512's cluster-pair size of
-100, the relaxed budget's 25%-per-side cap is itself capped by the
-absolute `max_drop_particles=5` limit (`min(5, ceil(0.25*100))=5`), well
-under the ~10-15 per side a median failure likely needs. The config's two
-independent budget parameters would need to be tuned differently at
-different N for the relaxed setting to actually engage the relative cap
-rather than being bottlenecked by the absolute one - not evaluated here.
+[overlap_failure_census.md](overlap_failure_census.md)'s N=512
+comparison (added after this page's initial budget validation) shows
+the relative offending-particle fraction shrinking with N (20% at N=512
+vs. 37.5% at N=128) — a trend in the direction the "5 out of 512"
+framing assumed. The absolute count needed (median 20 at N=512) still
+exceeds what either budget tested above allows: at N=512's cluster-pair
+size of 100, the relaxed budget's 25%-per-side cap is itself capped by
+the absolute `max_drop_particles=5` limit
+(`min(5, ceil(0.25*100)) = 5`), well under the ~10–15 per side a median
+failure would require. The two budget parameters would need different
+tuning at different N for the relative cap to engage at all; this was
+not evaluated.
 
-Both N=128 and N=512 hard-regime failures observed happen at CCA round 1
-(merging PCA subclusters directly, before any cluster has had a chance to
-grow large) - neither samples the *late*-round merge between two already-
-large, already-built clusters that originally motivated this idea. That
-remains untested; it would need a probe that specifically waits for (or
-forces) a later-round failure rather than sampling whichever round fails
-first, which is a separate, more involved undertaking than reused here.
+All hard-regime failures observed, at both N=128 and N=512, occur at
+CCA round 1 (merging PCA subclusters directly, before any cluster has
+grown large). Neither sample includes the late-round merge between two
+large, already-built clusters that originally motivated the idea; that
+case remains untested and would require a probe that waits for or
+forces a later-round failure.
 
-## Discussion
+### After backtracking pairing (2026-07-30)
 
-Both results point the same direction: the mechanism works exactly as
-designed (it does rescue localized failures, and does so without
-obviously distorting fractal accuracy in the cases it succeeds on), but
-"localized" is doing a lot of work in that sentence - at the one regime
-and scale actually measured, most failures are not localized enough for
-even a fairly permissive budget to help. This is not a reason to abandon
-the feature (a real, reproducible 3x single-shot success-rate improvement
-at a relaxed budget is not nothing), but it is a reason not to promote it
-beyond opt-in, and not to assume the "5 out of 512" framing that
-motivated it generalizes to the regime this project has actually
-characterized in depth.
-
-## Re-evaluated after backtracking (2026-07-30): leave it off
-
-Everything above was measured against the *greedy* pairing baseline,
+The results above were measured against the greedy pairing baseline,
 where hard-regime single-shot success was 2.5% and drop-rescue's 7.5%
-looked like a 3x improvement. That baseline no longer exists:
+constituted a threefold improvement. That baseline no longer exists:
 [backtracking_pairing.md](backtracking_pairing.md) reaches ~100% at the
-same point, so the failures this feature was built to catch mostly stop
-happening there.
+same point, so the failures this feature was built to catch largely no
+longer occur there. The remaining question is whether it helps at the
+new failure frontier — the Df/kf/σ region where backtracking still
+fails, per [boundary_sweep_v2.md](boundary_sweep_v2.md).
 
-The question worth asking is therefore whether it helps at the *new*
-failure frontier - the Df/kf/σ region where backtracking still fails, per
-[boundary_sweep_v2.md](boundary_sweep_v2.md).
 `benchmarks/drop_rescue_after_backtracking.py`, 40 seeds, same
 single-shot methodology, σ=1.9, N=128:
 
 | Point | Config | Success | Aggregates short of N | Particles dropped | mean \|Rg error\| |
 |---|---|---:|---:|---:|---:|
-| Df=2.3, kf=1.0 | baseline | 55.0% | 0 | 0 | **1.89%** |
+| Df=2.3, kf=1.0 | baseline | 55.0% | 0 | 0 | 1.89% |
 | | default budget | 57.5% | 1 | 2 | 1.98% |
 | | relaxed (25%/side) | 40.0% | 10 | 83 | 3.84% |
 | | relative-only (no absolute cap) | 47.5% | 16 | 253 | 10.73% |
-| Df=2.4, kf=0.8 | baseline | 45.0% | 0 | 0 | **1.18%** |
+| Df=2.4, kf=0.8 | baseline | 45.0% | 0 | 0 | 1.18% |
 | | default budget | 42.5% | 1 | 2 | 1.29% |
 | | relaxed (25%/side) | 42.5% | 13 | 113 | 4.49% |
 | | relative-only (no absolute cap) | 60.0% | 20 | 268 | 6.54% |
 
-Two things stand out, and they point the same way:
+Two observations, pointing the same way:
 
-1. **The success effect is inconsistent.** The relative-only budget gains
-   15pp at one frontier point and loses 7.5pp at the other. That is not a
-   mechanism working; that is noise around zero. There is a plausible
-   reason for the losses too: a rescued merge yields a cluster smaller
-   than the hierarchy expects, which shifts every subsequent Γ and can
-   cascade into failures later in the same run.
-2. **The accuracy cost is not noise.** Mean \|Rg error\| rises from
-   1.2-1.9% to 4.5-10.7% once the budget is loose enough to actually
-   fire. A tunable algorithm exists to hit a prescribed Df/kf; dropping
-   5-8% of the particles misses the target by several times the 5%
-   tolerance the rest of the pipeline is held to. Trading that for an
-   unreliable success change is a bad trade.
+1. The success effect is inconsistent. The relative-only budget gains
+   15pp at one frontier point and loses 7.5pp at the other — a pattern
+   indistinguishable from noise around zero. A plausible mechanism for
+   the losses exists: a rescued merge yields a cluster smaller than the
+   hierarchy expects, which shifts every subsequent Γ and can cascade
+   into failures later in the same run.
+2. The accuracy cost is systematic. Mean \|Rg error\| rises from
+   1.2–1.9% to 4.5–10.7% once the budget is loose enough to fire. A
+   tunable algorithm exists to hit a prescribed Df/kf; dropping 5–8% of
+   the particles misses the target by several times the 5% tolerance
+   the rest of the pipeline is held to, in exchange for an unreliable
+   change in success rate.
 
-The conservative default budget remains a no-op (1 rescue, 2 particles,
-across 40 seeds) - it is working exactly as designed, and that design is
-now clearly the right one.
+The conservative default budget remains effectively inert (1 rescue,
+2 particles, across 40 seeds), consistent with its design.
 
-**Recommendation: leave `cca_drop_rescue_enabled` off.** The mechanism is
-kept, documented and tested because "drop the few offenders" is an idea
-that keeps suggesting itself and it is worth being able to point at a
-measurement rather than re-litigating it. The measurement says the
-premise - that failures are localized to a handful of particles - does
-not hold at any regime this project has characterized: the merge-log
-census puts the median failure at ~35% of the cluster pair offending, not
-a handful.
+## Discussion
+
+The mechanism operates as designed — it rescues localized failures
+without apparent accuracy cost in the cases it succeeds on — but at
+every regime and scale measured, most failures are not localized enough
+for even a fairly permissive budget to apply: the merge-log census puts
+the median failure at ~35–45% of the cluster pair offending
+([event_logging.md](event_logging.md)), not a handful of particles.
+After backtracking, the residual failures show no consistent benefit
+and a clear accuracy penalty when the budget is loosened enough to
+engage.
+
+**Recommendation: leave `cca_drop_rescue_enabled` off.** The mechanism
+is retained, documented, and tested because "drop the few offenders" is
+an idea that recurs, and a measurement is a more durable answer than
+re-deriving the argument. The measurement is that the premise — failures
+localized to a handful of particles — does not hold in any regime this
+project has characterized.
 
 ## Limitations
 
-No backfill (see Scoping decision above) - every downstream consumer of
-"the aggregate has exactly N particles" needs to check
-`n_particles_dropped`. Not yet benchmarked in combination with Phase 1's
-matching-based pairing (fewer failures even reaching the sticking stage
-changes how often this fallback gets exercised at all) or against the
-full `hard_regime_boundary_sweep.toml`/`full_stability_sweep.toml` grids
-(this page's validation uses the faster single-shot methodology only,
-consistent with how Phase 1's `matching_leaf_weighted` variant was scoped
-once its single-shot result was already clear). The relaxed-budget
-fractal-accuracy comparison has an unavoidably small sample (n=1 baseline
-success, n=3 rescued successes) given how rare hard-regime single-shot
-successes are - a firmer accuracy conclusion would need either a larger
-seed count or a less extreme regime.
+There is no backfill (see Method): every downstream consumer of "the
+aggregate has exactly N particles" must check `n_particles_dropped`.
+The feature has not been benchmarked in combination with matching-based
+pairing, nor against the full
+`hard_regime_boundary_sweep.toml`/`full_stability_sweep.toml` grids;
+this page's validation uses the faster single-shot methodology
+throughout. The relaxed-budget fractal-accuracy comparison against the
+greedy baseline has an unavoidably small sample (n=1 baseline success,
+n=3 rescued successes) given how rare hard-regime single-shot successes
+were under greedy pairing; a firmer accuracy conclusion would require a
+larger seed count or a less extreme regime.
+
+## Implementation notes
+
+Two array-bookkeeping corrections were required by this feature.
+`_run_iteration` pre-allocates `coords_next`/`radii_next` sized to the
+particle count entering the round and fills them as pairs are
+processed; previously every particle always carried forward, so the
+arrays were always exactly full. Once particles can be dropped this no
+longer holds, and the arrays are now trimmed to the actual fill count
+before being carried into the next round (a no-op when nothing is
+dropped). Separately, `_identify_monomers` sized a scratch array to
+`self.N` (the originally-requested total) instead of the currently
+active particle count, spuriously logging every dropped particle's
+index as "unassigned" in each round after a drop; this was cosmetic
+and is fixed alongside.
