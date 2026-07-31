@@ -1,0 +1,10 @@
+{
+  "n_files": 885,
+  "n_overlapping": 0,
+  "worst_overlap": 5.125560498087106e-07,
+  "n_short": 0,
+  "overlapping": [],
+  "short": [],
+  "rg_error_pct_mean": -0.9041341068880656,
+  "rg_error_pct_median": -0.3945784889723855
+}

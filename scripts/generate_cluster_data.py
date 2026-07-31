@@ -333,16 +333,21 @@ def main() -> None:
         # --- global work queue --------------------------------------------
         need = {i: args.clusters_per_combo for i in range(len(combos))}
         attempts = {i: 0 for i in range(len(combos))}
-        pending: list[tuple[int, int]] = []  # (combo_idx, attempt)
+        # Queue combo indices only. The attempt number is assigned inside
+        # submit(), at the moment the counter is incremented - deriving it
+        # earlier let two failures for the same combo read the same "next"
+        # value before either was submitted, producing duplicate attempt
+        # numbers and therefore colliding output filenames.
+        pending: list[int] = []
         for i in range(len(combos)):
-            for a in range(args.clusters_per_combo):
-                pending.append((i, a))
+            pending.extend([i] * args.clusters_per_combo)
 
         futures: dict = {}
 
-        def submit(item):
-            """Submit one attempt and return its future."""
-            combo_idx, attempt = item
+        def submit(combo_idx: int):
+            """Submit one attempt for a combo and return its future."""
+            attempt = attempts[combo_idx]
+            attempts[combo_idx] += 1
             combo = combos[combo_idx]
             seed = deterministic_seed(
                 combo["sigma"], combo["Df"], combo["N"], attempt, args.label
@@ -357,7 +362,6 @@ def main() -> None:
                 pure=False,
             )
             futures[fut] = (combo_idx, attempt, seed)
-            attempts[combo_idx] += 1
             return fut
 
         for _ in range(min(window, len(pending))):
@@ -427,13 +431,13 @@ def main() -> None:
                 and need[combo_idx] > 0
                 and attempts[combo_idx] < MAX_ATTEMPTS_PER_COMBO
             ):
-                pending.append((combo_idx, attempts[combo_idx]))
+                pending.append(combo_idx)
 
             while pending and len(futures) < window:
-                item = pending.pop(0)
-                if need[item[0]] <= 0:
+                idx = pending.pop(0)
+                if need[idx] <= 0 or attempts[idx] >= MAX_ATTEMPTS_PER_COMBO:
                     continue
-                ac.add(submit(item))
+                ac.add(submit(idx))
 
             done += 1
             if done % 100 == 0:

@@ -297,7 +297,12 @@ class Metadata(BaseModel):
         rpgstd_str = f"{self.simulation_parameters.rp_gstd:.2f}".replace(".", "p")
         seed_str = f"{self.simulation_parameters.seed}"  # Use N_A if no seed
         agg_str = f"{self.generation_info.iteration}"
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        # Microsecond resolution: a second-resolution stamp collides
+        # whenever two aggregates with identical parameters are written
+        # within the same second, and the loser is silently overwritten.
+        # That is easy to hit when a generator saves results as parallel
+        # tasks return.
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
 
         filepath = Path(folderpath)
         filepath.mkdir(parents=True, exist_ok=True)
@@ -323,7 +328,13 @@ class Metadata(BaseModel):
 
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(header_string)
-            np.savetxt(f, data_to_save, fmt="%18.10e", delimiter=" ")
+            # %.17e round-trips float64 exactly. The previous %18.10e kept
+            # ~11 significant digits, which is invisible for most purposes
+            # but turns exact point contact into apparent overlap on the
+            # order of 1e-9..1e-7 when a consumer re-reads the file and
+            # runs its own overlap check - a spurious failure in geometry
+            # that was clean in memory.
+            np.savetxt(f, data_to_save, fmt="%24.17e", delimiter=" ")
         logger.info("Successfully saved aggregate data and metadata to")
         logger.info(f"    Folder:   {filepath.parent}")
         logger.info(f"    Filename: {filepath.name}")

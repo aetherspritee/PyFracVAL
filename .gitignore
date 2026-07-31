@@ -1,5 +1,9 @@
 .envrc
 .direnv
+
+# Pre-publication material - never commit (see PAPER.md header)
+PAPER.md
+paper_geometric_boundary.py
 RESULTS*/
 *.speedscope.json
 cluster_data/
@@ -192,3 +196,8 @@ docs/requirements.txt
 # sweep writes hundreds of MB of these; commit the analyzed summaries
 # (event_summary.json) instead, same as for aggregate .dat files.
 benchmark_results/**/events.jsonl
+
+# Generated cluster catalogs. The .dat files are bulk data (hundreds of
+# MB); the index/validation/gap JSONs describe them and are small enough
+# to keep, same policy as benchmark_results aggregates.
+cluster_data/**/*.dat
