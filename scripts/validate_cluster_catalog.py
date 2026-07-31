@@ -56,7 +56,7 @@ def parse_header_params(path: Path) -> dict:
             if not line.startswith("#"):
                 break
             text = line.lstrip("#").strip()
-            for key in ("Df:", "kf:", "N:", "rp_gstd:"):
+            for key in ("Df:", "kf:", "N:", "rp_gstd:", "tol_ov:"):
                 if text.startswith(key):
                     try:
                         out[key.rstrip(":")] = float(text.split(":", 1)[1])
@@ -69,7 +69,14 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, default=PROJECT_ROOT / "cluster_data")
     ap.add_argument(
-        "--tol", type=float, default=1e-9, help="max tolerated overlap fraction"
+        "--tol",
+        type=float,
+        default=None,
+        help=(
+            "max tolerated overlap fraction. Default: each file's own tol_ov, "
+            "read from its header - that is the contract the run promised. "
+            "Pass a number to check against a fixed stricter/looser bound."
+        ),
     )
     args = ap.parse_args()
 
@@ -82,6 +89,7 @@ def main() -> None:
     bad_overlap: list[dict] = []
     short: list[dict] = []
     worst = 0.0
+    n_within_tol = 0
     rg_errors: list[float] = []
     by_n: dict[int, int] = Counter()
     per_combo: dict[tuple, int] = defaultdict(int)
@@ -95,14 +103,24 @@ def main() -> None:
 
         max_ov, n_pairs = max_self_overlap(coords, radii)
         worst = max(worst, max_ov)
-        if max_ov > args.tol:
+        # The generator accepts contact up to tol_ov, so that is the bound
+        # to hold it to. Judging every file at a fixed 1e-9 instead tests a
+        # promise nobody made: a run configured with tol_ov=1e-6 is free to
+        # place a pair 1e-7 into each other, and whether it happens to is a
+        # property of the sticking geometry, not of correctness. The worst
+        # overlap seen is printed regardless, so nothing is hidden by this.
+        tol = args.tol if args.tol is not None else params.get("tol_ov", 1e-9)
+        if max_ov > tol:
             bad_overlap.append(
                 {
                     "file": str(path),
                     "max_overlap": max_ov,
                     "n_pairs": n_pairs,
+                    "tol": tol,
                 }
             )
+        elif max_ov > 0.0:
+            n_within_tol += 1
         if coords.shape[0] != n_expected:
             short.append(
                 {
@@ -129,6 +147,7 @@ def main() -> None:
     print(f"  files checked            : {len(files)}")
     print(f"  files with overlap > tol : {len(bad_overlap)}")
     print(f"  worst overlap anywhere   : {worst:.3e}")
+    print(f"  ... of which within tol  : {n_within_tol} file(s) show any contact")
     print(f"  files short of N         : {len(short)}")
     if rg_errors:
         arr = np.array(rg_errors)

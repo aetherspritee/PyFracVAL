@@ -90,8 +90,11 @@ CLUSTERS_PER_COMBO = 5
 #: full run_simulation, which retries internally up to 20 times, so this
 #: is a budget of retries-of-retries; 10 is generous for anything with a
 #: non-trivial per-attempt success probability and keeps a hopeless
-#: combination from occupying a worker for hours.
-MAX_ATTEMPTS_PER_COMBO = 10
+#: combination from occupying a worker for hours. Raised from 10 once the
+#: kf selection removed the genuinely-infeasible cells: what remains are
+#: marginal cells where the extra attempts actually convert, and there
+#: are few enough of them that the worst case stays bounded.
+MAX_ATTEMPTS_PER_COMBO = 25
 SCHEDULER_HOST = "marvin.bv.e-technik.tu-dortmund.de"
 SCHEDULER_PORT = 8786
 SCHEDULER_ADDRESS = f"tcp://{SCHEDULER_HOST}:{SCHEDULER_PORT}"
@@ -153,25 +156,45 @@ def parse_feasibility_csv(csv_path: Path) -> dict[tuple[float, float, int], floa
 
 
 def build_combo_list(limit: int | None = None) -> list[dict]:
-    """Union of the vanilla and densify feasibility grids.
+    """The (sigma, Df, N) grid with the kf measured for each cell.
 
-    The densify grid is included deliberately even though densification
-    itself is not used: those combinations were only reachable *via*
-    densification when the sweeps were run, and backtracking pairing has
-    since moved the feasibility boundary outward far enough that many are
-    now reachable natively (docs/source/boundary_sweep_v2.md). Attempting
-    them costs a bounded number of failed tasks and gains real coverage.
+    Reads scripts/select_kf.py's output, which probes a kf ladder against
+    the *current* implementation and picks, per cell, the viable value
+    closest to kf=1.0. The earlier source for this was a pair of sweep
+    CSVs produced by an older build; those left real gaps, partly because
+    some of their kf choices no longer work and partly because some never
+    worked and only appeared to under the overlap-acceptance defect.
+
+    Falls back to the old CSVs if the measured selection is absent, so the
+    script still runs in a fresh checkout.
     """
     base = PROJECT_ROOT / "benchmark_results/plausibility"
-    vanilla = parse_feasibility_csv(base / "wide_sweep_feasible_kf.csv")
-    densify = parse_feasibility_csv(base / "wide_sweep_feasible_kf_densify_retry.csv")
+    selected = base / "selected_kf.csv"
 
-    merged: dict[tuple[float, float, int], float] = dict(densify)
-    merged.update(vanilla)  # prefer the kf the vanilla sweep liked
+    if selected.exists():
+        combos = []
+        with selected.open() as fh:
+            for row in csv.DictReader(fh):
+                combos.append(
+                    {
+                        "sigma": float(row["sigma"]),
+                        "Df": float(row["Df"]),
+                        "N": int(row["N"]),
+                        "kf": float(row["kf"]),
+                    }
+                )
+    else:
+        logger.warning("%s missing; falling back to the legacy sweep CSVs", selected)
+        vanilla = parse_feasibility_csv(base / "wide_sweep_feasible_kf.csv")
+        densify = parse_feasibility_csv(
+            base / "wide_sweep_feasible_kf_densify_retry.csv"
+        )
+        merged = dict(densify)
+        merged.update(vanilla)
+        combos = [
+            {"sigma": s, "Df": d, "N": n, "kf": kf} for (s, d, n), kf in merged.items()
+        ]
 
-    combos = [
-        {"sigma": s, "Df": d, "N": n, "kf": kf} for (s, d, n), kf in merged.items()
-    ]
     combos.sort(key=lambda c: (c["N"], c["sigma"], c["Df"]))
     return combos[:limit] if limit else combos
 
