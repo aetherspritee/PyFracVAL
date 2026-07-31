@@ -13,7 +13,7 @@ This module follows the PCA stage of the FracVAL workflow described in
    the second body is a single monomer, whose scaling-law ``Rg`` is
    meaningless at n=1 while its mass can still be a large fraction of the
    growing cluster's. Using masses here builds 1/150 subclusters where
-   counts build 93/150. See :meth:`PCAggregator._gamma_calculation` for
+   counts build 93/150. See ``PCAggregator._gamma_calculation`` for
    the full argument and the measurement.
 
    Per-particle densities still matter in this stage: they feed
