@@ -1,21 +1,58 @@
 #!/usr/bin/env python3
-"""Generate cluster data for all feasible (sigma, Df, N) combinations.
+"""Generate a validated catalog of cluster data for downstream simulations.
 
-Reads the feasibility CSVs from the wide sweep, finds the best kf per combo,
-and generates 5 clusters per combo using the Marvin Dask cluster.
-Auto-retries failed generations with new seeds.  Cluster .dat files are saved
-locally on the client machine (not on remote workers).
+Reads the feasibility CSVs from the wide sweep, picks the best kf per
+(sigma, Df, N) combination, and generates ``CLUSTERS_PER_COMBO`` clusters
+for each on a Dask cluster (remote if reachable, otherwise local).
 
 Usage:
     devenv shell -- uv run python scripts/generate_cluster_data.py
+    devenv shell -- uv run python scripts/generate_cluster_data.py --local
+    devenv shell -- uv run python scripts/generate_cluster_data.py --limit 20
+
+Design notes (this is a rewrite; see git history for the previous version)
+-------------------------------------------------------------------------
+Four problems in the previous implementation shaped this one.
+
+**Saturation.** It walked combos one at a time, submitting a batch of at
+most ``CLUSTERS_PER_COMBO`` tasks and then blocking until all of them
+returned. Against a cluster offering ~148 concurrent slots that used
+about five, i.e. a ~30x throughput loss. This version keeps a single
+global work queue and a sliding in-flight window sized to the cluster, so
+combos overlap and the cluster stays busy.
+
+**Validation.** It hand-built ``AggregateProperties`` from coords/radii
+and never called :func:`pyfracval.quality.compute_aggregate_quality`, so
+a geometrically invalid aggregate was catalogued as ``success=True``.
+That is how a batch of densified clusters with severe particle overlap
+reached downstream consumers. Every cluster is now measured before it is
+written, and rejected if it overlaps.
+
+**Reproducibility.** Seeds came from ``hash()`` on a tuple containing a
+string. Python randomizes string hashing per process unless
+``PYTHONHASHSEED`` is fixed, so "deterministic_seed" was not deterministic
+across runs. Seeds now come from ``hashlib.blake2b``.
+
+**Runaway tasks.** No wall-clock budget was passed, so a single
+infeasible combination could occupy a worker indefinitely. Each task now
+carries ``max_runtime_seconds``.
+
+Densification is deliberately not offered. It does not reach the
+requested fractal dimension (measured ~0.5 low by the density-density
+correlation function) and its overlap resolution does not converge except
+for compressions so small they do essentially nothing. See
+``docs/source/correlation_validation.md``.
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
+import hashlib
 import json
 import logging
 import os
+import socket
 import sys
 import time
 from collections import defaultdict
@@ -30,6 +67,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from pyfracval.dask_runner import get_client  # noqa: E402
 from pyfracval.fractal import calculate_cluster_properties  # noqa: E402
 from pyfracval.main_runner import run_simulation  # noqa: E402
+from pyfracval.quality import compute_aggregate_quality  # noqa: E402
 from pyfracval.schemas import (  # noqa: E402
     AggregateProperties,
     GenerationInfo,
@@ -48,27 +86,39 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 CLUSTERS_PER_COMBO = 5
-MAX_ATTEMPTS_PER_COMBO = 100
-SCHEDULER_ADDRESS = "tcp://marvin.bv.e-technik.tu-dortmund.de:8786"
+#: Bounds a combination that never succeeds. Each attempt is already a
+#: full run_simulation, which retries internally up to 20 times, so this
+#: is a budget of retries-of-retries; 10 is generous for anything with a
+#: non-trivial per-attempt success probability and keeps a hopeless
+#: combination from occupying a worker for hours.
+MAX_ATTEMPTS_PER_COMBO = 10
+SCHEDULER_HOST = "marvin.bv.e-technik.tu-dortmund.de"
+SCHEDULER_PORT = 8786
+SCHEDULER_ADDRESS = f"tcp://{SCHEDULER_HOST}:{SCHEDULER_PORT}"
 OUTPUT_BASE = PROJECT_ROOT / "cluster_data"
+CONFIG_LABEL = "vanilla"
 
-# Workers save to a temp dir on their own filesystem (discarded); we save
-# locally on the client after collecting coords/radii from the future.
+#: Per-task wall-clock budget. Bounds an infeasible combination instead of
+#: letting it hold a worker until the campaign is abandoned.
+TASK_TIMEOUT_S = 180.0
+
+#: Workers write to their own filesystem and we discard it - the client
+#: re-saves locally from the returned arrays, so the catalog lands on one
+#: machine regardless of where the work ran.
 _WORKER_OUTPUT_DIR = "/tmp/pyfracval_worker_output"
 
-# Algorithm config for densify+retry (matches the wide_sweep_densify_retry TOML)
-DENSIFY_RETRY_ALGORITHM: dict[str, object] = {
-    "densify_enabled": True,
-    "densify_source_df": 2.0,
-    "densify_source_kf": 1.0,
-    "densify_method": "radial",
-    "densify_rtol": 0.05,
-    "densify_max_push_iters": 50,
-    "cca_retry_rotation_mode": "alternate",
-    "cca_retry_escalate_after": 120,
-    "cca_dual_jitter_interval": 5,
-    "cca_dual_jitter_deg": 8.0,
+#: Env applied to every worker process. Thread limits matter here because
+#: the cluster runs multi-threaded workers (4 threads/process): without
+#: them, each of the 4 concurrent tasks would spawn its own BLAS/OpenMP
+#: pool and oversubscribe the core count several times over.
+_WORKER_ENV = {
+    "PYFRACVAL_DISABLE_PARALLEL_SUBCLUSTERS": "1",
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
 }
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -76,18 +126,22 @@ DENSIFY_RETRY_ALGORITHM: dict[str, object] = {
 
 
 def deterministic_seed(
-    sigma: float,
-    df_val: float,
-    n_val: int,
-    attempt: int,
-    config_label: str,
+    sigma: float, df_val: float, n_val: int, attempt: int, label: str
 ) -> int:
-    """Reproducible seed bound to (sigma, Df, N, attempt, config)."""
-    return abs(hash((sigma, df_val, n_val, attempt, config_label))) % (2**31 - 1)
+    """Reproducible seed bound to (sigma, Df, N, attempt, config).
+
+    Uses blake2b rather than ``hash()``: Python randomizes string hashing
+    per process, so a ``hash()``-derived seed is not reproducible across
+    runs - which defeats the point of naming it deterministic.
+    """
+    key = f"{sigma:.6g}|{df_val:.6g}|{n_val}|{attempt}|{label}".encode()
+    return int.from_bytes(hashlib.blake2b(key, digest_size=4).digest(), "big") % (
+        2**31 - 1
+    )
 
 
-def parse_feasibility_csv(csv_path: Path) -> list[dict[str, object]]:
-    """Read feasibility CSV, return combos with best kf per (sigma, Df, N)."""
+def parse_feasibility_csv(csv_path: Path) -> dict[tuple[float, float, int], float]:
+    """Best-scoring kf per (sigma, Df, N) from a feasibility CSV."""
     combos: dict[tuple[float, float, int], list[tuple[float, float]]] = defaultdict(
         list
     )
@@ -95,83 +149,73 @@ def parse_feasibility_csv(csv_path: Path) -> list[dict[str, object]]:
         for row in csv.DictReader(fh):
             key = (float(row["sigma"]), float(row["Df"]), int(row["N"]))
             combos[key].append((float(row["kf"]), float(row["success_rate"])))
-
-    result: list[dict[str, object]] = []
-    for (sigma, df_val, n_val), kfs in combos.items():
-        kfs.sort(key=lambda x: -x[1])
-        result.append(
-            {
-                "sigma": sigma,
-                "Df": df_val,
-                "N": n_val,
-                "kf": kfs[0][0],
-                "success_rate": kfs[0][1],
-            }
-        )
-    return sorted(result, key=lambda r: (r["sigma"], r["N"], r["Df"]))  # type: ignore[arg-type,return-value]
+    return {k: max(v, key=lambda x: x[1])[0] for k, v in combos.items()}
 
 
-def build_sim_config(
-    sigma: float,
-    df_val: float,
-    n_val: int,
-    kf: float,
-    extra: dict[str, object] | None = None,
-) -> dict[str, object]:
-    config: dict[str, object] = {
-        "N": n_val,
-        "Df": df_val,
-        "kf": kf,
+def build_combo_list(limit: int | None = None) -> list[dict]:
+    """Union of the vanilla and densify feasibility grids.
+
+    The densify grid is included deliberately even though densification
+    itself is not used: those combinations were only reachable *via*
+    densification when the sweeps were run, and backtracking pairing has
+    since moved the feasibility boundary outward far enough that many are
+    now reachable natively (docs/source/boundary_sweep_v2.md). Attempting
+    them costs a bounded number of failed tasks and gains real coverage.
+    """
+    base = PROJECT_ROOT / "benchmark_results/plausibility"
+    vanilla = parse_feasibility_csv(base / "wide_sweep_feasible_kf.csv")
+    densify = parse_feasibility_csv(base / "wide_sweep_feasible_kf_densify_retry.csv")
+
+    merged: dict[tuple[float, float, int], float] = dict(densify)
+    merged.update(vanilla)  # prefer the kf the vanilla sweep liked
+
+    combos = [
+        {"sigma": s, "Df": d, "N": n, "kf": kf} for (s, d, n), kf in merged.items()
+    ]
+    combos.sort(key=lambda c: (c["N"], c["sigma"], c["Df"]))
+    return combos[:limit] if limit else combos
+
+
+def output_dir_for_combo(sigma: float, df_val: float, n_val: int, label: str) -> Path:
+    sigma_str = f"sigma_{sigma:.2f}".replace(".", "p")
+    df_str = f"Df_{df_val:.2f}".replace(".", "p")
+    return OUTPUT_BASE / label / f"{sigma_str}__{df_str}__N_{n_val}"
+
+
+def build_sim_config(combo: dict) -> dict:
+    return {
+        "N": combo["N"],
+        "Df": combo["Df"],
+        "kf": combo["kf"],
         "rp_g": 1.0,
-        "rp_gstd": sigma,
+        "rp_gstd": combo["sigma"],
         "tol_ov": 1e-6,
         "n_subcl_percentage": 0.1,
         "ext_case": 0,
     }
-    if extra:
-        config.update(extra)
-    return config
 
 
-def output_dir_for_combo(
-    sigma: float,
-    df_val: float,
-    n_val: int,
-    config_label: str,
-) -> Path:
-    sigma_str = f"sigma_{sigma:.2f}".replace(".", "p")
-    df_str = f"Df_{df_val:.2f}".replace(".", "p")
-    return OUTPUT_BASE / config_label / f"{sigma_str}__{df_str}__N_{n_val}"
-
-
-def save_cluster_locally(
+def save_cluster(
     coords: np.ndarray,
     radii: np.ndarray,
+    combo: dict,
     out_dir: Path,
     iteration: int,
     seed: int,
-    sigma: float,
-    df_val: float,
-    n_val: int,
-    kf: float,
+    quality: dict,
 ) -> str:
-    """Save a single cluster as a .dat file (YAML header + data columns).
-
-    Returns the path to the saved file.
-    """
+    """Write one validated cluster, quality record included."""
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    # Compute aggregate properties
-    _total_mass, rg, cm, _r_max = calculate_cluster_properties(
-        coords, radii, df_val, kf
+    _mass, rg, cm, _r_max = calculate_cluster_properties(
+        coords, radii, combo["Df"], combo["kf"]
     )
 
     sim_params = SimulationParameters(
-        N=n_val,
-        Df=df_val,
-        kf=kf,
+        N=combo["N"],
+        Df=combo["Df"],
+        kf=combo["kf"],
         rp_g=1.0,
-        rp_gstd=sigma,
+        rp_gstd=combo["sigma"],
         tol_ov=1e-6,
         n_subcl_percentage=0.1,
         ext_case=0,
@@ -183,17 +227,53 @@ def save_cluster_locally(
         aggregate_properties=AggregateProperties(
             N_particles_actual=int(coords.shape[0]),
             radius_of_gyration=float(rg) if rg is not None else None,
-            center_of_mass=cm.tolist() if cm is not None else None,  # type: ignore[union-attr]
+            center_of_mass=cm.tolist() if cm is not None else None,
+            n_particles_dropped=max(0, combo["N"] - int(coords.shape[0])),
+            # Carried into the file so a consumer never has to trust the
+            # catalog's success flag alone.
+            max_residual_overlap=quality["max_residual_overlap"],
+            n_overlapping_pairs=quality["n_overlapping_pairs"],
+            overlap_ok=quality["overlap_ok"],
+            measured_rg=quality["measured_rg"],
+            rg_error_pct=quality["rg_error_pct"],
         ),
     )
-
     metadata.save_to_file(folderpath=str(out_dir), coords=coords, radii=radii)
+    saved = sorted(out_dir.glob("fracval_*.dat"), key=lambda p: p.stat().st_mtime)
+    return str(saved[-1]) if saved else str(out_dir)
 
-    # Find the file that was just saved (save_to_file generates the filename)
-    saved_files = sorted(out_dir.glob("fracval_*.dat"), key=lambda p: p.stat().st_mtime)
-    if saved_files:
-        return str(saved_files[-1])
-    return str(out_dir)
+
+def scheduler_reachable(timeout: float = 10.0) -> bool:
+    try:
+        with socket.create_connection((SCHEDULER_HOST, SCHEDULER_PORT), timeout):
+            return True
+    except OSError:
+        return False
+
+
+def workers_have_pyfracval(client) -> bool:
+    """True when every worker can already import the package.
+
+    Checked before attempting an install: registering an install plugin is
+    a single blocking RPC that waits for every worker to finish a real pip
+    install, and doing that unnecessarily against a large cluster is a
+    good way to make the scheduler unresponsive.
+    """
+
+    def _probe():
+        try:
+            import pyfracval  # noqa: F401
+
+            return True
+        except Exception:
+            return False
+
+    try:
+        results = client.run(_probe)
+    except Exception as exc:
+        logger.warning("Could not probe workers for pyfracval: %s", exc)
+        return False
+    return bool(results) and all(results.values())
 
 
 # ---------------------------------------------------------------------------
@@ -202,202 +282,196 @@ def save_cluster_locally(
 
 
 def main() -> None:
-    tasks: list[tuple[str, Path, dict[str, object] | None]] = [
-        (
-            "vanilla",
-            PROJECT_ROOT / "benchmark_results/plausibility/wide_sweep_feasible_kf.csv",
-            None,
-        ),
-        (
-            "densify_retry",
-            PROJECT_ROOT
-            / "benchmark_results/plausibility/wide_sweep_feasible_kf_densify_retry.csv",
-            DENSIFY_RETRY_ALGORITHM,
-        ),
-    ]
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--local", action="store_true", help="force a local cluster")
+    ap.add_argument("--limit", type=int, help="only the first N combos (smoke test)")
+    ap.add_argument("--clusters-per-combo", type=int, default=CLUSTERS_PER_COMBO)
+    ap.add_argument("--label", default=CONFIG_LABEL)
+    args = ap.parse_args()
 
-    # Parse combos
-    all_combos: dict[str, list[dict[str, object]]] = {}
-    total_target = 0
-    for label, csv_path, _algo in tasks:
-        combos = parse_feasibility_csv(csv_path)
-        all_combos[label] = combos
-        n_target = len(combos) * CLUSTERS_PER_COMBO
-        total_target += n_target
-        logger.info(
-            "%s: %d combos × %d = %d clusters target",
-            label,
-            len(combos),
-            CLUSTERS_PER_COMBO,
-            n_target,
+    combos = build_combo_list(args.limit)
+    target = len(combos) * args.clusters_per_combo
+    logger.info(
+        "%d combos x %d clusters = %d target",
+        len(combos),
+        args.clusters_per_combo,
+        target,
+    )
+
+    use_remote = not args.local and scheduler_reachable()
+    if not args.local and not use_remote:
+        logger.warning(
+            "Remote scheduler %s unreachable; falling back to a local cluster.",
+            SCHEDULER_ADDRESS,
         )
-    logger.info("Total target: %d clusters", total_target)
 
-    # Master index
-    master_index: list[dict[str, object]] = []
-    stats: dict[str, dict[str, int]] = {}
-
-    try:
-        from tqdm import tqdm  # noqa: F811
-
-        _HAS_TQDM = True
-    except ImportError:
-        _HAS_TQDM = False
-
+    index_rows: list[dict] = []
+    rejected: list[dict] = []
     t_start = time.time()
 
-    with get_client(
-        scheduler_address=SCHEDULER_ADDRESS, install_package=True
-    ) as client:
-        # Prevent nested process/thread pools inside Dask workers
-        client.run(
-            lambda: os.environ.__setitem__(
-                "PYFRACVAL_DISABLE_PARALLEL_SUBCLUSTERS", "1"
+    client_kwargs = (
+        {"scheduler_address": SCHEDULER_ADDRESS} if use_remote else {"n_workers": None}
+    )
+    with get_client(**client_kwargs) as client:
+        if use_remote and not workers_have_pyfracval(client):
+            logger.info("Workers lack pyfracval; installing the local wheel.")
+            from pyfracval.dask_runner import _register_package
+
+            _register_package(client)
+
+        client.run(lambda: os.environ.update(_WORKER_ENV))
+
+        n_slots = sum(
+            w["nthreads"] for w in client.scheduler_info()["workers"].values()
+        )
+        # Keep roughly two tasks queued per slot: enough that a worker
+        # never idles waiting for the client to submit, without building a
+        # backlog so deep that finished work sits unclaimed.
+        window = max(8, n_slots * 2)
+        logger.info("Cluster offers %d slots; in-flight window %d", n_slots, window)
+
+        # --- global work queue --------------------------------------------
+        need = {i: args.clusters_per_combo for i in range(len(combos))}
+        attempts = {i: 0 for i in range(len(combos))}
+        pending: list[tuple[int, int]] = []  # (combo_idx, attempt)
+        for i in range(len(combos)):
+            for a in range(args.clusters_per_combo):
+                pending.append((i, a))
+
+        futures: dict = {}
+
+        def submit(item):
+            """Submit one attempt and return its future."""
+            combo_idx, attempt = item
+            combo = combos[combo_idx]
+            seed = deterministic_seed(
+                combo["sigma"], combo["Df"], combo["N"], attempt, args.label
             )
-        )
+            fut = client.submit(
+                run_simulation,
+                attempt,
+                build_sim_config(combo),
+                _WORKER_OUTPUT_DIR,
+                seed,
+                TASK_TIMEOUT_S,
+                pure=False,
+            )
+            futures[fut] = (combo_idx, attempt, seed)
+            attempts[combo_idx] += 1
+            return fut
 
-        for config_label, combos in all_combos.items():
-            algo = DENSIFY_RETRY_ALGORITHM if config_label == "densify_retry" else None
-            n_combos = len(combos)
-            combo_successes = 0
-            combo_failures = 0
+        for _ in range(min(window, len(pending))):
+            submit(pending.pop(0))
 
-            combo_iter = tqdm(combos, desc=config_label) if _HAS_TQDM else combos
+        done = 0
+        ac = as_completed(list(futures), with_results=False)
+        for fut in ac:
+            combo_idx, attempt, seed = futures.pop(fut)
+            combo = combos[combo_idx]
+            try:
+                success, coords, radii = fut.result()
+            except Exception as exc:
+                success, coords, radii = False, None, None
+                logger.debug("task raised: %s", exc)
 
-            for combo_idx, combo in enumerate(combo_iter):
-                sigma = float(combo["sigma"])  # type: ignore[arg-type]
-                df_val = float(combo["Df"])  # type: ignore[arg-type]
-                n_val = int(combo["N"])  # type: ignore[arg-type]
-                kf = float(combo["kf"])  # type: ignore[arg-type]
-
-                out_dir = output_dir_for_combo(sigma, df_val, n_val, config_label)
-                sim_config = build_sim_config(sigma, df_val, n_val, kf, algo)
-
-                successes = 0
-                total_attempts = 0
-
-                while (
-                    successes < CLUSTERS_PER_COMBO
-                    and total_attempts < MAX_ATTEMPTS_PER_COMBO
-                ):
-                    needed = CLUSTERS_PER_COMBO - successes
-                    batch_size = min(needed, MAX_ATTEMPTS_PER_COMBO - total_attempts)
-
-                    # Submit a batch of tasks (worker saves to /tmp, we save locally)
-                    futures: dict[object, tuple[int, int]] = {}
-                    for j in range(batch_size):
-                        attempt_num = total_attempts + j
-                        seed = deterministic_seed(
-                            sigma, df_val, n_val, attempt_num, config_label
-                        )
-                        fut = client.submit(
-                            run_simulation,
-                            attempt_num,
-                            sim_config,
-                            _WORKER_OUTPUT_DIR,
-                            seed,
-                        )
-                        futures[fut] = (attempt_num, seed)
-
-                    # Collect results and save locally
-                    for future in as_completed(futures):
-                        attempt_num, seed = futures[future]
-                        total_attempts += 1
-                        try:
-                            success, coords, radii = future.result()
-                            if success and coords is not None and radii is not None:
-                                filepath = save_cluster_locally(
-                                    coords,
-                                    radii,
-                                    out_dir,
-                                    attempt_num,
-                                    seed,
-                                    sigma,
-                                    df_val,
-                                    n_val,
-                                    kf,
-                                )
-                                successes += 1
-                                master_index.append(
-                                    {
-                                        "config": config_label,
-                                        "sigma": sigma,
-                                        "Df": df_val,
-                                        "N": n_val,
-                                        "kf": kf,
-                                        "attempt": attempt_num,
-                                        "seed": seed,
-                                        "success": True,
-                                        "filepath": filepath,
-                                    }
-                                )
-                        except Exception as exc:
-                            logger.warning(
-                                "%s | σ=%.2f Df=%.1f N=%d | attempt %d failed: %s",
-                                config_label,
-                                sigma,
-                                df_val,
-                                n_val,
-                                attempt_num,
-                                exc,
-                            )
-
-                if successes >= CLUSTERS_PER_COMBO:
-                    combo_successes += 1
+            accepted = False
+            if success and coords is not None and radii is not None:
+                q = compute_aggregate_quality(
+                    coords, radii, combo["Df"], combo["kf"], 1e-6
+                )
+                if q["overlap_ok"]:
+                    out_dir = output_dir_for_combo(
+                        combo["sigma"], combo["Df"], combo["N"], args.label
+                    )
+                    path = save_cluster(coords, radii, combo, out_dir, attempt, seed, q)
+                    index_rows.append(
+                        {
+                            "config": args.label,
+                            "sigma": combo["sigma"],
+                            "Df": combo["Df"],
+                            "N": combo["N"],
+                            "kf": combo["kf"],
+                            "attempt": attempt,
+                            "seed": seed,
+                            "success": True,
+                            "n_particles": q["n_particles"],
+                            "max_residual_overlap": q["max_residual_overlap"],
+                            "n_overlapping_pairs": q["n_overlapping_pairs"],
+                            "measured_rg": q["measured_rg"],
+                            "rg_error_pct": q["rg_error_pct"],
+                            "filepath": path,
+                        }
+                    )
+                    need[combo_idx] -= 1
+                    accepted = True
                 else:
-                    combo_failures += 1
-                    logger.error(
-                        "%s | σ=%.2f Df=%.1f N=%d | FAILED: only %d/%d clusters "
-                        "after %d attempts",
-                        config_label,
-                        sigma,
-                        df_val,
-                        n_val,
-                        successes,
-                        CLUSTERS_PER_COMBO,
-                        total_attempts,
+                    # Reached the requested particle count but the geometry
+                    # is not physically valid. Recording these separately
+                    # rather than dropping them keeps the rejection rate
+                    # visible instead of silently shrinking the catalog.
+                    rejected.append(
+                        {
+                            "sigma": combo["sigma"],
+                            "Df": combo["Df"],
+                            "N": combo["N"],
+                            "kf": combo["kf"],
+                            "seed": seed,
+                            "max_residual_overlap": q["max_residual_overlap"],
+                            "n_overlapping_pairs": q["n_overlapping_pairs"],
+                        }
                     )
 
-                # Progress every 20 combos
-                if combo_idx % 20 == 19:
-                    logger.info(
-                        "%s progress: %d/%d combos done",
-                        config_label,
-                        combo_idx + 1,
-                        n_combos,
-                    )
+            # Queue a replacement attempt if this combo still needs one.
+            if (
+                not accepted
+                and need[combo_idx] > 0
+                and attempts[combo_idx] < MAX_ATTEMPTS_PER_COMBO
+            ):
+                pending.append((combo_idx, attempts[combo_idx]))
 
-            stats[config_label] = {
-                "combos_total": n_combos,
-                "combos_ok": combo_successes,
-                "combos_failed": combo_failures,
-                "clusters_generated": len(
-                    [e for e in master_index if e["config"] == config_label]
-                ),
-            }
+            while pending and len(futures) < window:
+                item = pending.pop(0)
+                if need[item[0]] <= 0:
+                    continue
+                ac.add(submit(item))
 
-    t_end = time.time()
+            done += 1
+            if done % 100 == 0:
+                remaining = sum(v for v in need.values() if v > 0)
+                logger.info(
+                    "%d tasks done | %d clusters saved | %d still needed | %d in flight",
+                    done,
+                    len(index_rows),
+                    remaining,
+                    len(futures),
+                )
 
-    # Write master index
-    index_path = OUTPUT_BASE / "cluster_index.json"
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    with index_path.open("w") as fh:
-        json.dump(master_index, fh, indent=2)
+    elapsed = time.time() - t_start
 
-    # Summary
-    print("\n" + "=" * 60)
-    print("CLUSTER GENERATION COMPLETE")
-    print("=" * 60)
-    for label, s in stats.items():
-        print(
-            f"  {label}: {s['combos_ok']}/{s['combos_total']} combos OK "
-            f"({s['clusters_generated']} clusters)"
+    # --- write the catalog --------------------------------------------------
+    OUTPUT_BASE.mkdir(parents=True, exist_ok=True)
+    index_csv = OUTPUT_BASE / "cluster_index.csv"
+    if index_rows:
+        with index_csv.open("w", newline="") as fh:
+            writer = csv.DictWriter(fh, fieldnames=list(index_rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(index_rows)
+    (OUTPUT_BASE / "cluster_index.json").write_text(json.dumps(index_rows, indent=2))
+    if rejected:
+        (OUTPUT_BASE / "rejected_clusters.json").write_text(
+            json.dumps(rejected, indent=2)
         )
-    total_gen = sum(s["clusters_generated"] for s in stats.values())
-    print(f"  Total clusters generated: {total_gen}")
-    print(f"  Total elapsed: {t_end - t_start:.1f} s")
-    print(f"  Master index: {index_path}")
-    print("=" * 60)
+
+    complete = sum(1 for i in range(len(combos)) if need[i] <= 0)
+    print("\n" + "=" * 66)
+    print("CLUSTER GENERATION COMPLETE")
+    print("=" * 66)
+    print(f"  combos fully satisfied : {complete}/{len(combos)}")
+    print(f"  clusters saved         : {len(index_rows)}/{target}")
+    print(f"  rejected for overlap   : {len(rejected)}")
+    print(f"  elapsed                : {elapsed / 60:.1f} min")
+    print(f"  catalog                : {index_csv}")
+    print("=" * 66)
 
 
 if __name__ == "__main__":
