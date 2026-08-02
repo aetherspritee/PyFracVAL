@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -312,6 +312,15 @@ class OrchestratorAlgorithmConfig(BaseModel):
     # "events.pid<N>.jsonl.gz". Prefer it for anything that has to be
     # copied off a cluster; analyze_event_log.py reads either form.
     event_log_path: str | None = None
+    # "full" writes every record - ~660 per run, and the only mode that
+    # can answer a question nobody planned for. "summary" folds the merge
+    # and pca_failure records into counters and histograms in memory and
+    # writes one record per run instead: no per-attempt IO, ~660x fewer
+    # records, and the same report tables (medians are exact for the
+    # integer metrics and within half a bin otherwise). Default is "full"
+    # so existing configs - including the documented boundary-sweep
+    # reproduction - keep producing exactly what they did before.
+    event_log_detail: Literal["full", "summary"] = "full"
     # --- Drop-a-few-particles rescue (docs/source/drop_rescue.md) ------------
     # Opt-in; requires the overlap census above (auto-enabled when this is
     # True, see _validate_algorithm below). No backfill: a rescued merge

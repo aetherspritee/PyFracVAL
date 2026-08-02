@@ -228,7 +228,10 @@ class CCAggregator(_PairingMixin, _CandidatesMixin, _StickingMixin, _FallbacksMi
         if self._merge_log is None and self.algorithm_config.event_log_path:
             from ..event_log import EventLog
 
-            self._merge_log = EventLog(self.algorithm_config.event_log_path)
+            self._merge_log = EventLog(
+                self.algorithm_config.event_log_path,
+                detail=self.algorithm_config.event_log_detail,
+            )
 
     # --------------------------------------------------------------------------
     # Helper methods for CCA specific calculations

@@ -33,6 +33,66 @@ context so they can be sliced or joined:
 Every record carries `run_id`, `pid`, and the simulation parameters, so
 a sweep can write all its workers to one path and remain separable.
 
+## Detail levels
+
+`event_log_detail` chooses what gets written per run:
+
+```toml
+[algorithm]
+event_log_path   = "benchmark_results/events.jsonl"
+event_log_detail = "summary"     # or "full" (default)
+```
+
+`full` writes every record — ~660 per run — and is the only mode that can
+answer a question nobody planned for.
+
+`summary` folds the `merge` and `pca_failure` records into counters and
+sparse histograms **as they arrive**, and emits one `run_summary` record
+per run instead. Nothing accumulates in memory and nothing is written per
+attempt. Measured by replaying 51,221 real records from 78 runs
+(`cap_removal_rerun/cap20`) through both modes:
+
+| | records | size | analyzer report |
+|---|---|---|---|
+| `full` | 51,221 | 34.0 MB | reference |
+| `summary` | 78 | 1.38 MB | **byte-identical** |
+
+Every count, every median, every sliced cell matches. That is not
+automatic — it is what the bin widths in `SUMMARY_METRICS` are chosen for:
+
+- **Count-valued metrics** (offending particles, cluster-pair size,
+  overlapping pairs, candidate pairs tried, PCA particle index and
+  subcluster size) use `width = 1`, one bin per value, so their medians
+  are *exact*, not approximate.
+- **Float metrics** use a bin a half-width below the precision they are
+  reported at (`0.0002` for overlap fractions printed to 3 dp), and
+  `min_overlap` — which spans 1e-16 to ~1 — uses log bins of 0.0005
+  decades, 0.12%.
+- **Thresholds are counted, not binned.** "Failures with ≤10% of the pair
+  offending" comes from an exact counter, because reading a threshold off
+  a histogram would be wrong at exactly the boundary that matters.
+
+`min_overlap` defaults to `+inf` ("never measured"); non-finite values are
+skipped by the fold, matching how `_json_safe` writes them as null.
+
+The fold is also exposed in memory. `run_simulation` puts it in
+`diagnostics["event_summary"]`, so a Dask worker can return it with its
+result instead of the caller re-reading the log.
+
+**What you give up:** only questions decided in advance can be answered.
+The raw per-attempt records are gone, so a new slice or a new statistic
+means re-running. Use `full` (with `.gz`) for a targeted debugging sweep
+and `summary` for production runs.
+
+**One caveat:** the fold is emitted with the run record, so a run killed
+*hard* before it finishes loses its merge records, where `full` would
+already have them on disk. Ordinary trial timeouts are safe — the
+timeout is cooperative (`main_runner.py`, checked between attempts), so a
+timed-out run still emits its summary.
+
+The default is `full`, so existing configs — including the documented
+boundary-sweep reproduction below — keep producing exactly what they did.
+
 ## Compression
 
 A `.gz` suffix gzips the log as it is written:

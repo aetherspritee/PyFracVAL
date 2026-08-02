@@ -56,10 +56,23 @@ git history has the detail).
       that inherits a live gzip buffer duplicates records into the
       parent's file when its GC flushes. See
       `docs/source/event_logging.md`.
-      Still open: a `summary` detail level that pre-aggregates the ~660
-      merge records per trial into one enriched run record (another ~600x,
-      but needs the analyzer's medians and round attribution carried as
-      histograms rather than raw scalars).
+- [x] **Added `event_log_detail = "summary"`.** Folds the merge and
+      pca_failure records into counters and sparse histograms in memory as
+      they arrive and emits one `run_summary` record per run, so nothing
+      accumulates and nothing is written per attempt. Verified by
+      replaying 51,221 real records from 78 runs through both modes:
+      34.0 MB -> 1.38 MB (24.6x) with a **byte-identical** analyzer
+      report, including every median and every sliced cell. Count-valued
+      metrics bin at width 1 so their medians are exact; float metrics bin
+      a half-width below their reported precision; the <=10%-offending
+      threshold is an exact counter rather than a histogram read. The fold
+      is also returned in `diagnostics["event_summary"]`. Default stays
+      `full` so the documented boundary-sweep reproduction is unchanged.
+      Measured along the way: event-log IO was never the bottleneck -
+      50 us/record plain, 26.6 us/record gzipped, ~660 records per trial
+      against a 34 s median trial, i.e. ~0.1%. Summary mode is worth
+      having for transfer size and for dropping the postprocessing step,
+      not for speed.
 
 - [x] **Profiled the pipeline and took up to 1.8x** (`benchmarks/profile_pipeline.py`,
       `docs/source/profiling.md`). Three findings, none in the JIT'd

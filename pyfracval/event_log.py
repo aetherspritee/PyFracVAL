@@ -68,8 +68,10 @@ import atexit
 import gzip
 import json
 import logging
+import math
 import os
 import uuid
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -210,6 +212,242 @@ _KINDS = {
     PcaFailureEvent: "pca_failure",
     RunEvent: "run",
 }
+
+SUCCESS_OUTCOMES = frozenset(
+    {"stuck", "stuck_relaxed_tol", "rescued_soft_relaxation", "rescued_drop"}
+)
+
+
+@dataclass
+class Histogram:
+    """Sparse fixed-width histogram: mergeable, O(occupied bins) memory.
+
+    Exists so ``summary`` detail can answer the min/median/max questions
+    the reports ask without keeping the records that produced them.
+    ``n``, ``total``, ``lo`` and ``hi`` stay exact; only the median is
+    reconstructed, and for the integer-valued metrics (``width == 1``,
+    one bin per value) it is exact too.
+
+    Attributes
+    ----------
+    width : float
+        Bin width. In log mode, the width in decades of ``log10(v)``.
+    log : bool
+        Bin on a log scale, for metrics spanning many orders of
+        magnitude (``min_overlap`` runs from ~1e-16 to ~1). Values that
+        are zero or negative are counted separately and treated as the
+        smallest observations.
+    """
+
+    width: float = 1.0
+    log: bool = False
+    bins: Counter = field(default_factory=Counter)
+    n: int = 0
+    n_nonpositive: int = 0
+    total: float = 0.0
+    lo: float = float("inf")
+    hi: float = float("-inf")
+
+    def add(self, value) -> None:
+        if value is None:
+            return
+        v = float(value)
+        # Non-finite values carry no information about the distribution and
+        # have no bin. `MergeEvent.min_overlap` defaults to +inf - "never
+        # measured" - so this is the common case, not a corner one, and it
+        # is skipped for the same reason `_json_safe` writes it as null.
+        if not math.isfinite(v):
+            return
+        self.n += 1
+        self.total += v
+        self.lo = min(self.lo, v)
+        self.hi = max(self.hi, v)
+        if self.log:
+            if v <= 0.0:
+                self.n_nonpositive += 1
+                return
+            self.bins[math.floor(math.log10(v) / self.width)] += 1
+        else:
+            self.bins[math.floor(v / self.width)] += 1
+
+    def merge(self, other: "Histogram") -> None:
+        if (self.width, self.log) != (other.width, other.log):
+            raise ValueError("cannot merge histograms binned differently")
+        if other.n == 0:
+            return
+        self.bins.update(other.bins)
+        self.n += other.n
+        self.n_nonpositive += other.n_nonpositive
+        self.total += other.total
+        self.lo = min(self.lo, other.lo)
+        self.hi = max(self.hi, other.hi)
+
+    def _representative(self, index: int) -> float:
+        """Value standing in for a bin.
+
+        Integer metrics use ``width == 1``, so the bin ``[k, k+1)``
+        contains only ``k`` and this is exact. Otherwise it is the bin
+        centre, so the error is bounded by half a bin.
+        """
+        if self.log:
+            return 10.0 ** ((index + 0.5) * self.width)
+        if self.width == 1.0:
+            return float(index)
+        return (index + 0.5) * self.width
+
+    def _kth(self, k: int) -> float:
+        """The k-th smallest observation, 0-indexed."""
+        if k < self.n_nonpositive:
+            # Only reachable in log mode, where these are the zeros.
+            return self.lo if self.lo <= 0.0 else 0.0
+        cumulative = self.n_nonpositive
+        for index in sorted(self.bins):
+            cumulative += self.bins[index]
+            if cumulative > k:
+                return self._representative(index)
+        return self.hi
+
+    def median(self) -> float | None:
+        """Median, matching ``statistics.median``'s even-``n`` averaging."""
+        if self.n == 0:
+            return None
+        return (self._kth((self.n - 1) // 2) + self._kth(self.n // 2)) / 2.0
+
+    def to_dict(self) -> dict:
+        # Short keys: this payload is the whole point of summary mode.
+        out: dict = {"w": self.width, "n": self.n}
+        if self.log:
+            out["log"] = True
+        if self.n:
+            out["b"] = {str(k): v for k, v in sorted(self.bins.items())}
+            out["s"] = self.total
+            out["lo"] = self.lo
+            out["hi"] = self.hi
+        if self.n_nonpositive:
+            out["z"] = self.n_nonpositive
+        return out
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Histogram":
+        hist = cls(width=float(data.get("w", 1.0)), log=bool(data.get("log", False)))
+        hist.bins = Counter({int(k): int(v) for k, v in data.get("b", {}).items()})
+        hist.n = int(data.get("n", 0))
+        hist.n_nonpositive = int(data.get("z", 0))
+        hist.total = float(data.get("s", 0.0))
+        hist.lo = float(data.get("lo", float("inf")))
+        hist.hi = float(data.get("hi", float("-inf")))
+        return hist
+
+
+#: ``metric -> (bin width, log scale)``. Widths are chosen a half-bin
+#: below the precision each metric is reported at, so a median read off
+#: the histogram prints the same digits as one taken from the records.
+#: Integer metrics get ``width = 1`` and are therefore exact.
+SUMMARY_METRICS: dict[str, tuple[float, bool]] = {
+    "candidates_tried_ok": (1.0, False),
+    "candidates_tried_failed": (1.0, False),
+    "offending": (1.0, False),
+    "pair_size": (1.0, False),
+    "pairs_overlapping": (1.0, False),
+    "offending_fraction": (0.0005, False),  # printed {:.2f}
+    "overlap_of_rsum": (0.0002, False),  # printed {:.3f}
+    "overlap_of_rmin": (0.0002, False),  # printed {:.3f}
+    "min_overlap": (0.0005, True),  # printed {:.3e}; 0.0005 decades = 0.12%
+    "pca_particle_index": (1.0, False),
+    "pca_subcluster_size": (1.0, False),
+}
+
+
+@dataclass
+class RunSummary:
+    """The merge and ``pca_failure`` records of one run, folded.
+
+    A run emits ~660 merge records; this replaces them with counters and
+    sparse histograms of fixed size. Folding happens as records arrive,
+    so nothing accumulates in memory and nothing is written per attempt.
+    """
+
+    n_merges: int = 0
+    n_merge_failures: int = 0
+    n_censused: int = 0
+    n_rescued: int = 0
+    #: Censused failures where at most 10% of the cluster pair offends -
+    #: the premise drop-rescue rests on. Counted exactly rather than read
+    #: off a histogram, because it is a threshold rather than a quantile.
+    n_localized: int = 0
+    n_pca_failures: int = 0
+    merge_outcomes: Counter = field(default_factory=Counter)
+    pca_reasons: Counter = field(default_factory=Counter)
+    #: round index -> {"ok": n, "bad": n}
+    by_round: dict = field(default_factory=dict)
+    hists: dict = field(default_factory=dict)
+
+    def _hist(self, name: str) -> Histogram:
+        hist = self.hists.get(name)
+        if hist is None:
+            width, log = SUMMARY_METRICS[name]
+            hist = Histogram(width=width, log=log)
+            self.hists[name] = hist
+        return hist
+
+    def add(self, event) -> None:
+        """Fold one record. Ignores kinds that are not summarised."""
+        if isinstance(event, MergeEvent):
+            self._add_merge(event)
+        elif isinstance(event, PcaFailureEvent):
+            self._add_pca(event)
+
+    def _add_merge(self, event: MergeEvent) -> None:
+        self.n_merges += 1
+        self.merge_outcomes[event.outcome] += 1
+        succeeded = event.outcome in SUCCESS_OUTCOMES
+        round_counts = self.by_round.setdefault(event.round_index, {"ok": 0, "bad": 0})
+        round_counts["ok" if succeeded else "bad"] += 1
+
+        if succeeded:
+            if event.attempt_index:
+                self.n_rescued += 1
+            self._hist("candidates_tried_ok").add(event.candidates_tried)
+            return
+
+        self.n_merge_failures += 1
+        self._hist("candidates_tried_failed").add(event.candidates_tried)
+
+        if event.n_offending_particles is None:
+            return
+        self.n_censused += 1
+        size = (event.n1 or 0) + (event.n2 or 0)
+        self._hist("offending").add(event.n_offending_particles)
+        self._hist("pair_size").add(size)
+        if size:
+            fraction = event.n_offending_particles / size
+            self._hist("offending_fraction").add(fraction)
+            if fraction <= 0.1:
+                self.n_localized += 1
+        self._hist("pairs_overlapping").add(event.n_pairs_overlapping)
+        self._hist("overlap_of_rsum").add(event.max_overlap_of_rsum)
+        self._hist("overlap_of_rmin").add(event.max_overlap_of_rmin)
+        self._hist("min_overlap").add(event.min_overlap)
+
+    def _add_pca(self, event: PcaFailureEvent) -> None:
+        self.n_pca_failures += 1
+        self.pca_reasons[event.reason] += 1
+        self._hist("pca_particle_index").add(event.particle_index)
+        self._hist("pca_subcluster_size").add(event.subcluster_size)
+
+    def to_dict(self) -> dict:
+        return {
+            "n_merges": self.n_merges,
+            "n_merge_failures": self.n_merge_failures,
+            "n_censused": self.n_censused,
+            "n_rescued": self.n_rescued,
+            "n_localized": self.n_localized,
+            "n_pca_failures": self.n_pca_failures,
+            "merge_outcomes": dict(self.merge_outcomes),
+            "pca_reasons": dict(self.pca_reasons),
+            "by_round": {str(k): v for k, v in sorted(self.by_round.items())},
+            "hists": {name: h.to_dict() for name, h in self.hists.items() if h.n},
+        }
 
 
 def _json_safe(value):
@@ -354,6 +592,13 @@ class EventLog:
     run_id : str, optional
         Identifier shared by all records of one aggregate; generated when
         omitted.
+    detail : {"full", "summary"}, optional
+        ``full`` (default) writes every record. ``summary`` folds the
+        merge and ``pca_failure`` records into counters and histograms in
+        memory and emits one ``run_summary`` record per run instead -
+        ~660x fewer records, no per-attempt IO, and the result is also
+        exposed as :attr:`summary` for callers that would rather return
+        it than read a file.
     """
 
     def __init__(
@@ -361,6 +606,7 @@ class EventLog:
         path: str | Path,
         context: dict | None = None,
         run_id: str | None = None,
+        detail: str = "full",
     ):
         #: The path as configured, before per-process sharding.
         self.nominal_path = Path(path)
@@ -372,9 +618,21 @@ class EventLog:
         self.context = dict(context or {})
         self._failed = False
 
+        if detail not in ("full", "summary"):
+            raise ValueError(f"detail must be 'full' or 'summary', got {detail!r}")
+        self.detail = detail
+        #: Live fold of this run's merge/pca records in summary mode.
+        self.running_summary = RunSummary() if detail == "summary" else None
+        #: The emitted ``run_summary`` payload, set once the run record
+        #: arrives. Lets a Dask worker hand its result back in-process
+        #: rather than the caller re-reading it off disk.
+        self.summary: dict | None = None
+
         # One shard per process when compressed: a buffered gzip stream
         # cannot be shared across processes the way atomic line appends can.
-        self.compressed = self.nominal_path.suffix == ".gz"
+        # Summary mode writes one line per run, which is small enough that
+        # the plain atomic-append path is always adequate.
+        self.compressed = self.nominal_path.suffix == ".gz" and detail == "full"
 
         try:
             self.nominal_path.parent.mkdir(parents=True, exist_ok=True)
@@ -407,6 +665,15 @@ class EventLog:
             logger.warning(f"Event log: unknown event type {type(event)!r}")
             return
 
+        if self.running_summary is not None:
+            # Summary mode: merge and pca_failure records are folded in
+            # memory and never serialized. The run record still goes out,
+            # carrying the fold with it.
+            if kind != "run":
+                self.running_summary.add(event)
+                return
+            kind = "run_summary"
+
         payload = {k: _json_safe(v) for k, v in asdict(event).items()}
         payload["kind"] = kind
         payload["run_id"] = self.run_id
@@ -414,6 +681,13 @@ class EventLog:
         for key, value in self.context.items():
             # Context must not silently shadow a record's own fields.
             payload.setdefault(key, value)
+
+        if self.running_summary is not None:
+            payload["summary"] = self.running_summary.to_dict()
+            self.summary = payload
+            # One run, one fold: a second run through the same log starts
+            # from zero rather than inheriting the first one's totals.
+            self.running_summary = RunSummary()
 
         try:
             line = json.dumps(payload) + "\n"

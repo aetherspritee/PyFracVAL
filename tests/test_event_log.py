@@ -12,12 +12,19 @@ ambiguous "overlap fraction".
 import gzip
 import json
 import os
+from statistics import median
 
 import numpy as np
 import pytest
 
 from pyfracval.config import OrchestratorAlgorithmConfig
-from pyfracval.event_log import EventLog, MergeEvent, PcaFailureEvent, RunEvent
+from pyfracval.event_log import (
+    EventLog,
+    Histogram,
+    MergeEvent,
+    PcaFailureEvent,
+    RunEvent,
+)
 from pyfracval.main_runner import run_simulation
 
 
@@ -36,6 +43,197 @@ def _merge(**kw):
     )
     base.update(kw)
     return MergeEvent(**base)
+
+
+class TestHistogram:
+    """The summary fold's median must survive binning."""
+
+    def test_integer_metrics_are_exact(self):
+        # width == 1 puts one value per bin, so nothing is approximated -
+        # this is why the count-valued metrics use it.
+        values = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5]
+        h = Histogram(width=1.0)
+        for v in values:
+            h.add(v)
+        assert h.n == len(values)
+        assert h.lo == 1 and h.hi == 9
+        assert h.median() == median(values)
+
+    def test_even_n_matches_statistics_median(self):
+        values = [1, 2, 3, 4]
+        h = Histogram(width=1.0)
+        for v in values:
+            h.add(v)
+        assert h.median() == median(values) == 2.5
+
+    def test_float_median_lands_within_half_a_bin(self):
+        values = [i * 0.00037 for i in range(1000)]
+        h = Histogram(width=0.0002)
+        for v in values:
+            h.add(v)
+        assert abs(h.median() - median(values)) <= 0.0001
+        assert h.lo == min(values) and h.hi == max(values)
+
+    def test_log_bins_span_many_decades(self):
+        values = [1e-16, 1e-12, 1e-8, 1e-4, 1.0]
+        h = Histogram(width=0.0005, log=True)
+        for v in values:
+            h.add(v)
+        assert h.median() == pytest.approx(1e-8, rel=0.01)
+        assert h.lo == 1e-16 and h.hi == 1.0
+
+    def test_zero_is_kept_as_the_smallest_observation(self):
+        # min_overlap is genuinely 0.0 sometimes; log bins cannot hold it,
+        # so it must not be silently dropped from the count.
+        h = Histogram(width=0.0005, log=True)
+        for v in [0.0, 1e-6, 1e-3]:
+            h.add(v)
+        assert h.n == 3
+        assert h.lo == 0.0
+        assert h.median() == pytest.approx(1e-6, rel=0.01)
+
+    def test_merge_is_equivalent_to_one_pass(self):
+        left, right = [1, 5, 3, 9], [2, 8, 4]
+        a, b, both = Histogram(), Histogram(), Histogram()
+        for v in left:
+            a.add(v)
+        for v in right:
+            b.add(v)
+        for v in left + right:
+            both.add(v)
+        a.merge(b)
+        assert (a.n, a.lo, a.hi, a.median()) == (
+            both.n,
+            both.lo,
+            both.hi,
+            both.median(),
+        )
+        assert a.median() == median(left + right)
+
+    def test_round_trip_through_json(self):
+        h = Histogram(width=0.0005, log=True)
+        for v in [0.0, 1e-9, 1e-5, 0.5]:
+            h.add(v)
+        clone = Histogram.from_dict(json.loads(json.dumps(h.to_dict())))
+        assert (clone.n, clone.lo, clone.hi) == (h.n, h.lo, h.hi)
+        assert clone.median() == h.median()
+        assert clone.n_nonpositive == h.n_nonpositive
+
+    def test_differently_binned_histograms_refuse_to_merge(self):
+        with pytest.raises(ValueError):
+            Histogram(width=1.0).merge(Histogram(width=0.5))
+
+    def test_non_finite_values_are_skipped(self):
+        # MergeEvent.min_overlap defaults to +inf ("never measured"), so
+        # the fold meets infinities routinely and must not choke on them.
+        h = Histogram(width=0.0005, log=True)
+        for v in [float("inf"), float("-inf"), float("nan")]:
+            h.add(v)
+        assert h.n == 0
+        assert h.median() is None
+        h.add(0.5)
+        assert h.n == 1 and h.median() == pytest.approx(0.5, rel=0.01)
+
+
+class TestSummaryDetail:
+    """Summary mode folds in memory and emits one record per run."""
+
+    def test_only_the_run_record_is_written(self, tmp_path):
+        log = EventLog(tmp_path / "e.jsonl", detail="summary")
+        for _ in range(50):
+            log.record(_merge())
+        log.record(
+            PcaFailureEvent(
+                subcluster_index=0,
+                subcluster_size=12,
+                particle_index=3,
+                reason="no_candidates",
+            )
+        )
+        # Nothing on disk yet: the fold is still in memory.
+        assert not (tmp_path / "e.jsonl").exists()
+
+        log.record(RunEvent(outcome="success"))
+        lines = (tmp_path / "e.jsonl").read_text().splitlines()
+        assert len(lines) == 1
+        rec = json.loads(lines[0])
+        assert rec["kind"] == "run_summary"
+        assert rec["summary"]["n_merges"] == 50
+        assert rec["summary"]["n_pca_failures"] == 1
+
+    def test_summary_is_exposed_in_memory(self, tmp_path):
+        # The point of the mode: a worker can hand the fold back rather
+        # than the caller re-reading it off disk.
+        log = EventLog(tmp_path / "e.jsonl", detail="summary", context={"Df": 2.25})
+        assert log.summary is None
+        log.record(_merge())
+        log.record(RunEvent(outcome="failed", failure_stage="CCA"))
+        assert log.summary is not None
+        assert log.summary["Df"] == 2.25
+        assert log.summary["failure_stage"] == "CCA"
+        assert log.summary["summary"]["n_merges"] == 1
+
+    def test_counters_match_the_records_they_replace(self, tmp_path):
+        log = EventLog(tmp_path / "e.jsonl", detail="summary")
+        log.record(_merge(outcome="stuck", round_index=1, candidates_tried=4))
+        log.record(_merge(outcome="stuck", round_index=2, attempt_index=1))
+        log.record(
+            _merge(
+                outcome="failed_overlap",
+                round_index=1,
+                n_offending_particles=2,
+                n1=10,
+                n2=10,
+                max_overlap_of_rsum=0.4,
+                max_overlap_of_rmin=1.2,
+            )
+        )
+        log.record(_merge(outcome="failed_no_candidates", round_index=3))
+        log.record(RunEvent(outcome="failed"))
+
+        s = log.summary["summary"]
+        assert s["n_merges"] == 4
+        assert s["n_merge_failures"] == 2
+        assert s["n_censused"] == 1
+        assert s["n_rescued"] == 1  # the one with attempt_index != 0
+        assert s["n_localized"] == 1  # 2/20 = 0.1
+        assert s["merge_outcomes"] == {
+            "stuck": 2,
+            "failed_overlap": 1,
+            "failed_no_candidates": 1,
+        }
+        assert s["by_round"] == {
+            "1": {"ok": 1, "bad": 1},
+            "2": {"ok": 1, "bad": 0},
+            "3": {"ok": 0, "bad": 1},
+        }
+        assert s["hists"]["overlap_of_rsum"]["n"] == 1
+
+    def test_each_run_folds_independently(self, tmp_path):
+        # One EventLog can outlive a run in library use; the second run
+        # must not inherit the first one's totals.
+        log = EventLog(tmp_path / "e.jsonl", detail="summary")
+        log.record(_merge())
+        log.record(RunEvent(outcome="success"))
+        log.record(_merge())
+        log.record(_merge())
+        log.record(RunEvent(outcome="success"))
+        counts = [
+            json.loads(x)["summary"]["n_merges"]
+            for x in (tmp_path / "e.jsonl").read_text().splitlines()
+        ]
+        assert counts == [1, 2]
+
+    def test_summary_mode_never_compresses_or_shards(self, tmp_path):
+        # One line per run needs no gzip stream, so the plain atomic-append
+        # path applies and no .pid shard appears.
+        log = EventLog(tmp_path / "e.jsonl.gz", detail="summary")
+        assert not log.compressed
+        assert log.path == tmp_path / "e.jsonl.gz"
+
+    def test_rejects_an_unknown_detail(self, tmp_path):
+        with pytest.raises(ValueError):
+            EventLog(tmp_path / "e.jsonl", detail="terse")
 
 
 class TestCompressedLog:

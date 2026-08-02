@@ -42,6 +42,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import median
 
+from pyfracval.event_log import SUMMARY_METRICS, Histogram
+
 SUCCESS_OUTCOMES = {
     "stuck",
     "stuck_relaxed_tol",
@@ -95,6 +97,20 @@ def _pct(part: int, whole: int) -> str:
 
 
 def _stats(values, fmt: str = "{:.3g}") -> str:
+    """Format min/median/max of a list of values or of a Histogram.
+
+    Summary-mode logs carry histograms where full-mode logs carry the
+    values themselves; both answer the same three questions, so the
+    reports below are written once and fed either.
+    """
+    if isinstance(values, Histogram):
+        if not values.n:
+            return "n/a"
+        return (
+            f"min={fmt.format(values.lo)} "
+            f"median={fmt.format(values.median())} "
+            f"max={fmt.format(values.hi)}"
+        )
     vals = [v for v in values if v is not None]
     if not vals:
         return "n/a"
@@ -103,6 +119,13 @@ def _stats(values, fmt: str = "{:.3g}") -> str:
         f"median={fmt.format(median(vals))} "
         f"max={fmt.format(max(vals))}"
     )
+
+
+def _median_of(values) -> float | None:
+    """Median of a list or a Histogram, or None when empty."""
+    if isinstance(values, Histogram):
+        return values.median()
+    return median(values) if values else None
 
 
 def report_runs(runs: list[dict]) -> None:
@@ -293,14 +316,44 @@ def report_sliced(events: list[dict], keys: list[str]) -> None:
         )
 
 
+#: Accumulator attribute -> the metric name it is summarised under in a
+#: ``run_summary`` record. Drives the one-time swap from exact lists to
+#: mergeable histograms when a summary log is read.
+_SUMMARISED_FIELDS = {
+    "pca_particle_idx": "pca_particle_index",
+    "pca_sub_size": "pca_subcluster_size",
+    "cand_ok": "candidates_tried_ok",
+    "cand_bad": "candidates_tried_failed",
+    "offending": "offending",
+    "pair_size": "pair_size",
+    "frac": "offending_fraction",
+    "pairs_ov": "pairs_overlapping",
+    "ov_rsum": "overlap_of_rsum",
+    "ov_rmin": "overlap_of_rmin",
+    "best_ov": "min_overlap",
+}
+
+
+def _new_hist(metric: str) -> Histogram:
+    width, log = SUMMARY_METRICS[metric]
+    return Histogram(width=width, log=log)
+
+
 class Accumulator:
     """Streaming aggregation of the statistics the reports need.
 
     Holds counters and float arrays only - never the records themselves -
     so a multi-gigabyte log analyses in a few hundred MB.
+
+    A ``summary`` log arrives pre-folded: the per-attempt values were
+    already binned by the run that produced them. On the first
+    ``run_summary`` record the exact lists are swapped for histograms and
+    the folds are merged in. The reports read either.
     """
 
     def __init__(self, slice_keys: list[str]):
+        #: None until the first record fixes it to "full" or "summary".
+        self.detail: str | None = None
         self.kinds = Counter()
         self.slice_keys = slice_keys
 
@@ -315,8 +368,8 @@ class Accumulator:
 
         # pca failures
         self.pca_reasons = Counter()
-        self.pca_particle_idx: list[float] = []
-        self.pca_sub_size: list[float] = []
+        self.pca_particle_idx: list[float] | Histogram = []
+        self.pca_sub_size: list[float] | Histogram = []
         self.n_pca = 0
 
         # merges
@@ -324,38 +377,102 @@ class Accumulator:
         self.merge_outcomes = Counter()
         self.by_round: dict[int, Counter] = defaultdict(Counter)
         self.n_rescued = 0
-        self.cand_ok: list[float] = []
-        self.cand_bad: list[float] = []
+        self.cand_ok: list[float] | Histogram = []
+        self.cand_bad: list[float] | Histogram = []
 
         # overlap census
         self.n_fail = 0
         self.n_censused = 0
-        self.offending: list[float] = []
-        self.pair_size: list[float] = []
-        self.frac: list[float] = []
-        self.pairs_ov: list[float] = []
-        self.ov_rsum: list[float] = []
-        self.ov_rmin: list[float] = []
-        self.best_ov: list[float] = []
+        self.n_localized = 0
+        self.offending: list[float] | Histogram = []
+        self.pair_size: list[float] | Histogram = []
+        self.frac: list[float] | Histogram = []
+        self.pairs_ov: list[float] | Histogram = []
+        self.ov_rsum: list[float] | Histogram = []
+        self.ov_rmin: list[float] | Histogram = []
+        self.best_ov: list[float] | Histogram = []
 
         # per-slice
         self.slice_runs: dict[tuple, list[int]] = defaultdict(lambda: [0, 0])
         self.slice_merges: dict[tuple, list[int]] = defaultdict(lambda: [0, 0])
-        self.slice_offend: dict[tuple, list[float]] = defaultdict(list)
-        self.slice_frac: dict[tuple, list[float]] = defaultdict(list)
+        self.slice_offend: dict[tuple, list[float] | Histogram] = defaultdict(list)
+        self.slice_frac: dict[tuple, list[float] | Histogram] = defaultdict(list)
 
     def _key(self, e):
         return tuple(e.get(k) for k in self.slice_keys)
 
+    def _require_detail(self, detail: str) -> None:
+        """Pin the accumulator to one log kind.
+
+        Full and summary records answer the same questions by different
+        means and cannot be pooled into one table - an exact list and a
+        binned histogram have no common representation that preserves
+        both. Mixing them is a mistake worth naming rather than silently
+        half-counting.
+        """
+        if self.detail is None:
+            self.detail = detail
+            if detail == "summary":
+                for attr, metric in _SUMMARISED_FIELDS.items():
+                    setattr(self, attr, _new_hist(metric))
+                self.slice_offend = defaultdict(lambda: _new_hist("offending"))
+                self.slice_frac = defaultdict(lambda: _new_hist("offending_fraction"))
+        elif self.detail != detail:
+            raise SystemExit(
+                "Cannot mix full and summary event logs in one analysis: "
+                f"found '{detail}' records after '{self.detail}' ones. "
+                "Analyse them separately."
+            )
+
     def add(self, e: dict) -> None:
         kind = e.get("kind", "merge")
         self.kinds[kind] += 1
+        if kind == "run_summary":
+            self._require_detail("summary")
+            self._add_run(e)
+            self._add_summary(e)
+            return
+        self._require_detail("full")
         if kind == "run":
             self._add_run(e)
         elif kind == "pca_failure":
             self._add_pca(e)
         else:
             self._add_merge(e)
+
+    def _add_summary(self, e: dict) -> None:
+        """Merge one run's pre-folded merge/pca aggregates."""
+        s = e.get("summary") or {}
+        key = self._key(e)
+
+        self.n_merges += s.get("n_merges", 0)
+        self.n_fail += s.get("n_merge_failures", 0)
+        self.n_censused += s.get("n_censused", 0)
+        self.n_rescued += s.get("n_rescued", 0)
+        self.n_localized += s.get("n_localized", 0)
+        self.n_pca += s.get("n_pca_failures", 0)
+        self.merge_outcomes.update(s.get("merge_outcomes", {}))
+        self.pca_reasons.update(s.get("pca_reasons", {}))
+        for rnd, counts in (s.get("by_round") or {}).items():
+            self.by_round[int(rnd)].update(counts)
+
+        self.kinds["merge (folded)"] += s.get("n_merges", 0)
+        self.kinds["pca_failure (folded)"] += s.get("n_pca_failures", 0)
+
+        self.slice_merges[key][0] += s.get("n_merges", 0)
+        self.slice_merges[key][1] += s.get("n_merge_failures", 0)
+
+        hists = s.get("hists") or {}
+        for attr, metric in _SUMMARISED_FIELDS.items():
+            raw = hists.get(metric)
+            if raw is None:
+                continue
+            hist = Histogram.from_dict(raw)
+            getattr(self, attr).merge(hist)
+            if metric == "offending":
+                self.slice_offend[key].merge(hist)
+            elif metric == "offending_fraction":
+                self.slice_frac[key].merge(hist)
 
     def _add_run(self, e):
         self.n_runs += 1
@@ -410,6 +527,8 @@ class Accumulator:
         if size:
             self.frac.append(n_off / size)
             self.slice_frac[key].append(n_off / size)
+            if n_off / size <= 0.1:
+                self.n_localized += 1
         if e.get("n_pairs_overlapping") is not None:
             self.pairs_ov.append(e["n_pairs_overlapping"])
         if e.get("max_overlap_of_rsum") is not None:
@@ -510,10 +629,10 @@ def report(a: Accumulator) -> None:
         )
         print(f"  best overlap reached      : {_stats(a.best_ov, '{:.3e}')}")
         print("  (best-reached far above tol_ov means failures are not near-misses)")
-        localized = sum(1 for f in a.frac if f <= 0.1)
+        n_frac = a.frac.n if isinstance(a.frac, Histogram) else len(a.frac)
         print(
-            f"\n  failures with <=10% of the pair offending: {localized}"
-            f"  ({_pct(localized, max(len(a.frac), 1))})"
+            f"\n  failures with <=10% of the pair offending: {a.n_localized}"
+            f"  ({_pct(a.n_localized, max(n_frac, 1))})"
         )
         print(
             "  (this is the premise drop-rescue rests on; see "
@@ -531,14 +650,14 @@ def report(a: Accumulator) -> None:
         for key in sorted(a.slice_runs, key=lambda t: tuple(str(x) for x in t)):
             n_r, n_ok = a.slice_runs[key]
             m_all, m_bad = a.slice_merges.get(key, [0, 0])
-            offs = a.slice_offend.get(key, [])
-            fr = a.slice_frac.get(key, [])
+            med_off = _median_of(a.slice_offend.get(key, []))
+            med_frac = _median_of(a.slice_frac.get(key, []))
             cells = " ".join(f"{str(x):>7}" for x in key)
             print(
                 f"  {cells} {n_r:>6} {_pct(n_ok, n_r):>8} "
                 f"{(_pct(m_bad, m_all) if m_all else '-'):>11} "
-                f"{(f'{median(offs):.0f}' if offs else '-'):>11} "
-                f"{(f'{median(fr):.2f}' if fr else '-'):>9}"
+                f"{(f'{med_off:.0f}' if med_off is not None else '-'):>11} "
+                f"{(f'{med_frac:.2f}' if med_frac is not None else '-'):>9}"
             )
 
 
@@ -580,8 +699,14 @@ def main() -> None:
     report(acc)
 
     if args.json:
+
+        def _distribution(values):
+            """Raw values from a full log, the histogram from a summary one."""
+            return values.to_dict() if isinstance(values, Histogram) else values
+
         summary = {
             "n_records": sum(acc.kinds.values()),
+            "detail": acc.detail,
             "kinds": dict(acc.kinds),
             "n_runs": acc.n_runs,
             "n_runs_success": acc.n_runs_ok,
@@ -590,11 +715,12 @@ def main() -> None:
             "pca_failure_reasons": dict(acc.pca_reasons),
             "n_merge_failures": acc.n_fail,
             "n_censused": acc.n_censused,
-            "offending_particles": acc.offending,
-            "offending_fraction": acc.frac,
-            "max_overlap_of_rsum": acc.ov_rsum,
-            "max_overlap_of_rmin": acc.ov_rmin,
-            "best_overlap_reached": acc.best_ov,
+            "n_localized": acc.n_localized,
+            "offending_particles": _distribution(acc.offending),
+            "offending_fraction": _distribution(acc.frac),
+            "max_overlap_of_rsum": _distribution(acc.ov_rsum),
+            "max_overlap_of_rmin": _distribution(acc.ov_rmin),
+            "best_overlap_reached": _distribution(acc.best_ov),
             "by_round": {str(r): dict(c) for r, c in sorted(acc.by_round.items())},
         }
         args.json.parent.mkdir(parents=True, exist_ok=True)

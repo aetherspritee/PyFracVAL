@@ -148,14 +148,17 @@ def _record_run(
         return
     from .event_log import RunEvent
 
-    diagnostics = diagnostics or {}
+    # Keep the caller's dict itself: `or {}` would substitute a fresh one
+    # for an empty-but-present dict, and the summary written back below
+    # would never reach the caller.
+    diag = diagnostics if diagnostics is not None else {}
     quality = quality or {}
     event_log.record(
         RunEvent(
             outcome=outcome,
-            failure_stage=diagnostics.get("failure_stage"),
-            failure_reason=diagnostics.get("failure_reason"),
-            attempts_used=int(diagnostics.get("attempts_used", 0) or 0),
+            failure_stage=diag.get("failure_stage"),
+            failure_reason=diag.get("failure_reason"),
+            attempts_used=int(diag.get("attempts_used", 0) or 0),
             elapsed_s=time.time() - start_time,
             n_particles_actual=int(n_actual),
             n_particles_dropped=int(n_dropped),
@@ -167,6 +170,12 @@ def _record_run(
             extra=extra or {},
         )
     )
+    # In summary mode the fold is the run's whole failure story. Hand it
+    # back through the diagnostics dict as well as writing it, so callers
+    # that already collect diagnostics - the Dask sweep does - can consume
+    # it in-process instead of re-reading the log.
+    if event_log.summary is not None:
+        diag["event_summary"] = event_log.summary
 
 
 def _run_simulation_core(
@@ -209,6 +218,7 @@ def _run_simulation_core(
                 "seed": sim_params.seed,
                 "iteration": iteration,
             },
+            detail=algorithm_config.event_log_detail,
         )
 
     if sim_params.seed is not None:
