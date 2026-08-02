@@ -653,8 +653,11 @@ class PCAggregator:
                 ]
 
                 if not eligible_for_swap:
-                    # No more monomers to swap with
-                    logger.warning(
+                    # No more monomers to swap with. Debug, not warning: the
+                    # caller logs and structurally records this same failure
+                    # one frame up (via `failure_info`), so warning here only
+                    # doubles the line count of an already-recorded event.
+                    logger.debug(
                         f"PCA k={k}: No candidates found and no more available monomers to swap with."
                     )
                     return (
@@ -1166,7 +1169,12 @@ class PCAggregator:
                 # Check if search failed completely (no candidates even after swaps)
                 # Don't need len(candidates_list) check here
                 if initial_candidate_idx < 0 or not gamma_real:
-                    logger.error(
+                    # Debug, not error: this ends one subcluster *attempt*, and
+                    # the caller retries with a new shuffle. The run-level
+                    # failure ("PCA Subclustering failed after N attempts") is
+                    # the one worth an ERROR; this one is recorded structurally
+                    # just below and is ~100x more frequent.
+                    logger.debug(
                         f"PCA failed Search/Swap for k={k} (Attempt {search_attempt}). No valid gamma/candidates found even after swaps."
                     )
                     # Structured record of *which* PCA mechanism failed.

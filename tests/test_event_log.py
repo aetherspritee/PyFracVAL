@@ -9,7 +9,9 @@ and that overlap is reported under both denominators rather than one
 ambiguous "overlap fraction".
 """
 
+import gzip
 import json
+import os
 
 import numpy as np
 import pytest
@@ -34,6 +36,97 @@ def _merge(**kw):
     )
     base.update(kw)
     return MergeEvent(**base)
+
+
+class TestCompressedLog:
+    """A ``.gz`` path must round-trip losslessly, shard per process, and
+    share one stream between the ``EventLog`` instances a sweep creates."""
+
+    def test_gz_path_is_sharded_by_pid(self, tmp_path):
+        log = EventLog(tmp_path / "events.jsonl.gz")
+        assert log.compressed
+        assert log.path.name == f"events.pid{os.getpid()}.jsonl.gz"
+
+    def test_records_round_trip_through_gzip(self, tmp_path):
+        log = EventLog(tmp_path / "e.jsonl.gz", context={"Df": 2.1})
+        log.record(_merge(candidates_tried=7))
+        log.record(RunEvent(outcome="success", measured_rg=1.5))
+        log.close()
+
+        with gzip.open(log.path, "rt", encoding="utf-8") as handle:
+            records = [json.loads(line) for line in handle]
+        assert [r["kind"] for r in records] == ["merge", "run"]
+        assert records[0]["candidates_tried"] == 7
+        assert records[0]["Df"] == 2.1
+        assert records[1]["measured_rg"] == 1.5
+
+    def test_instances_on_one_path_share_a_stream(self, tmp_path):
+        # A sweep builds one EventLog per trial. Each opening its own gzip
+        # stream on the same file would interleave two buffers into
+        # garbage, so they must resolve to a single writer.
+        a = EventLog(tmp_path / "e.jsonl.gz", context={"N": 64})
+        b = EventLog(tmp_path / "e.jsonl.gz", context={"N": 128})
+        assert a.path == b.path
+        for _ in range(50):
+            a.record(_merge())
+            b.record(_merge())
+        a.close()
+
+        with gzip.open(a.path, "rt", encoding="utf-8") as handle:
+            records = [json.loads(line) for line in handle]
+        assert len(records) == 100
+        assert {r["N"] for r in records} == {64, 128}
+        assert len({r["run_id"] for r in records}) == 2
+
+    def test_compression_beats_the_plain_text_it_replaces(self, tmp_path):
+        plain = EventLog(tmp_path / "p.jsonl")
+        packed = EventLog(tmp_path / "p.jsonl.gz")
+        for i in range(400):
+            plain.record(_merge(candidates_tried=i))
+            packed.record(_merge(candidates_tried=i))
+        packed.close()
+        # The whole point of the suffix: guards against a regression to
+        # one gzip member per record, which would come out *larger*.
+        assert packed.path.stat().st_size < plain.path.stat().st_size / 5
+
+    def test_plain_path_is_not_sharded_or_compressed(self, tmp_path):
+        log = EventLog(tmp_path / "e.jsonl")
+        assert not log.compressed
+        assert log.path == tmp_path / "e.jsonl"
+
+    def test_a_forked_child_does_not_corrupt_the_parents_stream(self, tmp_path):
+        # pca_subclusters builds subclusters through a forked Pool, so a
+        # child can inherit an open gzip stream mid-record. If it wrote
+        # through it - or let atexit close it - the parent's log would be
+        # unreadable from that byte on. This is the regression guard.
+        log = EventLog(tmp_path / "e.jsonl.gz", context={"where": "parent"})
+        for _ in range(20):
+            log.record(_merge())  # opens the stream before forking
+
+        pid = os.fork()
+        if pid == 0:  # child
+            try:
+                child = EventLog(tmp_path / "e.jsonl.gz", context={"where": "child"})
+                for _ in range(20):
+                    child.record(_merge())
+                child.close()
+                os._exit(0)
+            except BaseException:
+                os._exit(1)
+
+        assert os.waitpid(pid, 0)[1] == 0, "child failed"
+        for _ in range(20):
+            log.record(_merge())
+        log.close()
+
+        with gzip.open(log.path, "rt", encoding="utf-8") as handle:
+            records = [json.loads(line) for line in handle]
+        # Parent's file: complete, readable, and free of the child's rows.
+        assert len(records) == 40
+        assert {r["where"] for r in records} == {"parent"}
+        # The child wrote its own shard rather than nothing.
+        shards = sorted(tmp_path.glob("e.pid*.jsonl.gz"))
+        assert len(shards) == 2
 
 
 class TestEventLogMechanics:

@@ -33,6 +33,34 @@ context so they can be sliced or joined:
 Every record carries `run_id`, `pid`, and the simulation parameters, so
 a sweep can write all its workers to one path and remain separable.
 
+## Compression
+
+A `.gz` suffix gzips the log as it is written:
+
+```toml
+event_log_path = "benchmark_results/events.jsonl.gz"
+```
+
+This matters at sweep scale. A merge record is ~640 bytes, of which
+~180 is the run context re-serialized verbatim on every line, and the
+4200-trial boundary sweep below emitted 523,812 of them for 323 MB.
+Measured on those records, gzip level 6 gives **~9.5x** — the difference
+between copying 330 MB and 35 MB off a cluster — with no loss of
+records or precision.
+
+A compressed log cannot use the atomic single-line append that lets many
+processes share one plain file: a gzip stream has to stay open across
+records, and a buffered stream cannot be shared. So a compressed log
+writes **one shard per process** — `events.jsonl.gz` becomes
+`events.pid1234.jsonl.gz`. Within a process, every `EventLog` on the same
+path shares one stream, so the thousands of per-trial instances a sweep
+creates still produce a single well-compressed file per worker. Pass the
+shards, or the directory holding them, to the analyzer.
+
+A run killed mid-write leaves its final gzip member without a trailer;
+the analyzer reports the truncation and keeps every record decoded
+before it.
+
 `pca_failure` is a distinct kind because PCA and CCA fail by different
 mechanisms, and a taxonomy that cannot distinguish them is of limited
 use. PCA failures occur while growing a single subcluster particle by
@@ -62,7 +90,21 @@ names now state the denominator explicitly.
 ```
 devenv shell -- uv run python benchmarks/analyze_event_log.py events.jsonl
 devenv shell -- uv run python benchmarks/analyze_event_log.py events.jsonl --by Df rp_gstd
+devenv shell -- uv run python benchmarks/analyze_event_log.py RUNDIR   # all shards
 ```
+
+## Text logs during a sweep
+
+The structured log replaces, rather than accompanies, free-text failure
+output. `benchmarks/stability_sweep.py` therefore configures the
+`pyfracval` logger at **ERROR** by default (`--log-level` to override),
+including inside Dask workers, which are separate processes that would
+otherwise fall through to Python's `logging.lastResort` handler and print
+every WARNING and ERROR unformatted to stderr.
+
+That fallback is what produced the ~100 MB `run.log` files next to the
+older sweeps: 1.3M lines, 94% of them three PCA retry messages, none of
+them read and all of them already recorded structurally.
 
 Applied to the full boundary sweep — the same 4200-trial grid as
 [boundary_sweep_v2.md](boundary_sweep_v2.md), re-run with logging on

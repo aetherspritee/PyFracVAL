@@ -37,6 +37,30 @@ git history has the detail).
 
 ## Done (recent)
 
+- [x] **Made sweep output shippable off a cluster.** Two separate problems.
+      (1) The ~100 MB `run.log` next to each sweep was Python's
+      `logging.lastResort` handler: nothing in the benchmark path ever
+      configured the `pyfracval` logger, so every WARNING and ERROR went
+      to stderr unformatted. 94% of those 1.3M lines were three PCA
+      retry messages that the event log already records structurally.
+      `stability_sweep.py` now configures the logger explicitly at ERROR
+      (`--log-level` to override) *including inside Dask workers*, which
+      are separate processes and were the actual source; the two PCA
+      messages that were miscategorised (a duplicate, and an attempt-level
+      failure logged at ERROR inside a retry loop) are now `debug`.
+      Measured on a Dask sweep: 20326 -> 1250 bytes of stdout, zero retry
+      lines. (2) `event_log_path` now accepts a `.gz` suffix, ~9.5x on
+      real merge records (330 MB -> 35 MB for the boundary sweep), one
+      shard per process since a gzip stream cannot be shared. Forks are
+      handled explicitly — `pca_subclusters` forks a `Pool`, and a child
+      that inherits a live gzip buffer duplicates records into the
+      parent's file when its GC flushes. See
+      `docs/source/event_logging.md`.
+      Still open: a `summary` detail level that pre-aggregates the ~660
+      merge records per trial into one enriched run record (another ~600x,
+      but needs the analyzer's medians and round attribution carried as
+      histograms rather than raw scalars).
+
 - [x] **Profiled the pipeline and took up to 1.8x** (`benchmarks/profile_pipeline.py`,
       `docs/source/profiling.md`). Three findings, none in the JIT'd
       overlap kernels: `np.cross` on 3-vectors costs 21us (12.4x slower

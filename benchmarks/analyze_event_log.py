@@ -22,8 +22,13 @@ them would misstate severity:
 - ``_of_rmin`` normalizes by ``min(r_i, r_j)`` and measures how deeply the
   smaller particle is penetrated.
 
+Logs may be plain ``.jsonl`` or gzipped ``.jsonl.gz``; a gzipped log is
+sharded per process, so pass the shards or the directory holding them.
+
 Usage:
     devenv shell -- uv run python benchmarks/analyze_event_log.py LOG.jsonl [...]
+    devenv shell -- uv run python benchmarks/analyze_event_log.py 'RUNDIR/events.pid*.jsonl.gz'
+    devenv shell -- uv run python benchmarks/analyze_event_log.py RUNDIR
     devenv shell -- uv run python benchmarks/analyze_event_log.py LOG.jsonl --by Df kf
     devenv shell -- uv run python benchmarks/analyze_event_log.py LOG.jsonl --json out.json
 """
@@ -31,6 +36,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -52,10 +58,27 @@ def iter_events(paths: list[Path]):
     costs several GB. Everything below accumulates counters and plain
     float arrays instead, which is a couple of orders of magnitude
     cheaper and keeps arbitrarily long logs analysable.
+
+    ``.gz`` logs are decompressed transparently. A compressed log is
+    written one shard per process, so a sweep leaves several files -
+    pass them all (``events.pid*.jsonl.gz``); the accumulators pool them.
     """
     for path in paths:
-        with path.open(encoding="utf-8") as handle:
-            for line_no, line in enumerate(handle, 1):
+        opener = gzip.open if path.suffix == ".gz" else open
+        with opener(path, "rt", encoding="utf-8") as handle:
+            line_no = 0
+            while True:
+                try:
+                    line = handle.readline()
+                except (OSError, EOFError) as exc:
+                    # A compressed log from a killed run ends without its
+                    # gzip trailer. Everything decoded up to that point is
+                    # still good and must not be thrown away.
+                    print(f"  ! truncated log {path} after line {line_no}: {exc}")
+                    break
+                if not line:
+                    break
+                line_no += 1
                 line = line.strip()
                 if not line:
                     continue
@@ -535,8 +558,21 @@ def main() -> None:
     if missing:
         raise SystemExit(f"No such log file(s): {', '.join(map(str, missing))}")
 
+    # A compressed log is sharded per process, so pointing at the
+    # directory is the natural way to ask for "the whole sweep".
+    logs: list[Path] = []
+    for path in args.logs:
+        if path.is_dir():
+            logs.extend(
+                sorted(p for p in path.iterdir() if p.suffix in {".jsonl", ".gz"})
+            )
+        else:
+            logs.append(path)
+    if not logs:
+        raise SystemExit("No .jsonl or .jsonl.gz files found in the given path(s)")
+
     acc = Accumulator(list(args.by or []))
-    for event in iter_events(args.logs):
+    for event in iter_events(logs):
         acc.add(event)
     if not sum(acc.kinds.values()):
         raise SystemExit("No events found - was event_log_path set?")

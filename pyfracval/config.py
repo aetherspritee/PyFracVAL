@@ -306,6 +306,11 @@ class OrchestratorAlgorithmConfig(BaseModel):
     # Setting this auto-enables the overlap census (see the validator
     # below): "how many particles overlap, and by how much" is the whole
     # point of the failure records, and the census is what measures it.
+    #
+    # A ".gz" suffix gzips the log (~9.5x on real sweep records) and
+    # writes one shard per process: "events.jsonl.gz" becomes
+    # "events.pid<N>.jsonl.gz". Prefer it for anything that has to be
+    # copied off a cluster; analyze_event_log.py reads either form.
     event_log_path: str | None = None
     # --- Drop-a-few-particles rescue (docs/source/drop_rescue.md) ------------
     # Opt-in; requires the overlap census above (auto-enabled when this is

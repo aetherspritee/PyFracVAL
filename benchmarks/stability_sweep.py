@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import logging
 import time
 from dataclasses import asdict
 from pathlib import Path
@@ -30,6 +31,7 @@ import numpy as np
 
 from benchmarks.sticking_benchmark import StickingBenchmark
 from pyfracval.config import SweepConfig
+from pyfracval.logs import TRACE_LEVEL_NUM, create_logger
 
 
 def _parse_float_list(value: str) -> List[float]:
@@ -174,6 +176,19 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="N",
         help="Number of workers for the local Dask cluster (default: all CPUs).",
+    )
+
+    # --- Logging ------------------------------------------------------------
+    parser.add_argument(
+        "--log-level",
+        default="ERROR",
+        choices=["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help=(
+            "Level for the 'pyfracval' logger (default: ERROR). A sweep retries "
+            "constantly and every retry logs; at WARNING a single grid emits "
+            "~1e6 lines of text that duplicate what the event log already "
+            "records structurally. Raise this only when debugging one trial."
+        ),
     )
 
     return parser
@@ -342,8 +357,31 @@ def _run_sweep_sequential(
                     )
 
 
+def _configure_worker_logging(log_level: str) -> None:
+    """Configure the 'pyfracval' logger inside a Dask worker process.
+
+    Workers are separate processes that never ran ``main()``, so without
+    this the package logger has no handler and Python's
+    ``logging.lastResort`` prints every WARNING and ERROR - which is
+    where the ~100 MB run.log files of the Dask sweeps came from. Guarded
+    so it runs once per worker rather than once per task, and applied
+    task-side rather than via ``client.run`` so workers that join an
+    external scheduler late are covered too.
+    """
+    if getattr(_configure_worker_logging, "_done", False):
+        return
+    level = TRACE_LEVEL_NUM if log_level == "TRACE" else getattr(logging, log_level)
+    create_logger(level)
+    _configure_worker_logging._done = True  # type: ignore[attr-defined]
+
+
 def _timed_run_simulation(
-    iteration, sim_config_dict, output_base_dir, seed, max_runtime_seconds
+    iteration,
+    sim_config_dict,
+    output_base_dir,
+    seed,
+    max_runtime_seconds,
+    log_level="ERROR",
 ):
     """Runs on the Dask worker; self-reports execution duration rather than
     relying on submit-to-completion wall time (which includes queue wait
@@ -354,6 +392,8 @@ def _timed_run_simulation(
     import time as _time
 
     from pyfracval.main_runner import run_simulation
+
+    _configure_worker_logging(log_level)
 
     t0 = _time.time()
     diagnostics: dict = {}
@@ -369,7 +409,15 @@ def _timed_run_simulation(
 
 
 def _run_sweep_dask(
-    cfg, sizes, sigmas, df_values, kf_values, benchmark, sweep_rows, raw_handle
+    cfg,
+    sizes,
+    sigmas,
+    df_values,
+    kf_values,
+    benchmark,
+    sweep_rows,
+    raw_handle,
+    log_level="ERROR",
 ):
     """Inner loop for the Dask-distributed sweep."""
     import os
@@ -455,6 +503,7 @@ def _run_sweep_dask(
                                 dask_output_base_dir,
                                 seed,
                                 sim.trial_timeout,
+                                log_level,
                             )
                             combo_futures[fut] = (combo_key, trial)
 
@@ -560,6 +609,17 @@ def _append_sweep_row(
 def main() -> int:
     args = _build_parser().parse_args()
 
+    # Configure the 'pyfracval' logger explicitly. Without this the package
+    # logger has no handler and no level, so Python's `logging.lastResort`
+    # handler takes over and prints every WARNING and ERROR to stderr with no
+    # level prefix - which is where the ~100 MB run.log files came from.
+    level = (
+        TRACE_LEVEL_NUM
+        if args.log_level == "TRACE"
+        else getattr(logging, args.log_level)
+    )
+    create_logger(level)
+
     # Resolve final config: TOML base + CLI overrides
     cfg = _resolve_config(args)
 
@@ -597,6 +657,7 @@ def main() -> int:
                 benchmark,
                 sweep_rows,
                 raw_handle,
+                args.log_level,
             )
         else:
             _run_sweep_sequential(
