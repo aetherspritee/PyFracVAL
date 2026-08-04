@@ -25,7 +25,7 @@ class SimulationParameters(BaseModel):
     N : int
         Target number of primary particles.
     Df : float
-        Target fractal dimension.
+        Target fractal dimension (1.0 <= Df <= 3.0).
     kf : float
         Target fractal prefactor.
     rp_g : float
@@ -43,7 +43,14 @@ class SimulationParameters(BaseModel):
     """
 
     N: int = Field(..., description="Target number of primary particles.")
-    Df: float = Field(..., description="Target fractal dimension.")
+    # Inclusive physical range for a 3D mass fractal: Df = 1.0 (linear
+    # chain) through Df = 3.0 (compact sphere). Validating here means an
+    # out-of-range Df fails at run_simulation's entry gate as a
+    # classified PARAMS failure instead of crashing with an unhandled
+    # ValidationError from a downstream constructor (Subclusterer).
+    Df: float = Field(
+        ..., ge=1.0, le=3.0, description="Target fractal dimension (1.0 to 3.0)."
+    )
     kf: float = Field(..., description="Target fractal prefactor.")
     rp_g: float = Field(..., description="Geometric mean radius of primary particles.")
     rp_gstd: float = Field(

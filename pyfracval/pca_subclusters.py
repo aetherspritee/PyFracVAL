@@ -142,7 +142,17 @@ class Subclusterer(BaseModel):
     # across subclusters alongside the radii, and reordered by each PCA
     # run exactly as its radii are, so densities always follow particles.
     initial_densities: np.ndarray | None = Field(default=None)
-    df: float = Field(..., gt=1.0, lt=3.0)
+    # Inclusive bounds: Df = 1.0 (linear chain) and Df = 3.0 (compact
+    # sphere) are legitimate targets. This class never uses `df` in any
+    # computation — the PCA stage runs at a fixed anchor (Df=1.79,
+    # kf=1.40; see run_subclustering) and the target Df only matters in
+    # CCA, whose gamma calculation is finite and guarded at both
+    # endpoints. The former strict bounds (gt/lt) made every Df=1.0 and
+    # Df=3.0 run die with an unhandled ValidationError inside the retry
+    # loop (recorded as failure_stage 'NONE' by the sweeps) instead of
+    # running at all. Out-of-range values are now rejected up front by
+    # SimulationParameters as a classified PARAMS failure.
+    df: float = Field(..., ge=1.0, le=3.0)
     kf: float = Field(..., gt=0.0)
     tol_ov: float
     n_subcl_percentage: float = Field(default=0.1, lt=1.0)
