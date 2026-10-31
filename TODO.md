@@ -37,6 +37,16 @@ git history has the detail).
 
 ## Done (recent)
 
+- [x] **Exported the aggregate catalog to the dimensional-analysis project**
+      (2026-10-31). `scripts/export_student_dataset.py` rescales any
+      `.dat` set to rp_g = 1.0, drops validator-flagged files and writes
+      the `sigma__Df__N` layout + `cluster_index.csv` the students use.
+      Shipped `cluster_data/` (1140 files) and `paper_extended_map`
+      (10198 files, 2 dropped) on branch
+      `data/catalog-v2-and-extended-map` of their repo. Their pre-existing
+      2026-04-30 data has 505/2020 overlapping files (both `vanilla` and
+      `densify_retry`) and was left in place by request.
+
 - [x] **Made sweep output shippable off a cluster.** Two separate problems.
       (1) The ~100 MB `run.log` next to each sweep was Python's
       `logging.lastResort` handler: nothing in the benchmark path ever
